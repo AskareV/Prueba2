@@ -1,0 +1,129 @@
+# Compila el juego en cada push:
+#  - Versión web  -> rama gh-pages (GitHub Pages)
+#  - APK Android  -> GitHub Releases (link de descarga directa)
+name: Compilar juego
+
+on:
+  push:
+    branches-ignore: [gh-pages]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: compilar
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: "4.7.2"
+  NOMBRE_APK: mi-juego.apk
+  RELEASES_A_CONSERVAR: 5
+
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17 (lo necesita Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Descargar Godot y plantillas de exportación
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          cd "$RUNNER_TEMP"
+          curl -fsSL --retry 3 -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl -fsSL --retry 3 -o plantillas.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q godot.zip
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          destino="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$destino"
+          unzip -q plantillas.tpz
+          mv templates/* "$destino/"
+          godot --version
+
+      - name: Configurar Android SDK y Java en Godot
+        run: |
+          # Abrir el editor una vez crea el archivo de configuración e importa el proyecto.
+          timeout 300 godot --headless --editor --quit || true
+          ajustes=$(ls "$HOME"/.config/godot/editor_settings-*.tres 2>/dev/null | head -n 1)
+          if [ -z "$ajustes" ]; then
+            echo "::error::Godot no creó editor_settings-*.tres"
+            ls -la "$HOME/.config/godot" || true
+            exit 1
+          fi
+          echo "Ajustes del editor: $ajustes"
+          echo "export/android/android_sdk_path = \"$ANDROID_SDK_ROOT\"" >> "$ajustes"
+          echo "export/android/java_sdk_path = \"$JAVA_HOME\"" >> "$ajustes"
+
+      - name: Poner número de versión
+        run: |
+          version="0.1.${{ github.run_number }}"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          sed -i "s|^config/version=.*|config/version=\"$version\"|" project.godot
+          sed -i "s|^version/code=.*|version/code=${{ github.run_number }}|" export_presets.cfg
+          grep -n "config/version" project.godot
+          grep -n "version/code" export_presets.cfg
+
+      - name: Importar recursos
+        run: timeout 300 godot --headless --import
+
+      - name: Exportar versión web
+        run: |
+          mkdir -p build/web
+          touch build/.gdignore
+          godot --headless --export-release "Web" build/web/index.html
+          test -f build/web/index.html
+          touch build/web/.nojekyll
+          ls -la build/web
+
+      - name: Exportar APK de Android
+        env:
+          # Llave de pruebas (ver ci/LEEME.md). No usar para Play Store.
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ github.workspace }}/ci/pruebas.keystore
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: pruebas
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: pruebas123
+        run: |
+          mkdir -p build/android
+          godot --headless --export-release "Android" "build/android/$NOMBRE_APK"
+          test -f "build/android/$NOMBRE_APK"
+          ls -la build/android
+
+      - name: Guardar archivos compilados
+        uses: actions/upload-artifact@v4
+        with:
+          name: juego-${{ env.VERSION }}
+          path: |
+            build/web
+            build/android/${{ env.NOMBRE_APK }}
+          retention-days: 7
+
+      - name: Publicar versión web (rama gh-pages)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: build/web
+          force_orphan: true
+          commit_message: "Versión web ${{ env.VERSION }}"
+
+      - name: Publicar APK (GitHub Releases)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VERSION" "build/android/$NOMBRE_APK" \
+            --target "$GITHUB_SHA" \
+            --latest \
+            --title "Versión $VERSION" \
+            --notes "Compilado desde la rama \`${GITHUB_REF_NAME}\` (commit ${GITHUB_SHA::7})."
+          # Borrar versiones antiguas para no acumular demasiadas.
+          gh release list --limit 100 --json tagName,createdAt \
+            --jq "sort_by(.createdAt) | reverse | .[$RELEASES_A_CONSERVAR:] | .[].tagName" |
+          while read -r etiqueta; do
+            gh release delete "$etiqueta" --cleanup-tag --yes
+          done

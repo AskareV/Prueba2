@@ -1,0 +1,5 @@
+# Archivos que genera Godot (se recrean solos)
+.godot/
+
+# Resultados de la compilación
+build/
