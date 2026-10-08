@@ -16,7 +16,7 @@ Cada APK nuevo se instala encima del anterior, sin desinstalar.
 |---|---|
 | `project.godot` | Configuración del proyecto (horizontal, 1280×720, se adapta a cualquier pantalla) |
 | `escenas/` | Escenas de Godot (`.tscn`) |
-| `scripts/` | Código en GDScript (`.gd`) |
+| `scripts/` | Código en GDScript (`.gd`). `orientacion.gd` es global: en el navegador pide girar el teléfono si está vertical |
 | `assets/` | Imágenes, sonidos y fuentes |
 | `export_presets.cfg` | Configuración para exportar a Android y Web |
 | `ci/` | Llave de firma de pruebas del APK (ver `ci/LEEME.md`) |

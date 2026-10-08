@@ -26,10 +26,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Descargar el código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Instalar Java 17 (lo necesita Android)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -93,10 +93,13 @@ jobs:
           mkdir -p build/android
           godot --headless --export-release "Android" "build/android/$NOMBRE_APK"
           test -f "build/android/$NOMBRE_APK"
+          # Comprobar que el APK quedó firmado (si no, Android no lo instala).
+          herramientas=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -n 1)
+          "$herramientas/apksigner" verify --print-certs "build/android/$NOMBRE_APK"
           ls -la build/android
 
       - name: Guardar archivos compilados
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: juego-${{ env.VERSION }}
           path: |
@@ -116,14 +119,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Si se vuelve a ejecutar la misma compilación, reemplazar su versión.
+          gh release delete "v$VERSION" --cleanup-tag --yes 2>/dev/null || true
           gh release create "v$VERSION" "build/android/$NOMBRE_APK" \
             --target "$GITHUB_SHA" \
             --latest \
             --title "Versión $VERSION" \
             --notes "Compilado desde la rama \`${GITHUB_REF_NAME}\` (commit ${GITHUB_SHA::7})."
           # Borrar versiones antiguas para no acumular demasiadas.
-          gh release list --limit 100 --json tagName,createdAt \
-            --jq "sort_by(.createdAt) | reverse | .[$RELEASES_A_CONSERVAR:] | .[].tagName" |
+          gh release list --limit 100 --json tagName,publishedAt \
+            --jq "map(select(.tagName != \"v$VERSION\")) | sort_by(.publishedAt) | reverse | .[$((RELEASES_A_CONSERVAR - 1)):] | .[].tagName" |
           while read -r etiqueta; do
-            gh release delete "$etiqueta" --cleanup-tag --yes
+            gh release delete "$etiqueta" --cleanup-tag --yes < /dev/null
           done
