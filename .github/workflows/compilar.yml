@@ -66,7 +66,7 @@ jobs:
 
       - name: Poner número de versión
         run: |
-          version="0.1.${{ github.run_number }}"
+          version="0.2.${{ github.run_number }}"
           echo "VERSION=$version" >> "$GITHUB_ENV"
           sed -i "s|^config/version=.*|config/version=\"$version\"|" project.godot
           sed -i "s|^version/code=.*|version/code=${{ github.run_number }}|" export_presets.cfg
@@ -75,6 +75,16 @@ jobs:
 
       - name: Importar recursos
         run: timeout 300 godot --headless --import
+
+      - name: Ejecutar pruebas
+        run: |
+          set -o pipefail
+          timeout 300 godot --headless --script res://pruebas/ejecutar.gd 2>&1 | tee pruebas.log
+          timeout 300 godot --headless --script res://pruebas/partida_automatica.gd 2>&1 | tee -a pruebas.log
+          if grep -E "SCRIPT ERROR|Parse Error" pruebas.log; then
+            echo "::error::Hubo errores de script durante las pruebas"
+            exit 1
+          fi
 
       - name: Exportar versión web
         run: |

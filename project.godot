@@ -11,13 +11,16 @@ config_version=5
 [application]
 
 config/name="Mi Juego"
-config/version="0.1.0"
-run/main_scene="res://escenas/principal.tscn"
+config/version="0.2.0"
+run/main_scene="res://escenas/preparacion.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
+config/quit_on_go_back=false
 
 [autoload]
 
+Tema="*res://scripts/estilo.gd"
+Partida="*res://scripts/partida.gd"
 Orientacion="*res://scripts/orientacion.gd"
 
 [display]
