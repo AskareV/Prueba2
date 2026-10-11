@@ -6,6 +6,8 @@ name: Compilar juego
 on:
   push:
     branches-ignore: [gh-pages]
+    # Cambios solo de documentación no necesitan compilar el juego.
+    paths-ignore: ["docs/**", "README.md"]
   workflow_dispatch:
 
 permissions:
