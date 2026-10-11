@@ -3,7 +3,6 @@ extends Control
 ## El contenido se diseña en un área de 1280×720 centrada, que siempre cabe.
 
 const ESCENA_COMBATE := "res://escenas/combate.tscn"
-const COLORES_TIPO := {"cortante": Color("#ef5350"), "contundente": Color("#ab47bc"), "punzante": Color("#29b6f6")}
 const DIFICULTAD := {"bandido": "Fácil", "lancero": "Medio", "orco": "Difícil"}
 
 var _fondo: FondoMazmorra
@@ -107,7 +106,7 @@ func _crear_opciones_rey() -> void:
 		boton.button_group = grupo_arma
 		boton.button_pressed = Partida.arma == arma_id
 		boton.pressed.connect(_al_elegir_arma.bind(arma_id))
-		Estilo.con_franja(boton, COLORES_TIPO[arma["tipo"]])
+		Estilo.con_franja(boton, DatosArmas.COLORES_TIPO[arma["tipo"]])
 		columna.add_child(boton)
 
 	_descripcion_arma = _etiqueta("", 17, Vector2(362, 506))

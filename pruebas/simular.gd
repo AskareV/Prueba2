@@ -55,10 +55,10 @@ func _combatir(arma_id: String, rival_id: String, diestro: bool, rng: RandomNumb
 
 ## Hace actuar a un luchador como en la escena de combate. Devuelve 1 si desarmó.
 func _actuar(yo: Luchador, otro: Luchador, rng: RandomNumberGenerator, turno: int) -> int:
+	yo.defendiendo = false
 	if yo.aturdido:
 		yo.aturdido = false
 		return 0
-	yo.defendiendo = false
 	var decision := IAEnemigo.decidir(yo, otro, rng)
 	match decision["accion"]:
 		"recoger":

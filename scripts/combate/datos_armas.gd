@@ -13,6 +13,9 @@ const ARMAS := {
 ## Armas que se pueden elegir (los puños solo se usan al quedar desarmado).
 const ELEGIBLES := ["espada", "maza", "lanza"]
 
+## Color de cada tipo de arma en los botones.
+const COLORES_TIPO := {"cortante": Color("#ef5350"), "contundente": Color("#ab47bc"), "punzante": Color("#29b6f6")}
+
 ## Datos por tipo de arma:
 ## - herida: cómo se registra el golpe (para el sangrado e infecciones futuras).
 ## - exp_tamano: < 1 hace más fácil acertar a partes pequeñas.

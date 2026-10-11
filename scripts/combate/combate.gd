@@ -12,7 +12,6 @@ const COLOR_AVISO := Color("#ffd54f")
 ## Orden de los botones de zona: imita la silueta del rival, que mira a la cámara
 ## (su brazo derecho queda a la izquierda de la pantalla).
 const ORDEN_BOTONES_ZONA := ["brazo_der", "cabeza", "brazo_izq", "pierna_der", "torso", "pierna_izq"]
-const COLORES_TIPO := {"cortante": Color("#ef5350"), "contundente": Color("#ab47bc"), "punzante": Color("#29b6f6")}
 const TAMANO_LUPA := Vector2(380, 330)
 
 var _rng := RandomNumberGenerator.new()
@@ -220,6 +219,8 @@ func _reubicar() -> void:
 # --- Flujo de turnos ---
 
 func _iniciar_turno_jugador() -> void:
+	# La guardia dura hasta el comienzo de su propio turno, aunque lo pierda aturdido.
+	_jugador.defendiendo = false
 	if _jugador.aturdido:
 		_jugador.aturdido = false
 		_agregar_mensaje("Estás aturdido y pierdes el turno.")
@@ -228,7 +229,6 @@ func _iniciar_turno_jugador() -> void:
 		await _pausa(1.0)
 		await _turno_del_rival()
 		return
-	_jugador.defendiendo = false
 	_actualizar_paneles()
 	_mostrar_acciones()
 
@@ -251,13 +251,13 @@ func _turno_del_rival() -> void:
 
 func _actuar_rival() -> void:
 	var nombre := _mayuscula(_enemigo.con_articulo())
+	_enemigo.defendiendo = false
 	if _enemigo.aturdido:
 		_enemigo.aturdido = false
 		_agregar_mensaje("%s está aturdido y pierde el turno." % nombre)
 		_texto_flotante(_figura_enemigo, "craneo", "Aturdido", COLOR_AVISO)
 		await _pausa(0.9)
 		return
-	_enemigo.defendiendo = false
 	var decision := IAEnemigo.decidir(_enemigo, _jugador, _rng)
 	match decision["accion"]:
 		"recoger":
@@ -446,7 +446,7 @@ func _mostrar_armas() -> void:
 		var texto := "%s\n%s" % [arma["nombre"], DatosArmas.tipo(arma["tipo"])["nombre"]]
 		var boton := _boton(texto, _al_elegir_arma.bind(arma_id), Vector2(236, 72), 20)
 		boton.disabled = arma_id == _jugador.arma
-		Estilo.con_franja(boton, COLORES_TIPO[arma["tipo"]])
+		Estilo.con_franja(boton, DatosArmas.COLORES_TIPO[arma["tipo"]])
 		_opciones.add_child(boton)
 	_boton_volver.text = "Volver"
 	_mostrar_panel_apuntar()
