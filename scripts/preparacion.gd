@@ -39,6 +39,17 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_reubicar)
 	_reubicar()
 	_actualizar_rey()
+	_bloquear_toques(0.45)
+
+
+## Ignora los toques un momento al entrar: un doble toque en la pantalla anterior
+## (por ejemplo en "Preparación") no debe elegir sin querer lo que quede debajo.
+func _bloquear_toques(segundos: float) -> void:
+	var escudo := Control.new()
+	escudo.set_anchors_preset(Control.PRESET_FULL_RECT)
+	escudo.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(escudo)
+	get_tree().create_timer(segundos).timeout.connect(escudo.queue_free)
 
 
 func _notification(what: int) -> void:
@@ -213,4 +224,4 @@ func _actualizar_rey() -> void:
 
 
 func _al_combatir() -> void:
-	get_tree().change_scene_to_file(ESCENA_COMBATE)
+	get_tree().change_scene_to_file.call_deferred(ESCENA_COMBATE)

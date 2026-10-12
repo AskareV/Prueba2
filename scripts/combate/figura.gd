@@ -53,6 +53,11 @@ var desplazamiento := Vector2.ZERO
 var _partes: Dictionary = {}
 var _anclas: Dictionary = {}
 var _centros: Dictionary = {}
+var _areas: Dictionary = {}
+## Heridas resumidas por parte (se recalculan solo cuando llega una nueva):
+## parte -> {"conteo": {tipo: n}, "ultima": tipo}.
+var _resumen_heridas: Dictionary = {}
+var _heridas_resumidas := -1
 var _lado_arma_dibujado := "?"
 var _destellos: Dictionary = {}
 var _tiempo := 0.0
@@ -74,6 +79,8 @@ func _process(delta: float) -> void:
 	_tiempo += delta
 	if _lado_arma_actual() != _lado_arma_dibujado:
 		_reconstruir()
+	if luchador.heridas.size() != _heridas_resumidas:
+		_resumir_heridas()
 	for parte_id in _destellos.keys():
 		_destellos[parte_id] = maxf(float(_destellos[parte_id]) - delta * 3.5, 0.0)
 		if _destellos[parte_id] <= 0.0:
@@ -98,6 +105,35 @@ func parte_en(punto_global: Vector2) -> String:
 
 func posicion_global_de(parte_id: String) -> Vector2:
 	return to_global(_centros[parte_id] + desplazamiento)
+
+
+## Parte de una zona que el dedo quiso tocar: la que contiene el punto o la que
+## está a menos de "margen" píxeles de pantalla. Si hay varias, gana la más pequeña,
+## para que ojos, manos y pies se puedan tocar. Devuelve "" si no hay ninguna.
+func parte_cercana(punto_global: Vector2, zona_id: String, margen: float) -> String:
+	var local := to_local(punto_global) - desplazamiento
+	var margen_local := margen / maxf(global_scale.x, 0.01)
+	var elegida := ""
+	var area_elegida := INF
+	for parte_id in DatosCuerpo.partes_de(zona_id):
+		var distancia := INF
+		for forma in _partes[parte_id]:
+			distancia = minf(distancia, _distancia_a_forma(local, forma))
+		var area: float = _areas[parte_id]
+		if distancia <= margen_local and area < area_elegida:
+			elegida = parte_id
+			area_elegida = area
+	return elegida
+
+
+static func _distancia_a_forma(punto: Vector2, forma: PackedVector2Array) -> float:
+	if Geometry2D.is_point_in_polygon(punto, forma):
+		return 0.0
+	var minima := INF
+	for i in forma.size():
+		var cercano := Geometry2D.get_closest_point_to_segment(punto, forma[i], forma[(i + 1) % forma.size()])
+		minima = minf(minima, punto.distance_to(cercano))
+	return minima
 
 
 ## Rectángulo que ocupa una zona, en coordenadas locales (sin la escala del nodo).
@@ -169,9 +205,27 @@ func _reconstruir() -> void:
 	_partes = plantilla["partes"]
 	_anclas = plantilla["anclas"]
 	_centros.clear()
+	_areas.clear()
 	for parte_id in _partes:
 		var formas: Array = _partes[parte_id]
 		_centros[parte_id] = PlantillaHumanoide.centro(formas[formas.size() - 1])
+		var area := 0.0
+		for forma in formas:
+			area += PlantillaHumanoide.area(forma)
+		_areas[parte_id] = area
+
+
+func _resumir_heridas() -> void:
+	_resumen_heridas.clear()
+	for herida in luchador.heridas:
+		var parte_id: String = herida["parte"]
+		if not _resumen_heridas.has(parte_id):
+			_resumen_heridas[parte_id] = {"conteo": {}, "ultima": ""}
+		var resumen: Dictionary = _resumen_heridas[parte_id]
+		var conteo: Dictionary = resumen["conteo"]
+		conteo[herida["tipo"]] = int(conteo.get(herida["tipo"], 0)) + 1
+		resumen["ultima"] = herida["tipo"]
+	_heridas_resumidas = luchador.heridas.size()
 
 
 # --- Dibujo ---
@@ -244,9 +298,8 @@ func _color_parte(parte_id: String) -> Color:
 func _herida_principal(parte_id: String) -> String:
 	if luchador.fracturas.has(parte_id):
 		return "Fractura"
-	for i in range(luchador.heridas.size() - 1, -1, -1):
-		if luchador.heridas[i]["parte"] == parte_id:
-			return luchador.heridas[i]["tipo"]
+	if _resumen_heridas.has(parte_id):
+		return _resumen_heridas[parte_id]["ultima"]
 	return "Corte"
 
 
@@ -442,8 +495,10 @@ func _dibujar_marcas() -> void:
 	for parte_id in _centros:
 		if parte_id.begins_with("ojo_") or luchador.nivel(parte_id) == 0:
 			continue
+		if not _resumen_heridas.has(parte_id):
+			continue
 		var centro: Vector2 = _centros[parte_id]
-		var conteo := luchador.heridas_de(parte_id)
+		var conteo: Dictionary = _resumen_heridas[parte_id]["conteo"]
 		var cortes := mini(int(conteo.get("Corte", 0)), 3)
 		for i in cortes:
 			var y := (i - (cortes - 1) / 2.0) * 6.0

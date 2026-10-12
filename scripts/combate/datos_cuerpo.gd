@@ -31,7 +31,7 @@ const ZONAS := {
 const PARTES := {
 	"craneo": {
 		"nombre": "Cráneo", "corto": "Cráneo", "articulo": "el", "texto": "cráneo",
-		"zona": "cabeza", "tamano": 0.72, "danio": 1.5, "fragilidad": 1.25, "hueso": true,
+		"zona": "cabeza", "tamano": 0.62, "danio": 1.35, "fragilidad": 1.0, "hueso": true,
 		"organos": "cerebro",
 	},
 	"ojo_der": {
@@ -46,7 +46,7 @@ const PARTES := {
 	},
 	"cuello": {
 		"nombre": "Cuello", "corto": "Cuello", "articulo": "el", "texto": "cuello",
-		"zona": "cabeza", "tamano": 0.55, "danio": 1.6, "fragilidad": 2.4, "hueso": true,
+		"zona": "cabeza", "tamano": 0.45, "danio": 1.4, "fragilidad": 2.4, "hueso": true,
 		"organos": "tráquea, arterias carótidas, columna",
 	},
 	"torax_der": {

@@ -121,7 +121,10 @@ func nivel(parte_id: String) -> int:
 
 
 func estado(parte_id: String) -> String:
-	return ESTADOS[nivel(parte_id)]
+	var texto: String = ESTADOS[nivel(parte_id)]
+	if DatosCuerpo.PARTES[parte_id]["articulo"] == "el" and texto.ends_with("a"):
+		texto = texto.substr(0, texto.length() - 1) + "o"
+	return texto
 
 
 ## Aplica un golpe acertado: resta vida y daña la parte. Devuelve la integridad previa.
@@ -203,8 +206,6 @@ func esquiva() -> float:
 	var valor := 0.05 + 0.12 * mov_piernas()
 	if defendiendo:
 		valor += 0.2
-	if aturdido:
-		valor *= 0.5
 	return valor
 
 

@@ -11,6 +11,7 @@ const MAX_CUADROS := 6000
 const ACCIONES := 1
 const ZONA := 2
 const PARTE := 3
+const ARMA := 4
 const FIN := 5
 
 var _rng := RandomNumberGenerator.new()
@@ -56,6 +57,8 @@ func _jugar_un_combate() -> String:
 				_elegir_zona(escena)
 			PARTE:
 				_elegir_parte(escena)
+			ARMA:
+				_elegir_arma(escena)
 	# Esperar a que aparezca la ventana del resultado.
 	for espera in 120:
 		if escena.get("_ventana") != null:
@@ -80,13 +83,20 @@ func _elegir_accion(escena: Control) -> void:
 		escena.call("_al_pulsar_defender")
 	elif tirada < 0.15 or jugador.desarmado:
 		escena.call("_al_pulsar_arma")
-		if not jugador.desarmado:
-			var otras := DatosArmas.ELEGIBLES.filter(func(a: String) -> bool: return a != jugador.arma)
-			escena.call("_al_elegir_arma", otras[_rng.randi() % otras.size()])
 	elif tirada < 0.17:
 		escena.call("_al_pulsar_huir")
 	else:
 		escena.call("_al_pulsar_atacar")
+
+
+## En el menú de armas: casi siempre cambia de arma; a veces vuelve atrás.
+func _elegir_arma(escena: Control) -> void:
+	if _rng.randf() < 0.2:
+		escena.call("_volver_atras")
+		return
+	var jugador: Luchador = escena.get("_jugador")
+	var otras := DatosArmas.ELEGIBLES.filter(func(a: String) -> bool: return a != jugador.arma)
+	escena.call("_al_elegir_arma", otras[_rng.randi() % otras.size()])
 
 
 func _elegir_zona(escena: Control) -> void:

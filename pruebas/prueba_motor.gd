@@ -144,3 +144,50 @@ func prueba_huir_depende_de_las_piernas() -> void:
 	rey.integridad["muslo_der"] = 10.0
 	rey.integridad["muslo_izq"] = 10.0
 	verificar(MotorCombate.prob_huir(rey, orco) < sano, "Con las piernas heridas cuesta más huir")
+
+
+func prueba_golpe_final_no_desarma_ni_aturde() -> void:
+	var rng := rng_fijo(17)
+	var rey := DatosRivales.crear_rey(true, "maza")
+	for intento in 300:
+		var orco := DatosRivales.crear_rival("orco")
+		orco.vida = 1
+		var r := MotorCombate.resolver_ataque(rey, orco, "craneo", rng, intento)
+		if r["acierto"]:
+			verificar(orco.fuera_de_combate(), "El golpe deja al orco fuera de combate")
+			verificar(not r["desarme"] and not r["aturdido"], "Fuera de combate no suelta el arma ni queda aturdido")
+			return
+	verificar(false, "Algún golpe debía acertar")
+
+
+func prueba_punos_aturden_menos_que_la_maza() -> void:
+	var rng := rng_fijo(23)
+	var con_maza := DatosRivales.crear_rey(true, "maza")
+	var sin_arma := DatosRivales.crear_rey(true, "maza")
+	sin_arma.desarmado = true
+	var aturdidos := {"maza": 0, "punos": 0}
+	for intento in 3000:
+		for atacante in [con_maza, sin_arma]:
+			var rival := DatosRivales.crear_rival("bandido")
+			var r := MotorCombate.resolver_ataque(atacante, rival, "craneo", rng, intento)
+			if r["aturdido"]:
+				aturdidos[atacante.arma_actual()] += 1
+	verificar(aturdidos["punos"] * 2 < aturdidos["maza"],
+		"Los puños aturden mucho menos (%d contra %d)" % [aturdidos["punos"], aturdidos["maza"]])
+
+
+func prueba_lesion_de_cuello_hace_soltar_el_arma() -> void:
+	var rng := rng_fijo(31)
+	var rey := DatosRivales.crear_rey(true, "lanza")
+	for intento in 300:
+		var bandido := DatosRivales.crear_rival("bandido")
+		bandido.vida = 1000
+		# Brazo del arma ya dañado: con la columna lesionada no podrá sostenerla.
+		bandido.integridad["antebrazo_der"] = 40.0
+		bandido.integridad["cuello"] = 16.0
+		var r := MotorCombate.resolver_ataque(rey, bandido, "cuello", rng, intento)
+		if r["acierto"]:
+			verificar(not bandido.puede_empunar("der"), "Con el cuello inutilizado el brazo no sostiene el arma")
+			verificar(r["desarme"] and bandido.desarmado, "Suelta el arma aunque el golpe fue en el cuello")
+			return
+	verificar(false, "Algún golpe debía acertar")

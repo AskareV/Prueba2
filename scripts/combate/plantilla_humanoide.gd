@@ -115,6 +115,16 @@ static func escalar(puntos: PackedVector2Array, escala: Vector2) -> PackedVector
 	return resultado
 
 
+## Área de una forma (fórmula del cordón de zapato).
+static func area(puntos: PackedVector2Array) -> float:
+	var doble := 0.0
+	for i in puntos.size():
+		var a := puntos[i]
+		var b := puntos[(i + 1) % puntos.size()]
+		doble += a.x * b.y - b.x * a.y
+	return absf(doble) / 2.0
+
+
 ## Centro aproximado de una forma (promedio de sus puntos).
 static func centro(puntos: PackedVector2Array) -> Vector2:
 	var suma := Vector2.ZERO

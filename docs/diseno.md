@@ -149,19 +149,28 @@ definamos armas y daño.
 
 - **Acciones:** Atacar (zona → parte), Defender (recibe la mitad de daño y esquiva
   más), cambiar o recoger el arma, y Huir.
+- **Al apuntar:** cada botón muestra la probabilidad de acierto (y el daño posible en
+  las partes). Al elegir una zona, una **lupa** la muestra ampliada para tocar partes
+  pequeñas como ojos, manos o pies.
+- **Cráneo y cuello** son pequeños y difíciles de acertar. Cada arma tiene su punto
+  fuerte: la espada, el torso y las extremidades; la maza, el cráneo; la lanza, el
+  cuello. Así ninguna parte gana siempre (comprobado con miles de combates simulados).
 - **Integridad por parte:** cada golpe resta vida y daña la parte golpeada. Según
   su integridad, la parte está sana, levemente herida, herida, grave o inutilizada.
 - **Efectos provisionales de las funciones (B.2):**
   - Visión baja: menos precisión.
   - Movimiento de piernas bajo: esquiva menos y le cuesta huir.
   - Movimiento del brazo del arma bajo: pega más débil.
-  - Golpe en la mano del arma: puede soltarla; si la mano dominante queda
-    inutilizada, recoge el arma con la otra mano ("mano torpe": menos precisión y
-    daño).
+  - Golpe en la mano del arma: puede soltarla. Si el brazo del arma ya no puede
+    sostenerla (también por una lesión en el cuello), la suelta siempre. Si la mano
+    dominante queda inutilizada, recoge el arma con la otra mano ("mano torpe":
+    menos precisión y daño).
+  - Sin arma se pelea con los puños, que aturden y desarman mucho menos.
   - Golpe en el cráneo: puede aturdir (pierde un turno). Si la conciencia baja
     demasiado, se desmaya y pierde el combate.
 - Las heridas se registran por tipo (corte, contusión, perforación, fractura) para
   conectarlas después con el sangrado, el dolor y las infecciones.
+- **Dificultad de los rivales** (simulada): bandido fácil, lancero medio, orco difícil.
 
 ## 7. Pendientes
 

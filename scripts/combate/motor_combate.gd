@@ -80,6 +80,7 @@ static func resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: St
 	var base := rng.randi_range(danio_min, danio_max)
 	var danio := maxi(1, roundi(base * multiplicador_danio(atacante, defensor, parte_id)))
 	var herida: String = tipo["herida"]
+	var podia_empunar := not defensor.desarmado and defensor.puede_empunar(defensor.lado_arma())
 	var antes := defensor.recibir_golpe(parte_id, danio, herida, turno)
 	var despues: float = defensor.integridad[parte_id]
 	atacante.aciertos += 1
@@ -99,34 +100,40 @@ static func resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: St
 	if antes >= Luchador.INUTILIZADA and despues < Luchador.INUTILIZADA:
 		resultado["inutilizada"] = true
 
-	resultado["desarme"] = _intentar_desarme(defensor, parte_id, tipo, despues, rng)
-
-	if parte_id == "craneo" and not defensor.aturdido:
-		var prob_base: float = tipo["prob_aturdir"]
-		if rng.randf() < prob_base * (1.6 - defensor.conciencia()):
-			defensor.aturdido = true
-			resultado["aturdido"] = true
-
 	if defensor.conciencia() < UMBRAL_DESMAYO and not defensor.desmayado:
 		defensor.desmayado = true
 		resultado["desmayo"] = true
+	# Quien queda fuera de combate ya no suelta el arma ni queda aturdido.
+	if defensor.fuera_de_combate():
+		return resultado
+
+	var efectos: float = arma.get("efectos", 1.0)
+	resultado["desarme"] = _intentar_desarme(defensor, parte_id, tipo, despues, podia_empunar, efectos, rng)
+
+	if parte_id == "craneo" and not defensor.aturdido:
+		var prob_base: float = tipo["prob_aturdir"] * efectos
+		if rng.randf() < prob_base * (1.6 - defensor.conciencia()):
+			defensor.aturdido = true
+			resultado["aturdido"] = true
 	return resultado
 
 
 ## Un golpe en la mano del arma (o, menos, en ese antebrazo) puede hacerla soltar.
 ## Si esa mano o brazo queda inutilizado, la suelta siempre.
 static func _intentar_desarme(defensor: Luchador, parte_id: String, tipo: Dictionary,
-		integridad_despues: float, rng: RandomNumberGenerator) -> bool:
+		integridad_despues: float, podia_empunar: bool, efectos: float, rng: RandomNumberGenerator) -> bool:
 	if defensor.desarmado:
 		return false
 	var lado := defensor.lado_arma()
-	var prob_base: float = tipo["prob_desarmar"]
+	var prob_base: float = tipo["prob_desarmar"] * efectos
 	var prob := 0.0
 	if parte_id == "mano_" + lado:
 		prob = prob_base + (1.0 - integridad_despues / 100.0) * 0.4
 	elif parte_id == "antebrazo_" + lado:
 		prob = prob_base * 0.4
-	if not defensor.puede_empunar(lado) and DatosCuerpo.zona_de(parte_id) == "brazo_" + lado:
+	# Si el brazo del arma ya no puede sostenerla (por un golpe en ese brazo o en el
+	# cuello, que afecta la columna), la suelta siempre.
+	if not defensor.puede_empunar(lado) and (podia_empunar or DatosCuerpo.zona_de(parte_id) == "brazo_" + lado):
 		prob = 1.0
 	if prob > 0.0 and rng.randf() < prob:
 		defensor.desarmado = true
@@ -137,6 +144,4 @@ static func _intentar_desarme(defensor: Luchador, parte_id: String, tipo: Dictio
 ## Probabilidad de huir: depende de las piernas de ambos.
 static func prob_huir(quien_huye: Luchador, perseguidor: Luchador) -> float:
 	var prob := 0.25 + 0.5 * quien_huye.mov_piernas() - 0.2 * perseguidor.mov_piernas()
-	if quien_huye.aturdido:
-		prob *= 0.5
 	return clampf(prob, 0.05, 0.9)

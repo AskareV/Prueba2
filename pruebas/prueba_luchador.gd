@@ -72,3 +72,16 @@ func prueba_recibir_golpe() -> void:
 	rey.recibir_golpe("abdomen", 500, "Corte", 2)
 	verificar_igual(rey.vida, 0, "La vida no baja de 0")
 	verificar(rey.fuera_de_combate(), "Sin vida queda fuera de combate")
+
+
+func prueba_estado_concuerda_en_genero() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	rey.integridad["mano_der"] = 5.0
+	rey.integridad["hombro_der"] = 5.0
+	verificar_igual(rey.estado("mano_der"), "Inutilizada", "La mano es femenina")
+	verificar_igual(rey.estado("hombro_der"), "Inutilizado", "El hombro es masculino")
+	rey.integridad["espinilla_izq"] = 50.0
+	rey.integridad["muslo_izq"] = 50.0
+	verificar_igual(rey.estado("espinilla_izq"), "Herida", "La espinilla está herida")
+	verificar_igual(rey.estado("muslo_izq"), "Herido", "El muslo está herido")
+	verificar_igual(rey.estado("abdomen"), "Sano", "Sano en masculino")

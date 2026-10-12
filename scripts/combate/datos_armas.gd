@@ -3,11 +3,13 @@ extends RefCounted
 ## Armas provisionales de la demo (docs/diseno.md, punto 6). Todos los números
 ## son de prueba y se ajustarán cuando definamos armas y daño.
 
+## "efectos" (opcional, 1 si falta) multiplica la probabilidad de aturdir y de
+## desarmar: los puños aturden y desarman mucho menos que una maza.
 const ARMAS := {
 	"espada": {"nombre": "Espada", "tipo": "cortante", "danio_min": 12, "danio_max": 18, "precision": 0.85},
 	"maza": {"nombre": "Maza", "tipo": "contundente", "danio_min": 13, "danio_max": 20, "precision": 0.78},
 	"lanza": {"nombre": "Lanza", "tipo": "punzante", "danio_min": 10, "danio_max": 17, "precision": 0.9},
-	"punos": {"nombre": "Puños", "tipo": "contundente", "danio_min": 3, "danio_max": 6, "precision": 0.85},
+	"punos": {"nombre": "Puños", "tipo": "contundente", "danio_min": 3, "danio_max": 6, "precision": 0.85, "efectos": 0.4},
 }
 
 ## Armas que se pueden elegir (los puños solo se usan al quedar desarmado).
@@ -41,7 +43,7 @@ const TIPOS := {
 		"descripcion": "Más daño en el cráneo; aturde y desarma con más facilidad; puede fracturar.",
 		"exp_tamano": 1.0,
 		"prob_aturdir": 0.35,
-		"prob_desarmar": 0.45,
+		"prob_desarmar": 0.6,
 		"afinidad": {"craneo": 1.25, "torax": 1.1, "hombro": 1.1, "cuello": 0.9, "ojo": 0.8},
 	},
 	"punzante": {
@@ -50,7 +52,7 @@ const TIPOS := {
 		"descripcion": "Más precisa con partes pequeñas; más daño en tórax, abdomen y cuello.",
 		"exp_tamano": 0.6,
 		"prob_aturdir": 0.2,
-		"prob_desarmar": 0.35,
+		"prob_desarmar": 0.3,
 		"afinidad": {
 			"craneo": 0.85, "ojo": 1.25, "cuello": 1.2, "torax": 1.2, "abdomen": 1.2,
 			"mano": 0.85, "pie": 0.85,

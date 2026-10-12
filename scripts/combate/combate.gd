@@ -13,6 +13,11 @@ const COLOR_AVISO := Color("#ffd54f")
 ## (su brazo derecho queda a la izquierda de la pantalla).
 const ORDEN_BOTONES_ZONA := ["brazo_der", "cabeza", "brazo_izq", "pierna_der", "torso", "pierna_izq"]
 const TAMANO_LUPA := Vector2(380, 330)
+## Tras cambiar los botones se ignoran los toques un momento, para que un doble
+## toque no pulse sin querer el botón que aparece bajo el dedo (por ejemplo, Huir).
+const PAUSA_ENTRE_MENUS := 0.35
+## Margen (en píxeles de pantalla) para acertar con el dedo a partes pequeñas.
+const MARGEN_TOQUE := 14.0
 
 var _rng := RandomNumberGenerator.new()
 var _jugador: Luchador
@@ -49,6 +54,9 @@ var _figura_lupa: Figura
 var _capa_textos: Control
 ## Ventana abierta (estado o fin de combate), o null.
 var _ventana: Control
+var _ventana_es_estado := false
+## Segundos que faltan para volver a aceptar toques (ver PAUSA_ENTRE_MENUS).
+var _bloqueo := 0.0
 
 
 func _ready() -> void:
@@ -63,6 +71,12 @@ func _ready() -> void:
 	_reubicar()
 	_agregar_mensaje("¡%s te desafía! Elige qué hacer." % _mayuscula(_enemigo.con_articulo()))
 	_iniciar_turno_jugador()
+	# Un doble toque en "¡Combatir!" no debe pulsar lo que quede debajo al entrar.
+	_bloqueo = 0.5
+
+
+func _process(delta: float) -> void:
+	_bloqueo = maxf(_bloqueo - delta, 0.0)
 
 
 # --- Construcción de la escena ---
@@ -107,9 +121,9 @@ func _crear_interfaz() -> void:
 	botones.alignment = BoxContainer.ALIGNMENT_CENTER
 	botones.add_theme_constant_override("separation", 10)
 	centro.add_child(botones)
-	_boton_estado = _boton("Estado", _mostrar_estado, Vector2(150, 54), 21)
+	_boton_estado = _boton("Estado", _al_pulsar_estado, Vector2(150, 54), 21)
 	botones.add_child(_boton_estado)
-	_boton_menu = _boton("Menú", _ir_a_preparacion, Vector2(120, 54), 21)
+	_boton_menu = _boton("Menú", _al_pulsar_menu, Vector2(120, 54), 21)
 	botones.add_child(_boton_menu)
 	_etiqueta_turno = Label.new()
 	_etiqueta_turno.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -156,13 +170,14 @@ func _crear_interfaz() -> void:
 	fila.alignment = BoxContainer.ALIGNMENT_CENTER
 	fila.add_theme_constant_override("separation", 14)
 	_apuntar.add_child(fila)
+	# "Volver" va a la izquierda: así no queda bajo el dedo nada peligroso (como Huir).
+	_boton_volver = _boton("Volver", _al_pulsar_volver, Vector2(150, 70), 22)
+	_boton_volver.size_flags_vertical = Control.SIZE_SHRINK_END
+	fila.add_child(_boton_volver)
 	_opciones = GridContainer.new()
 	_opciones.add_theme_constant_override("h_separation", 10)
 	_opciones.add_theme_constant_override("v_separation", 10)
 	fila.add_child(_opciones)
-	_boton_volver = _boton("Volver", _volver_atras, Vector2(150, 70), 22)
-	_boton_volver.size_flags_vertical = Control.SIZE_SHRINK_END
-	fila.add_child(_boton_volver)
 
 	_lupa = Panel.new()
 	_lupa.clip_contents = true
@@ -310,7 +325,11 @@ func _comprobar_fin() -> bool:
 	if not (_jugador.fuera_de_combate() or _enemigo.fuera_de_combate()):
 		return false
 	_estado = Estado.FIN
+	_cerrar_ventana()
 	_ocultar_controles()
+	# Hasta que aparezca el resultado no se puede salir ni abrir el estado.
+	_boton_menu.disabled = true
+	_boton_estado.disabled = true
 	await _pausa(1.1)
 	_mostrar_fin("victoria" if _enemigo.fuera_de_combate() else "derrota")
 	return true
@@ -319,7 +338,7 @@ func _comprobar_fin() -> bool:
 # --- Acciones del jugador ---
 
 func _al_pulsar_atacar() -> void:
-	if _estado == Estado.ACCIONES:
+	if _estado == Estado.ACCIONES and _entrada_libre():
 		_mostrar_zonas()
 
 
@@ -341,10 +360,11 @@ func _mostrar_zonas() -> void:
 		_opciones.add_child(boton)
 	_boton_volver.text = "Cancelar"
 	_mostrar_panel_apuntar()
+	_bloquear_entrada()
 
 
 func _al_elegir_zona(zona_id: String) -> void:
-	if _estado != Estado.ZONA and _estado != Estado.PARTE:
+	if (_estado != Estado.ZONA and _estado != Estado.PARTE) or not _entrada_libre():
 		return
 	_estado = Estado.PARTE
 	_zona = zona_id
@@ -370,6 +390,7 @@ func _al_elegir_zona(zona_id: String) -> void:
 	_boton_volver.text = "Volver"
 	_mostrar_panel_apuntar()
 	_mostrar_lupa(zona_id)
+	_bloquear_entrada()
 
 
 ## Amplía la zona en la lupa, centrada y tan grande como quepa.
@@ -386,7 +407,7 @@ func _mostrar_lupa(zona_id: String) -> void:
 
 
 func _al_elegir_parte(parte_id: String) -> void:
-	if _estado != Estado.PARTE:
+	if _estado != Estado.PARTE or not _entrada_libre():
 		return
 	_estado = Estado.ESPERANDO
 	_figura_enemigo.modo = Figura.Modo.NORMAL
@@ -407,7 +428,7 @@ func _resaltar_parte(parte_id: String) -> void:
 
 
 func _al_pulsar_defender() -> void:
-	if _estado != Estado.ACCIONES:
+	if _estado != Estado.ACCIONES or not _entrada_libre():
 		return
 	_estado = Estado.ESPERANDO
 	_ocultar_controles()
@@ -419,7 +440,7 @@ func _al_pulsar_defender() -> void:
 
 
 func _al_pulsar_arma() -> void:
-	if _estado != Estado.ACCIONES:
+	if _estado != Estado.ACCIONES or not _entrada_libre():
 		return
 	if not _jugador.desarmado:
 		_mostrar_armas()
@@ -450,23 +471,29 @@ func _mostrar_armas() -> void:
 		_opciones.add_child(boton)
 	_boton_volver.text = "Volver"
 	_mostrar_panel_apuntar()
+	_bloquear_entrada()
 
 
 func _al_elegir_arma(arma_id: String) -> void:
-	if _estado != Estado.ARMA:
+	if _estado != Estado.ARMA or not _entrada_libre():
 		return
 	_estado = Estado.ESPERANDO
 	_ocultar_controles()
 	_jugador.arma = arma_id
-	_jugador.empunar()
-	_agregar_mensaje("Cambias a la %s." % _nombre_arma(arma_id))
+	var texto := "Cambias a la %s" % _nombre_arma(arma_id)
+	if not _jugador.empunar():
+		_jugador.desarmado = true
+		texto = "No puedes sostener la %s" % _nombre_arma(arma_id)
+	elif _jugador.mano_torpe:
+		texto += " con la otra mano"
+	_agregar_mensaje(texto + ".")
 	_actualizar_paneles()
 	await _pausa(0.7)
 	await _turno_del_rival()
 
 
 func _al_pulsar_huir() -> void:
-	if _estado != Estado.ACCIONES:
+	if _estado != Estado.ACCIONES or not _entrada_libre():
 		return
 	_estado = Estado.ESPERANDO
 	_ocultar_controles()
@@ -475,6 +502,7 @@ func _al_pulsar_huir() -> void:
 		var tween := create_tween()
 		tween.tween_property(_figura_jugador, "position:x", -200.0, 0.8).set_ease(Tween.EASE_IN)
 		await tween.finished
+		_figura_jugador.visible = false
 		_mostrar_fin("huida")
 	else:
 		_agregar_mensaje("Intentas huir, pero %s te corta el paso." % _enemigo.con_articulo())
@@ -489,28 +517,34 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_volver_atras()
 		return
-	if not (event is InputEventScreenTouch) or event.pressed:
+	if not (event is InputEventScreenTouch):
+		return
+	var toque := event as InputEventScreenTouch
+	# Solo el primer dedo, al levantarlo, y nunca un toque cancelado por el sistema.
+	if toque.pressed or toque.index != 0 or toque.canceled:
 		return
 	if _estado != Estado.ZONA and _estado != Estado.PARTE:
 		return
-	var punto: Vector2 = event.position
+	var punto := toque.position
 	if _apuntar.get_global_rect().has_point(punto):
 		return
 	if _lupa.visible and _lupa.get_global_rect().has_point(punto):
-		var en_lupa := _figura_lupa.parte_en(punto)
-		if en_lupa != "" and DatosCuerpo.zona_de(en_lupa) == _zona:
+		var en_lupa := _figura_lupa.parte_cercana(punto, _zona, MARGEN_TOQUE)
+		if en_lupa != "":
 			get_viewport().set_input_as_handled()
 			_al_elegir_parte(en_lupa)
 		return
+	if _estado == Estado.PARTE:
+		var cercana := _figura_enemigo.parte_cercana(punto, _zona, MARGEN_TOQUE)
+		if cercana != "":
+			get_viewport().set_input_as_handled()
+			_al_elegir_parte(cercana)
+			return
 	var parte_id := _figura_enemigo.parte_en(punto)
 	if parte_id == "":
 		return
 	get_viewport().set_input_as_handled()
-	var zona_id := DatosCuerpo.zona_de(parte_id)
-	if _estado == Estado.PARTE and zona_id == _zona:
-		_al_elegir_parte(parte_id)
-	else:
-		_al_elegir_zona(zona_id)
+	_al_elegir_zona(DatosCuerpo.zona_de(parte_id))
 
 
 func _notification(what: int) -> void:
@@ -519,6 +553,8 @@ func _notification(what: int) -> void:
 
 
 func _volver_atras() -> void:
+	if not _entrada_libre():
+		return
 	if _ventana != null:
 		if _estado == Estado.FIN:
 			_ir_a_preparacion()
@@ -538,7 +574,41 @@ func _ir_a_preparacion() -> void:
 	# Durante las animaciones no se sale, para no cortar un turno a la mitad.
 	if _estado == Estado.ESPERANDO:
 		return
-	get_tree().change_scene_to_file(ESCENA_PREPARACION)
+	get_tree().change_scene_to_file.call_deferred(ESCENA_PREPARACION)
+
+
+# --- Botones con pausa entre menús ---
+
+func _bloquear_entrada() -> void:
+	_bloqueo = PAUSA_ENTRE_MENUS
+
+
+func _entrada_libre() -> bool:
+	return _bloqueo <= 0.0
+
+
+func _al_pulsar_volver() -> void:
+	_volver_atras()
+
+
+func _al_pulsar_menu() -> void:
+	if _entrada_libre():
+		_ir_a_preparacion()
+
+
+func _al_pulsar_estado() -> void:
+	if _estado != Estado.FIN and _entrada_libre():
+		_mostrar_estado()
+
+
+func _al_pulsar_cerrar() -> void:
+	if _entrada_libre():
+		_cerrar_ventana()
+
+
+func _al_pulsar_revancha() -> void:
+	if _entrada_libre():
+		get_tree().reload_current_scene.call_deferred()
 
 
 # --- Interfaz ---
@@ -561,6 +631,7 @@ func _mostrar_acciones() -> void:
 	_etiqueta_turno.text = "Turno %d · Te toca" % _turno
 	_boton_menu.disabled = false
 	_boton_estado.disabled = false
+	_bloquear_entrada()
 
 
 func _mostrar_panel_apuntar() -> void:
@@ -587,6 +658,9 @@ func _limpiar_opciones() -> void:
 func _actualizar_paneles() -> void:
 	_panel_jugador.actualizar()
 	_panel_enemigo.actualizar()
+	# Si la ventana de estado está abierta, se rehace para que no muestre datos viejos.
+	if _ventana_es_estado:
+		_mostrar_estado()
 
 
 func _figura_de(luchador: Luchador) -> Figura:
@@ -667,7 +741,8 @@ func _avisos(r: Dictionary) -> Array[String]:
 	if r["fractura"]:
 		avisos.append("¡Fractura!")
 	if r["inutilizada"]:
-		avisos.append("¡Inutilizada!")
+		var femenino: bool = DatosCuerpo.PARTES[r["parte"]]["articulo"] == "la"
+		avisos.append("¡Inutilizada!" if femenino else "¡Inutilizado!")
 	if r["desarme"]:
 		avisos.append("¡Desarmado!")
 	if r["aturdido"]:
@@ -715,19 +790,23 @@ func _abrir_ventana(tamano: Vector2) -> VBoxContainer:
 	columna.add_theme_constant_override("separation", 10)
 	panel.add_child(columna)
 	_ventana = capa
+	_bloquear_entrada()
 	return columna
 
 
 func _cerrar_ventana() -> void:
+	_ventana_es_estado = false
 	if _ventana != null:
 		_ventana.queue_free()
 		_ventana = null
+		_bloquear_entrada()
 
 
 func _mostrar_estado() -> void:
 	if _estado == Estado.FIN:
 		return
 	var columna := _abrir_ventana(Vector2(1180, 640))
+	_ventana_es_estado = true
 	var titulo := _etiqueta_simple("Estado de los combatientes", 30, Color("#ffe082"))
 	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	columna.add_child(titulo)
@@ -744,7 +823,7 @@ func _mostrar_estado() -> void:
 	reglas.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	reglas.custom_minimum_size = Vector2(1100, 0)
 	columna.add_child(reglas)
-	var cerrar := _boton("Cerrar", _cerrar_ventana, Vector2(200, 62), 22)
+	var cerrar := _boton("Cerrar", _al_pulsar_cerrar, Vector2(200, 62), 22)
 	cerrar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	columna.add_child(cerrar)
 
@@ -834,8 +913,8 @@ func _mostrar_fin(resultado: String) -> void:
 	botones.alignment = BoxContainer.ALIGNMENT_CENTER
 	botones.add_theme_constant_override("separation", 16)
 	columna.add_child(botones)
-	botones.add_child(_boton("Revancha", get_tree().reload_current_scene, Vector2(230, 72), 24))
-	botones.add_child(_boton("Preparación", _ir_a_preparacion, Vector2(230, 72), 24))
+	botones.add_child(_boton("Revancha", _al_pulsar_revancha, Vector2(230, 72), 24))
+	botones.add_child(_boton("Preparación", _al_pulsar_menu, Vector2(230, 72), 24))
 
 
 func _etiqueta_simple(texto: String, tamano: int, color: Color) -> Label:
