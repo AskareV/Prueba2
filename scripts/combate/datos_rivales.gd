@@ -9,8 +9,8 @@ const ORDEN := ["bandido", "orco", "lancero"]
 
 const PERSONALIDADES := {
 	"astuto": "Astuto: intenta desarmarte.",
-	"bruto": "Bruto: apunta a tu cabeza.",
-	"preciso": "Preciso: busca tu cuello y tus ojos.",
+	"bruto": "Bruto: abre tu guardia y va a tu cabeza.",
+	"preciso": "Preciso: abre tu guardia y va a tu cuello.",
 	"normal": "Ataca donde es más fácil acertar.",
 }
 
@@ -38,7 +38,7 @@ const RIVALES := {
 		},
 	},
 	"lancero": {
-		"nombre": "Lancero", "articulo": "el", "vida": 90, "diestro": true, "arma": "lanza",
+		"nombre": "Lancero", "articulo": "el", "vida": 100, "diestro": true, "arma": "lanza",
 		"personalidad": "preciso",
 		"aspecto": {
 			"piel": Color("#c68642"), "torso": Color("#2c6e6a"), "hombros": Color("#b0b7c3"),

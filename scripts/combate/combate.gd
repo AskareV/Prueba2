@@ -18,6 +18,8 @@ const TAMANO_LUPA := Vector2(380, 330)
 const PAUSA_ENTRE_MENUS := 0.35
 ## Margen (en píxeles de pantalla) para acertar con el dedo a partes pequeñas.
 const MARGEN_TOQUE := 14.0
+## Líneas visibles del registro de mensajes.
+const LINEAS_REGISTRO := 3
 
 var _rng := RandomNumberGenerator.new()
 var _jugador: Luchador
@@ -27,6 +29,7 @@ var _turno := 1
 var _estado := Estado.ESPERANDO
 var _zona := ""
 var _mensajes: Array[String] = []
+var _etiquetas_bbcode := RegEx.create_from_string("\\[[^\\]]*\\]")
 
 var _fondo: FondoMazmorra
 var _antorchas: Antorchas
@@ -383,7 +386,10 @@ func _al_elegir_zona(zona_id: String) -> void:
 		if _enemigo.nivel(parte_id) >= 3:
 			nombre += " (%s)" % _enemigo.estado(parte_id).to_lower()
 		var texto := "%s\n%d%% · %d–%d de daño" % [nombre, roundi(prob * 100.0), rango.x, rango.y]
-		var boton := _boton(texto, _al_elegir_parte.bind(parte_id), Vector2(222, 72), 19)
+		var tactica := _texto_tactico(parte_id)
+		if tactica != "":
+			texto += "\n" + tactica
+		var boton := _boton(texto, _al_elegir_parte.bind(parte_id), Vector2(222, 96), 19)
 		Estilo.con_franja(boton, Figura.COLORES_PARTE[i % Figura.COLORES_PARTE.size()])
 		boton.mouse_entered.connect(_resaltar_parte.bind(parte_id))
 		_opciones.add_child(boton)
@@ -391,6 +397,18 @@ func _al_elegir_zona(zona_id: String) -> void:
 	_mostrar_panel_apuntar()
 	_mostrar_lupa(zona_id)
 	_bloquear_entrada()
+
+
+## En brazos y piernas: cuántos golpes faltan para inutilizarlos (así se ve para
+## qué sirve atacarlos aunque quiten poca vida).
+func _texto_tactico(parte_id: String) -> String:
+	var zona_id := DatosCuerpo.zona_de(parte_id)
+	if DatosCuerpo.ZONAS[zona_id]["defensa"] == "cubierta":
+		return ""
+	if not _enemigo.extremidad_util(zona_id):
+		return "Pierna ya inutilizada" if zona_id.begins_with("pierna_") else "Brazo ya inutilizado"
+	var golpes := MotorCombate.golpes_para_inutilizar(_jugador, _enemigo, parte_id)
+	return "Inutilizar: %d %s" % [golpes, "golpe" if golpes == 1 else "golpes"]
 
 
 ## Amplía la zona en la lupa, centrada y tan grande como quepa.
@@ -620,7 +638,8 @@ func _mostrar_acciones() -> void:
 	_lupa.visible = false
 	_registro.visible = true
 	_acciones.visible = true
-	_boton_atacar.text = "Atacar" if not _jugador.desarmado else "Atacar\n(puños)"
+	_boton_atacar.text = "Atacar" if not _jugador.desarmado \
+		else "Atacar\n(%s)" % _nombre_arma(_jugador.arma_actual())
 	if _jugador.desarmado:
 		_boton_arma.text = "Recoger arma"
 		_boton_arma.disabled = not (_jugador.puede_empunar("der") or _jugador.puede_empunar("izq"))
@@ -669,13 +688,27 @@ func _figura_de(luchador: Luchador) -> Figura:
 
 func _agregar_mensaje(texto: String) -> void:
 	_mensajes.append(texto)
-	while _mensajes.size() > 3:
+	# Salen los más viejos hasta que quepan: un mensaje largo ocupa dos líneas.
+	while _mensajes.size() > 1 and _lineas_del_registro() > LINEAS_REGISTRO:
 		_mensajes.pop_front()
 	var lineas: PackedStringArray = []
 	for i in _mensajes.size():
 		var reciente := i == _mensajes.size() - 1
 		lineas.append("[color=%s]%s[/color]" % ["#ffffff" if reciente else "#8f97bd", _mensajes[i]])
 	_registro.text = "[center]%s[/center]" % "\n".join(lineas)
+
+
+## Líneas que ocupan los mensajes en el registro, según su ancho.
+func _lineas_del_registro() -> int:
+	var fuente := _registro.get_theme_font("normal_font")
+	var tamano := _registro.get_theme_font_size("normal_font_size")
+	# Un poco menos que el ancho real: el ajuste por palabras deja huecos al final.
+	var ancho := maxf(_registro.size.x, 1.0) * 0.92
+	var lineas := 0
+	for mensaje in _mensajes:
+		var plano := _etiquetas_bbcode.sub(mensaje, "", true)
+		lineas += maxi(1, ceili(fuente.get_string_size(plano, HORIZONTAL_ALIGNMENT_LEFT, -1, tamano).x / ancho))
+	return lineas
 
 
 ## Texto que sube y se desvanece sobre una parte del cuerpo ("-12", "Falla"...).
@@ -727,6 +760,9 @@ func _narrar(atacante: Luchador, defensor: Luchador, r: Dictionary) -> String:
 	if r["desarme"]:
 		texto += " ¡Sueltas tu %s!" % _nombre_arma(defensor.arma) if tu \
 			else " ¡Suelta su %s!" % _nombre_arma(defensor.arma)
+	if r["expuesto"]:
+		texto += " Ahora tu cabeza y tu torso están más expuestos." if tu \
+			else " Ahora su cabeza y su torso están más expuestos."
 	if r["aturdido"]:
 		texto += " ¡Quedas aturdido!" if tu else " ¡Queda aturdido!"
 	if r["desmayo"]:
@@ -755,6 +791,8 @@ func _avisos(r: Dictionary) -> Array[String]:
 func _con_arma(arma_id: String, posesivo: String) -> String:
 	if arma_id == "punos":
 		return "con los puños"
+	if arma_id == "patadas":
+		return "a patadas"
 	return "con %s %s" % [posesivo, _nombre_arma(arma_id)]
 
 
@@ -816,10 +854,11 @@ func _mostrar_estado() -> void:
 	columna.add_child(fila)
 	fila.add_child(_columna_estado(_jugador, "Rey (tú)"))
 	fila.add_child(_columna_estado(_enemigo, _enemigo.nombre))
-	var reglas := _etiqueta_simple("Reglas provisionales: la visión afecta la precisión; las piernas, la esquiva "
-		+ "y la huida; el brazo del arma, el daño; un golpe en la mano del arma puede hacerla soltar; el cráneo "
-		+ "puede aturdir o desmayar. La respiración aún no tiene efecto. El sangrado, el dolor y las "
-		+ "infecciones vendrán después.", 16, Estilo.TEXTO_SUAVE)
+	var reglas := _etiqueta_simple("Reglas provisionales: cada brazo y pierna útil cubre la cabeza y el torso "
+		+ "(cobertura); al inutilizarlo es más fácil acertarles. Brazos y piernas quitan poca vida pero se "
+		+ "inutilizan rápido; sin brazos útiles se pelea a patadas. La visión afecta la precisión; las piernas, "
+		+ "la esquiva y la huida; el brazo del arma, el daño. La mano del arma puede soltarla; el cráneo puede "
+		+ "aturdir o desmayar. El sangrado, el dolor y las infecciones vendrán después.", 16, Estilo.TEXTO_SUAVE)
 	reglas.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	reglas.custom_minimum_size = Vector2(1100, 0)
 	columna.add_child(reglas)
@@ -828,30 +867,35 @@ func _mostrar_estado() -> void:
 	columna.add_child(cerrar)
 
 
+## Fila "nombre ▬▬▬ 80%" de la ventana de estado.
+func _fila_barra(texto: String, valor: float) -> HBoxContainer:
+	var fila := HBoxContainer.new()
+	fila.add_theme_constant_override("separation", 10)
+	var nombre := _etiqueta_simple(texto, 18, Estilo.TEXTO)
+	nombre.custom_minimum_size = Vector2(140, 0)
+	fila.add_child(nombre)
+	var barra := Barra.new()
+	barra.custom_minimum_size = Vector2(250, 16)
+	barra.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	barra.valor = valor
+	fila.add_child(barra)
+	fila.add_child(_etiqueta_simple("%d%%" % roundi(valor * 100.0), 18, Barra.color_para(valor)))
+	return fila
+
+
 func _columna_estado(luchador: Luchador, titulo: String) -> VBoxContainer:
 	var columna := VBoxContainer.new()
 	columna.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	columna.add_theme_constant_override("separation", 5)
 	columna.add_child(_etiqueta_simple("%s · %d / %d de vida" % [titulo, luchador.vida, luchador.vida_max], 24, Color.WHITE))
 	for funcion_id in DatosCuerpo.FUNCIONES:
-		var valor := luchador.funcion(funcion_id)
-		var fila := HBoxContainer.new()
-		fila.add_theme_constant_override("separation", 10)
-		var nombre := _etiqueta_simple(DatosCuerpo.NOMBRES_FUNCION[funcion_id], 18, Estilo.TEXTO)
-		nombre.custom_minimum_size = Vector2(140, 0)
-		fila.add_child(nombre)
-		var barra := Barra.new()
-		barra.custom_minimum_size = Vector2(250, 16)
-		barra.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		barra.valor = valor
-		fila.add_child(barra)
-		fila.add_child(_etiqueta_simple("%d%%" % roundi(valor * 100.0), 18, Barra.color_para(valor)))
-		columna.add_child(fila)
+		columna.add_child(_fila_barra(DatosCuerpo.NOMBRES_FUNCION[funcion_id], luchador.funcion(funcion_id)))
+	columna.add_child(_fila_barra("Cobertura", luchador.cobertura() / Luchador.cobertura_maxima()))
 	columna.add_child(_etiqueta_simple("Partes heridas", 20, Color("#ffe082")))
 	var lista := VBoxContainer.new()
 	lista.add_theme_constant_override("separation", 2)
 	var desplazable := ScrollContainer.new()
-	desplazable.custom_minimum_size = Vector2(0, 200)
+	desplazable.custom_minimum_size = Vector2(0, 140)
 	desplazable.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	desplazable.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	desplazable.add_child(lista)

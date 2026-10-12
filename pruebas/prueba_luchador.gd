@@ -64,12 +64,12 @@ func prueba_niveles_de_herida() -> void:
 
 func prueba_recibir_golpe() -> void:
 	var rey := DatosRivales.crear_rey(true, "espada")
-	var antes := rey.recibir_golpe("mano_der", 10, "Corte", 1)
+	var antes := rey.recibir_golpe("mano_der", 10, 30.0, "Corte", 1)
 	verificar_cerca(antes, 100.0, "Devuelve la integridad previa")
-	verificar_igual(rey.vida, 90, "Resta vida")
-	verificar_cerca(rey.integridad["mano_der"], 70.0, "La mano pierde 10 × fragilidad 3")
+	verificar_igual(rey.vida, 90, "Resta la vida indicada")
+	verificar_cerca(rey.integridad["mano_der"], 70.0, "La mano pierde el desgaste indicado")
 	verificar_igual(rey.heridas_de("mano_der"), {"Corte": 1}, "Registra la herida")
-	rey.recibir_golpe("abdomen", 500, "Corte", 2)
+	rey.recibir_golpe("abdomen", 500, 50.0, "Corte", 2)
 	verificar_igual(rey.vida, 0, "La vida no baja de 0")
 	verificar(rey.fuera_de_combate(), "Sin vida queda fuera de combate")
 
@@ -85,3 +85,38 @@ func prueba_estado_concuerda_en_genero() -> void:
 	verificar_igual(rey.estado("espinilla_izq"), "Herida", "La espinilla está herida")
 	verificar_igual(rey.estado("muslo_izq"), "Herido", "El muslo está herido")
 	verificar_igual(rey.estado("abdomen"), "Sano", "Sano en masculino")
+
+
+func prueba_cobertura_baja_al_inutilizar_brazos_y_piernas() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	verificar_cerca(rey.cobertura(), Luchador.cobertura_maxima(), "Sano cubre al máximo")
+	rey.integridad["mano_izq"] = 40.0
+	verificar_cerca(rey.cobertura(), Luchador.cobertura_maxima(), "Un brazo herido pero útil sigue cubriendo")
+	rey.integridad["mano_izq"] = 10.0
+	verificar_cerca(rey.cobertura(), Luchador.cobertura_maxima() - Luchador.COBERTURA_POR_BRAZO,
+		"Un brazo inutilizado deja de cubrir")
+	rey.integridad["pie_der"] = 10.0
+	verificar_cerca(rey.cobertura(),
+		Luchador.cobertura_maxima() - Luchador.COBERTURA_POR_BRAZO - Luchador.COBERTURA_POR_PIERNA,
+		"Una pierna inutilizada deja de cubrir")
+
+
+func prueba_defensa_por_zona() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	verificar_cerca(rey.defensa("brazo_der"), 0.0, "Los brazos van delante: no esquivan")
+	verificar_cerca(rey.defensa("pierna_izq"), rey.esquiva(), "Las piernas solo esquivan")
+	verificar_cerca(rey.defensa("torso"), rey.esquiva() + rey.cobertura(), "El torso esquiva y está cubierto")
+	verificar_cerca(rey.defensa("cabeza"), rey.defensa("torso"), "La cabeza se cubre igual que el torso")
+	rey.defendiendo = true
+	verificar_cerca(rey.defensa("brazo_der"), Luchador.DEFENSA_GUARDIA, "En guardia también protege los brazos")
+
+
+func prueba_sin_brazos_pelea_a_patadas() -> void:
+	var rey := DatosRivales.crear_rey(true, "maza")
+	rey.desarmado = true
+	verificar_igual(rey.arma_actual(), "punos", "Desarmado con brazos útiles: puños")
+	rey.integridad["mano_der"] = 5.0
+	verificar_igual(rey.arma_actual(), "punos", "Con un brazo útil todavía usa los puños")
+	rey.integridad["antebrazo_izq"] = 5.0
+	verificar_igual(rey.arma_actual(), "patadas", "Sin brazos útiles, a patadas")
+	verificar_cerca(rey.fuerza_ataque(), rey.mov_piernas(), "Las patadas dependen de las piernas")

@@ -95,6 +95,7 @@ func prueba_solo_el_craneo_aturde() -> void:
 		orco.vida = orco.vida_max
 	var aturdido := false
 	for turno in 200:
+		orco.vida = orco.vida_max
 		orco.integridad["craneo"] = 100.0
 		orco.aturdido = false
 		var r := MotorCombate.resolver_ataque(rey, orco, "craneo", rng, turno)
@@ -191,3 +192,91 @@ func prueba_lesion_de_cuello_hace_soltar_el_arma() -> void:
 			verificar(r["desarme"] and bandido.desarmado, "Suelta el arma aunque el golpe fue en el cuello")
 			return
 	verificar(false, "Algún golpe debía acertar")
+
+
+func prueba_brazos_mas_faciles_que_torso_y_cabeza() -> void:
+	var bandido := DatosRivales.crear_rival("bandido")
+	for arma_id in DatosArmas.ELEGIBLES:
+		var rey := DatosRivales.crear_rey(true, arma_id)
+		var brazo := MotorCombate.prob_acierto(rey, bandido, "brazo_der")
+		var torax := MotorCombate.prob_acierto(rey, bandido, "torax_izq")
+		var craneo := MotorCombate.prob_acierto(rey, bandido, "craneo")
+		verificar(brazo > torax + 0.2, "Con %s el brazo es mucho más fácil que el tórax (%.2f contra %.2f)" % [arma_id, brazo, torax])
+		verificar(torax > craneo, "Con %s el tórax es más fácil que el cráneo" % arma_id)
+
+
+## Pedido explícito: el acierto en las piernas queda como estaba
+## (precisión × tamaño × (1 − esquiva por piernas)).
+func prueba_piernas_mantienen_su_acierto() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var bandido := DatosRivales.crear_rival("bandido")
+	verificar_cerca(MotorCombate.prob_acierto(rey, bandido, "muslo_der"), 0.85 * 0.85 * (1.0 - 0.17), "Muslo con espada")
+	verificar_cerca(MotorCombate.prob_acierto(rey, bandido, "espinilla_izq"), 0.85 * 0.75 * (1.0 - 0.17), "Espinilla con espada")
+	verificar_cerca(MotorCombate.prob_acierto(rey, bandido, "pie_der"), 0.85 * 0.6 * (1.0 - 0.17), "Pie con espada")
+
+
+func prueba_inutilizar_un_brazo_expone_cabeza_y_torso() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var bandido := DatosRivales.crear_rival("bandido")
+	var antes := {}
+	for parte_id in ["torax_izq", "abdomen", "craneo", "cuello", "muslo_der", "brazo_izq"]:
+		antes[parte_id] = MotorCombate.prob_acierto(rey, bandido, parte_id)
+	bandido.integridad["mano_der"] = 10.0
+	for parte_id in ["torax_izq", "abdomen", "craneo", "cuello"]:
+		verificar(MotorCombate.prob_acierto(rey, bandido, parte_id) > antes[parte_id],
+			"Con un brazo inutilizado es más fácil acertar a %s" % parte_id)
+	verificar_cerca(MotorCombate.prob_acierto(rey, bandido, "muslo_der"), antes["muslo_der"], "Las piernas no cambian")
+	verificar_cerca(MotorCombate.prob_acierto(rey, bandido, "brazo_izq"), antes["brazo_izq"], "El otro brazo no cambia")
+
+
+func prueba_inutilizar_una_pierna_expone_cabeza_y_torso() -> void:
+	var rey := DatosRivales.crear_rey(true, "maza")
+	var orco := DatosRivales.crear_rival("orco")
+	var torax := MotorCombate.prob_acierto(rey, orco, "torax_der")
+	var craneo := MotorCombate.prob_acierto(rey, orco, "craneo")
+	orco.integridad["espinilla_izq"] = 10.0
+	verificar(MotorCombate.prob_acierto(rey, orco, "torax_der") > torax, "Con una pierna inutilizada el tórax es más fácil")
+	verificar(MotorCombate.prob_acierto(rey, orco, "craneo") > craneo, "Con una pierna inutilizada el cráneo es más fácil")
+
+
+func prueba_avisa_cuando_queda_expuesto() -> void:
+	var rng := rng_fijo(41)
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var bandido := DatosRivales.crear_rival("bandido")
+	bandido.vida = 1000
+	bandido.integridad["brazo_izq"] = 16.0
+	var golpes := 0
+	for turno in 100:
+		var r := MotorCombate.resolver_ataque(rey, bandido, "brazo_izq", rng, turno)
+		if not r["acierto"]:
+			continue
+		golpes += 1
+		if golpes == 1:
+			verificar(r["inutilizada"] and r["expuesto"], "Al inutilizar el brazo, su cabeza y torso quedan expuestos")
+		else:
+			verificar(not r["expuesto"], "Golpear un brazo ya inutilizado no avisa otra vez")
+			return
+	verificar(false, "Algún golpe debía acertar dos veces")
+
+
+func prueba_brazos_quitan_poca_vida_pero_se_inutilizan_pronto() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var bandido := DatosRivales.crear_rival("bandido")
+	var vida_brazo := MotorCombate.multiplicador_danio(rey, bandido, "brazo_der")
+	var vida_torax := MotorCombate.multiplicador_danio(rey, bandido, "torax_izq")
+	verificar(vida_brazo * 2.0 < vida_torax, "Un golpe en el brazo quita mucha menos vida que en el tórax")
+	for parte_id in DatosCuerpo.partes_de("brazo_der"):
+		var golpes := MotorCombate.golpes_para_inutilizar(rey, bandido, parte_id)
+		verificar(golpes >= 4 and golpes <= 7, "%s se inutiliza en 4 a 7 golpes (%d)" % [parte_id, golpes])
+
+
+func prueba_golpes_para_inutilizar() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var bandido := DatosRivales.crear_rival("bandido")
+	var sana := MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq")
+	bandido.integridad["mano_izq"] = 50.0
+	verificar(MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq") < sana, "Una mano herida necesita menos golpes")
+	bandido.integridad["mano_izq"] = 15.0
+	verificar_igual(MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq"), 1, "En el límite basta un golpe")
+	bandido.integridad["mano_izq"] = 10.0
+	verificar_igual(MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq"), 0, "Ya inutilizada no necesita golpes")

@@ -6,6 +6,16 @@ extends RefCounted
 
 ## Por debajo de esta integridad la parte queda inutilizada.
 const INUTILIZADA := 15.0
+## Defensa (provisional): probabilidad de que un ataque bien dirigido no llegue.
+## Esquiva con las piernas: base + lo que aportan las piernas sanas.
+const ESQUIVA_BASE := 0.05
+const ESQUIVA_PIERNAS := 0.12
+## Cobertura de cabeza y torso: cuánto las protege cada brazo útil (bloquea) y
+## cada pierna útil (se aparta). Un brazo o pierna inutilizado ya no cubre.
+const COBERTURA_POR_BRAZO := 0.14
+const COBERTURA_POR_PIERNA := 0.03
+## En guardia, toda zona es más difícil de alcanzar.
+const DEFENSA_GUARDIA := 0.2
 const ESTADOS := ["Sana", "Leve", "Herida", "Grave", "Inutilizada"]
 
 var nombre: String
@@ -24,7 +34,7 @@ var desarmado := false
 var mano_torpe := false
 ## Pierde su próximo turno.
 var aturdido := false
-## En guardia hasta su próximo turno: esquiva más y recibe la mitad de daño.
+## En guardia hasta su próximo turno: se defiende mejor y recibe la mitad de daño.
 var defendiendo := false
 ## Inconsciente: queda fuera de combate.
 var desmayado := false
@@ -75,12 +85,17 @@ func mano_arma() -> String:
 	return "mano_" + lado_arma()
 
 
+## Sin arma pelea con los puños; si ningún brazo sirve, a patadas.
 func arma_actual() -> String:
-	return "punos" if desarmado else arma
+	if not desarmado:
+		return arma
+	if extremidad_util("brazo_der") or extremidad_util("brazo_izq"):
+		return "punos"
+	return "patadas"
 
 
 func puede_empunar(lado: String) -> bool:
-	return mov_brazo(lado) >= INUTILIZADA / 100.0
+	return extremidad_util("brazo_" + lado)
 
 
 ## Toma el arma con la mano dominante o, si no puede, con la otra.
@@ -127,13 +142,13 @@ func estado(parte_id: String) -> String:
 	return texto
 
 
-## Aplica un golpe acertado: resta vida y daña la parte. Devuelve la integridad previa.
-func recibir_golpe(parte_id: String, danio: int, tipo_herida: String, turno: int) -> float:
+## Aplica un golpe acertado: resta "danio" de vida y "desgaste" de integridad a
+## la parte. Devuelve la integridad previa.
+func recibir_golpe(parte_id: String, danio: int, desgaste: float, tipo_herida: String, turno: int) -> float:
 	var antes: float = integridad[parte_id]
-	var fragilidad: float = DatosCuerpo.PARTES[parte_id]["fragilidad"]
 	vida = maxi(vida - danio, 0)
 	danio_recibido += danio
-	integridad[parte_id] = maxf(antes - danio * fragilidad, 0.0)
+	integridad[parte_id] = maxf(antes - desgaste, 0.0)
 	heridas.append({"parte": parte_id, "tipo": tipo_herida, "danio": danio, "turno": turno})
 	return antes
 
@@ -176,10 +191,23 @@ func mov_brazo(lado: String) -> float:
 	return minimo * factor_columna()
 
 
+## Una pierna vale lo que su parte más dañada.
+func mov_pierna(lado: String) -> float:
+	var minimo := minf(factor("muslo_" + lado), minf(factor("espinilla_" + lado), factor("pie_" + lado)))
+	return minimo * factor_columna()
+
+
 func mov_piernas() -> float:
-	var der := minf(factor("muslo_der"), minf(factor("espinilla_der"), factor("pie_der")))
-	var izq := minf(factor("muslo_izq"), minf(factor("espinilla_izq"), factor("pie_izq")))
-	return (der + izq) / 2.0 * factor_columna()
+	return (mov_pierna("der") + mov_pierna("izq")) / 2.0
+
+
+## Movimiento del brazo o la pierna de esa zona (1 para cabeza y torso).
+func movilidad(zona_id: String) -> float:
+	if zona_id.begins_with("brazo_"):
+		return mov_brazo(zona_id.substr(6))
+	if zona_id.begins_with("pierna_"):
+		return mov_pierna(zona_id.substr(7))
+	return 1.0
 
 
 func funcion(funcion_id: String) -> float:
@@ -201,18 +229,54 @@ func funcion(funcion_id: String) -> float:
 
 # --- Valores derivados para el combate (provisionales) ---
 
-## Probabilidad de esquivar: depende de las piernas y de estar en guardia.
+## Esquiva al moverse: depende de las piernas.
 func esquiva() -> float:
-	var valor := 0.05 + 0.12 * mov_piernas()
-	if defendiendo:
-		valor += 0.2
+	return ESQUIVA_BASE + ESQUIVA_PIERNAS * mov_piernas()
+
+
+## Brazo o pierna que aún se puede usar (no está inutilizado).
+func extremidad_util(zona_id: String) -> bool:
+	return movilidad(zona_id) >= INUTILIZADA / 100.0
+
+
+## Cuánto cubren la cabeza y el torso los brazos (bloqueando) y las piernas
+## (apartándose). Cada brazo o pierna inutilizado deja de cubrir.
+func cobertura() -> float:
+	var valor := 0.0
+	for lado in ["der", "izq"]:
+		if extremidad_util("brazo_" + lado):
+			valor += COBERTURA_POR_BRAZO
+		if extremidad_util("pierna_" + lado):
+			valor += COBERTURA_POR_PIERNA
 	return valor
 
 
-## Capacidad del brazo con que ataca (el mejor si pelea sin arma).
+## Cobertura con los dos brazos y las dos piernas útiles.
+static func cobertura_maxima() -> float:
+	return (COBERTURA_POR_BRAZO + COBERTURA_POR_PIERNA) * 2.0
+
+
+## Probabilidad de que un ataque a esa zona no llegue (ver "defensa" en DatosCuerpo.ZONAS).
+func defensa(zona_id: String) -> float:
+	var valor := 0.0
+	match String(DatosCuerpo.ZONAS[zona_id]["defensa"]):
+		"cubierta":
+			valor = esquiva() + cobertura()
+		"esquiva":
+			valor = esquiva()
+	if defendiendo:
+		valor += DEFENSA_GUARDIA
+	return valor
+
+
+## Capacidad del brazo con que ataca (el mejor si pelea sin arma, o las
+## piernas si pelea a patadas).
 func fuerza_ataque() -> float:
-	if desarmado:
-		return maxf(mov_brazo("der"), mov_brazo("izq"))
+	match arma_actual():
+		"punos":
+			return maxf(mov_brazo("der"), mov_brazo("izq"))
+		"patadas":
+			return mov_piernas()
 	return mov_brazo(lado_arma())
 
 

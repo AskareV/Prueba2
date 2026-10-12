@@ -3,16 +3,21 @@ extends RefCounted
 ## Armas provisionales de la demo (docs/diseno.md, punto 6). Todos los números
 ## son de prueba y se ajustarán cuando definamos armas y daño.
 
+## "danio_min" y "danio_max" son la fuerza del golpe; cada parte la convierte en
+## vida perdida y en desgaste de la parte (ver DatosCuerpo.PARTES). El rango es
+## estrecho para que el daño dependa poco de la suerte.
 ## "efectos" (opcional, 1 si falta) multiplica la probabilidad de aturdir y de
 ## desarmar: los puños aturden y desarman mucho menos que una maza.
 const ARMAS := {
-	"espada": {"nombre": "Espada", "tipo": "cortante", "danio_min": 12, "danio_max": 18, "precision": 0.85},
-	"maza": {"nombre": "Maza", "tipo": "contundente", "danio_min": 13, "danio_max": 20, "precision": 0.78},
-	"lanza": {"nombre": "Lanza", "tipo": "punzante", "danio_min": 10, "danio_max": 17, "precision": 0.9},
-	"punos": {"nombre": "Puños", "tipo": "contundente", "danio_min": 3, "danio_max": 6, "precision": 0.85, "efectos": 0.4},
+	"espada": {"nombre": "Espada", "tipo": "cortante", "danio_min": 14, "danio_max": 17, "precision": 0.85},
+	"maza": {"nombre": "Maza", "tipo": "contundente", "danio_min": 15, "danio_max": 19, "precision": 0.78},
+	"lanza": {"nombre": "Lanza", "tipo": "punzante", "danio_min": 12, "danio_max": 16, "precision": 0.9},
+	"punos": {"nombre": "Puños", "tipo": "contundente", "danio_min": 4, "danio_max": 5, "precision": 0.85, "efectos": 0.4},
+	"patadas": {"nombre": "Patadas", "tipo": "contundente", "danio_min": 9, "danio_max": 11, "precision": 0.8, "efectos": 0.5},
 }
 
-## Armas que se pueden elegir (los puños solo se usan al quedar desarmado).
+## Armas que se pueden elegir. Sin arma se pelea con los puños o, si ningún
+## brazo sirve, a patadas.
 const ELEGIBLES := ["espada", "maza", "lanza"]
 
 ## Color de cada tipo de arma en los botones.
@@ -30,8 +35,8 @@ const TIPOS := {
 		"herida": "Corte",
 		"descripcion": "Más daño en extremidades y cuello; menos en el cráneo.",
 		"exp_tamano": 1.0,
-		"prob_aturdir": 0.15,
-		"prob_desarmar": 0.35,
+		"prob_aturdir": 0.1,
+		"prob_desarmar": 0.25,
 		"afinidad": {
 			"craneo": 0.9, "cuello": 1.15, "brazo": 1.15, "antebrazo": 1.15, "mano": 1.15,
 			"muslo": 1.15, "espinilla": 1.15, "pie": 1.1,
@@ -42,17 +47,17 @@ const TIPOS := {
 		"herida": "Contusión",
 		"descripcion": "Más daño en el cráneo; aturde y desarma con más facilidad; puede fracturar.",
 		"exp_tamano": 1.0,
-		"prob_aturdir": 0.35,
-		"prob_desarmar": 0.6,
-		"afinidad": {"craneo": 1.25, "torax": 1.1, "hombro": 1.1, "cuello": 0.9, "ojo": 0.8},
+		"prob_aturdir": 0.15,
+		"prob_desarmar": 0.3,
+		"afinidad": {"craneo": 1.15, "torax": 1.1, "hombro": 1.1, "cuello": 0.9, "ojo": 0.8},
 	},
 	"punzante": {
 		"nombre": "Punzante",
 		"herida": "Perforación",
 		"descripcion": "Más precisa con partes pequeñas; más daño en tórax, abdomen y cuello.",
 		"exp_tamano": 0.6,
-		"prob_aturdir": 0.2,
-		"prob_desarmar": 0.3,
+		"prob_aturdir": 0.12,
+		"prob_desarmar": 0.12,
 		"afinidad": {
 			"craneo": 0.85, "ojo": 1.25, "cuello": 1.2, "torax": 1.2, "abdomen": 1.2,
 			"mano": 0.85, "pie": 0.85,

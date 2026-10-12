@@ -49,3 +49,12 @@ func prueba_textos_para_narrar() -> void:
 	verificar_igual(DatosCuerpo.posesivo("craneo", "tu"), "tu cráneo", "Posesivo")
 	verificar_igual(DatosCuerpo.base_de("antebrazo_izq"), "antebrazo", "Base sin lado")
 	verificar_igual(DatosCuerpo.base_de("abdomen"), "abdomen", "Base de parte central")
+
+
+func prueba_defensa_de_cada_zona() -> void:
+	var esperado := {
+		"cabeza": "cubierta", "torso": "cubierta", "brazo_der": "expuesta", "brazo_izq": "expuesta",
+		"pierna_der": "esquiva", "pierna_izq": "esquiva",
+	}
+	for zona_id in esperado:
+		verificar_igual(DatosCuerpo.ZONAS[zona_id].get("defensa", ""), esperado[zona_id], "Defensa de %s" % zona_id)

@@ -23,21 +23,42 @@ func prueba_recoge_el_arma_si_puede() -> void:
 		"Sin manos útiles no intenta recoger")
 
 
-func prueba_personalidades() -> void:
+## Cuenta cuántas veces, en 1000 decisiones, elige alguna de esas partes.
+func _veces(rival: Luchador, rey: Luchador, partes: Array, rng: RandomNumberGenerator) -> int:
+	var veces := 0
+	for i in 1000:
+		if partes.has(IAEnemigo.elegir_parte(rival, rey, rng)):
+			veces += 1
+	return veces
+
+
+func prueba_el_astuto_va_por_la_mano_del_arma() -> void:
 	var rng := rng_fijo(33)
+	var bandido := DatosRivales.crear_rival("bandido")
+	verificar(_veces(bandido, DatosRivales.crear_rey(true, "espada"), ["mano_der"], rng) > 600,
+		"Contra un diestro busca la mano derecha")
+	verificar(_veces(bandido, DatosRivales.crear_rey(false, "espada"), ["mano_izq"], rng) > 600,
+		"Contra un zurdo busca la mano izquierda")
+
+
+func prueba_con_la_guardia_cerrada_abre_el_brazo_del_arma() -> void:
+	var rng := rng_fijo(34)
+	for rival_id in ["orco", "lancero"]:
+		for diestro in [true, false]:
+			var rey := DatosRivales.crear_rey(diestro, "espada")
+			var brazo := "brazo_der" if diestro else "brazo_izq"
+			verificar(_veces(DatosRivales.crear_rival(rival_id), rey, DatosCuerpo.partes_de(brazo), rng) > 600,
+				"El %s primero ataca tu brazo del arma si tu cabeza y torso están cubiertos" % rival_id)
+
+
+func prueba_con_la_guardia_abierta_sigue_su_personalidad() -> void:
+	var rng := rng_fijo(35)
 	var rey := DatosRivales.crear_rey(true, "espada")
-	var conteo := {"bandido": 0, "orco": 0, "lancero": 0}
-	var objetivos := {"bandido": ["mano_der"], "orco": ["craneo"], "lancero": ["cuello", "ojo_der", "ojo_izq"]}
-	var normal := Luchador.new("Prueba", 100, true, "espada")
-	var conteo_normal := {"bandido": 0, "orco": 0, "lancero": 0}
-	for rival_id in conteo:
-		var rival := DatosRivales.crear_rival(rival_id)
-		normal.arma = rival.arma
-		for i in 2000:
-			if objetivos[rival_id].has(IAEnemigo.elegir_parte(rival, rey, rng)):
-				conteo[rival_id] += 1
-			if objetivos[rival_id].has(IAEnemigo.elegir_parte(normal, rey, rng)):
-				conteo_normal[rival_id] += 1
-	for rival_id in conteo:
-		verificar(conteo[rival_id] > conteo_normal[rival_id] * 1.5,
-			"%s prefiere sus partes favoritas (%d contra %d)" % [rival_id, conteo[rival_id], conteo_normal[rival_id]])
+	# Sin brazos útiles, la cabeza y el torso quedan expuestos.
+	rey.integridad["mano_der"] = 5.0
+	rey.integridad["mano_izq"] = 5.0
+	rey.desarmado = true
+	var orco := DatosRivales.crear_rival("orco")
+	var lancero := DatosRivales.crear_rival("lancero")
+	verificar(_veces(orco, rey, ["craneo"], rng) > 600, "El orco (bruto) va a tu cráneo")
+	verificar(_veces(lancero, rey, ["cuello", "ojo_der", "ojo_izq"], rng) > 600, "El lancero (preciso) va a tu cuello y ojos")

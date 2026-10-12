@@ -9,8 +9,13 @@ const ACIERTO_MAX := 0.95
 const UMBRAL_DESMAYO := 0.2
 ## Integridad bajo la cual un golpe contundente fractura un hueso.
 const UMBRAL_FRACTURA := 55.0
-const PENALIZACION_MANO_TORPE_PRECISION := 0.75
-const PENALIZACION_MANO_TORPE_DANIO := 0.8
+const PENALIZACION_MANO_TORPE_PRECISION := 0.85
+## Fuerza que conserva un golpe dado con el brazo del arma inutilizado; con el
+## brazo sano es 1. Un brazo herido pega más débil, pero no deja de pelear.
+const FUERZA_MINIMA := 0.75
+## Cuánto sube la probabilidad de desarmar según lo dañada que quede la mano.
+const DESARME_POR_HERIDA := 0.25
+const PENALIZACION_MANO_TORPE_DANIO := 0.85
 const REDUCCION_DANIO_EN_GUARDIA := 0.5
 
 
@@ -24,7 +29,7 @@ static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: Strin
 	prob *= 0.5 + 0.5 * atacante.vision()
 	if atacante.mano_torpe and not atacante.desarmado:
 		prob *= PENALIZACION_MANO_TORPE_PRECISION
-	prob *= 1.0 - defensor.esquiva()
+	prob *= 1.0 - defensor.defensa(DatosCuerpo.zona_de(parte_id))
 	return clampf(prob, ACIERTO_MIN, ACIERTO_MAX)
 
 
@@ -37,16 +42,41 @@ static func prob_acierto_zona(atacante: Luchador, defensor: Luchador, zona_id: S
 	return suma / partes.size()
 
 
-static func multiplicador_danio(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
+## Fuerza del golpe respecto de la del arma: tipo de arma contra esa parte,
+## estado del brazo que ataca y guardia del defensor.
+static func multiplicador_golpe(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
 	var arma: Dictionary = DatosArmas.arma(atacante.arma_actual())
-	var danio_parte: float = DatosCuerpo.PARTES[parte_id]["danio"]
-	var mult := danio_parte * DatosArmas.afinidad(arma["tipo"], parte_id)
-	mult *= 0.4 + 0.6 * atacante.fuerza_ataque()
+	var mult := DatosArmas.afinidad(arma["tipo"], parte_id)
+	mult *= FUERZA_MINIMA + (1.0 - FUERZA_MINIMA) * atacante.fuerza_ataque()
 	if atacante.mano_torpe and not atacante.desarmado:
 		mult *= PENALIZACION_MANO_TORPE_DANIO
 	if defensor.defendiendo:
 		mult *= REDUCCION_DANIO_EN_GUARDIA
 	return mult
+
+
+## Vida que quita cada punto de daño del arma en esa parte.
+static func multiplicador_danio(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
+	var danio_parte: float = DatosCuerpo.PARTES[parte_id]["danio"]
+	return danio_parte * multiplicador_golpe(atacante, defensor, parte_id)
+
+
+## Integridad que pierde la parte por cada punto de daño del arma.
+static func multiplicador_desgaste(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
+	var fragilidad: float = DatosCuerpo.PARTES[parte_id]["fragilidad"]
+	return fragilidad * multiplicador_golpe(atacante, defensor, parte_id)
+
+
+## Golpes acertados (de fuerza media) que faltan para inutilizar esa parte; 0 si
+## ya lo está.
+static func golpes_para_inutilizar(atacante: Luchador, defensor: Luchador, parte_id: String) -> int:
+	var restante: float = defensor.integridad[parte_id] - Luchador.INUTILIZADA
+	if restante < 0.0:
+		return 0
+	var arma: Dictionary = DatosArmas.arma(atacante.arma_actual())
+	var fuerza_media := (float(arma["danio_min"]) + float(arma["danio_max"])) / 2.0
+	var desgaste := maxf(fuerza_media * multiplicador_desgaste(atacante, defensor, parte_id), 0.01)
+	return floori(restante / desgaste) + 1
 
 
 ## Daño mínimo y máximo de un golpe acertado en esa parte.
@@ -59,7 +89,8 @@ static func rango_danio(atacante: Luchador, defensor: Luchador, parte_id: String
 
 
 ## Resuelve un ataque y aplica sus efectos al defensor. Devuelve qué pasó:
-## acierto, danio, herida, fractura, inutilizada, desarme, aturdido, desmayo.
+## acierto, danio, herida, fractura, inutilizada, expuesto (un brazo o pierna dejó
+## de cubrir la cabeza y el torso), desarme, aturdido, desmayo.
 static func resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: String,
 		rng: RandomNumberGenerator, turno: int) -> Dictionary:
 	var arma_id := atacante.arma_actual()
@@ -68,8 +99,8 @@ static func resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: St
 	var tipo: Dictionary = DatosArmas.tipo(tipo_id)
 	var resultado := {
 		"parte": parte_id, "arma": arma_id, "acierto": false, "danio": 0, "herida": "",
-		"fractura": false, "inutilizada": false, "desarme": false, "aturdido": false,
-		"desmayo": false,
+		"fractura": false, "inutilizada": false, "expuesto": false, "desarme": false,
+		"aturdido": false, "desmayo": false,
 	}
 	atacante.ataques += 1
 	if rng.randf() >= prob_acierto(atacante, defensor, parte_id):
@@ -79,9 +110,11 @@ static func resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: St
 	var danio_max: int = arma["danio_max"]
 	var base := rng.randi_range(danio_min, danio_max)
 	var danio := maxi(1, roundi(base * multiplicador_danio(atacante, defensor, parte_id)))
+	var desgaste := base * multiplicador_desgaste(atacante, defensor, parte_id)
 	var herida: String = tipo["herida"]
 	var podia_empunar := not defensor.desarmado and defensor.puede_empunar(defensor.lado_arma())
-	var antes := defensor.recibir_golpe(parte_id, danio, herida, turno)
+	var cobertura_antes := defensor.cobertura()
+	var antes := defensor.recibir_golpe(parte_id, danio, desgaste, herida, turno)
 	var despues: float = defensor.integridad[parte_id]
 	atacante.aciertos += 1
 	atacante.danio_causado += danio
@@ -103,9 +136,11 @@ static func resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: St
 	if defensor.conciencia() < UMBRAL_DESMAYO and not defensor.desmayado:
 		defensor.desmayado = true
 		resultado["desmayo"] = true
-	# Quien queda fuera de combate ya no suelta el arma ni queda aturdido.
+	# Quien queda fuera de combate ya no suelta el arma, ni queda aturdido o expuesto.
 	if defensor.fuera_de_combate():
 		return resultado
+
+	resultado["expuesto"] = defensor.cobertura() < cobertura_antes
 
 	var efectos: float = arma.get("efectos", 1.0)
 	resultado["desarme"] = _intentar_desarme(defensor, parte_id, tipo, despues, podia_empunar, efectos, rng)
@@ -128,7 +163,7 @@ static func _intentar_desarme(defensor: Luchador, parte_id: String, tipo: Dictio
 	var prob_base: float = tipo["prob_desarmar"] * efectos
 	var prob := 0.0
 	if parte_id == "mano_" + lado:
-		prob = prob_base + (1.0 - integridad_despues / 100.0) * 0.4
+		prob = prob_base + (1.0 - integridad_despues / 100.0) * DESARME_POR_HERIDA
 	elif parte_id == "antebrazo_" + lado:
 		prob = prob_base * 0.4
 	# Si el brazo del arma ya no puede sostenerla (por un golpe en ese brazo o en el

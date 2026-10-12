@@ -8,6 +8,7 @@ const ARCHIVOS := [
 	"res://pruebas/prueba_luchador.gd",
 	"res://pruebas/prueba_motor.gd",
 	"res://pruebas/prueba_ia.gd",
+	"res://pruebas/prueba_equilibrio.gd",
 ]
 
 

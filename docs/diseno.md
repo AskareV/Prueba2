@@ -138,7 +138,7 @@ Reglas **provisionales** para probar el sistema de cuerpo. Se ajustarán cuando
 definamos armas y daño.
 
 - **Vida:** el héroe tiene **100**. Rivales de la demo: Bandido 80, Orco 110 y
-  Lancero 90.
+  Lancero 100.
 - **Tres tipos de arma:**
 
 | Tipo | Arma de la demo | Característica provisional |
@@ -147,30 +147,91 @@ definamos armas y daño.
 | Contundente | Maza | Más daño en el cráneo; aturde y desarma con más facilidad; puede fracturar |
 | Punzante | Lanza | Más precisa con partes pequeñas (ojos, cuello, manos); más daño en tórax y abdomen |
 
-- **Acciones:** Atacar (zona → parte), Defender (recibe la mitad de daño y esquiva
-  más), cambiar o recoger el arma, y Huir.
-- **Al apuntar:** cada botón muestra la probabilidad de acierto (y el daño posible en
-  las partes). Al elegir una zona, una **lupa** la muestra ampliada para tocar partes
-  pequeñas como ojos, manos o pies.
-- **Cráneo y cuello** son pequeños y difíciles de acertar. Cada arma tiene su punto
-  fuerte: la espada, el torso y las extremidades; la maza, el cráneo; la lanza, el
-  cuello. Así ninguna parte gana siempre (comprobado con miles de combates simulados).
-- **Integridad por parte:** cada golpe resta vida y daña la parte golpeada. Según
-  su integridad, la parte está sana, levemente herida, herida, grave o inutilizada.
-- **Efectos provisionales de las funciones (B.2):**
-  - Visión baja: menos precisión.
-  - Movimiento de piernas bajo: esquiva menos y le cuesta huir.
-  - Movimiento del brazo del arma bajo: pega más débil.
-  - Golpe en la mano del arma: puede soltarla. Si el brazo del arma ya no puede
-    sostenerla (también por una lesión en el cuello), la suelta siempre. Si la mano
-    dominante queda inutilizada, recoge el arma con la otra mano ("mano torpe":
-    menos precisión y daño).
-  - Sin arma se pelea con los puños, que aturden y desarman mucho menos.
-  - Golpe en el cráneo: puede aturdir (pierde un turno). Si la conciencia baja
-    demasiado, se desmaya y pierde el combate.
+- **Acciones:** Atacar (zona → parte), Defender (se defiende mejor y recibe la
+  mitad de daño), cambiar o recoger el arma, y Huir.
+- **Al apuntar:** cada botón muestra la probabilidad de acierto y, en las partes,
+  el daño posible. En brazos y piernas también muestra cuántos golpes faltan para
+  inutilizarlos. Al elegir una zona, una **lupa** la muestra ampliada para tocar
+  partes pequeñas como ojos, manos o pies.
+
+### 6.1 Acierto y defensa: combate táctico
+
+La idea: los brazos protegen el cuerpo. Primero se debilita la defensa del rival
+y después se va a la cabeza o el torso.
+
+| Zona | Cómo se defiende | Acierto con espada, rival sano |
+|---|---|---|
+| Brazos | Van delante para bloquear: no esquivan | 53% (mano) a 72% |
+| Piernas | Esquivan (igual que antes) | 42% (pie) a 60% (muslo) |
+| Torso | Esquiva y lo **cubren** los brazos y las piernas | 40–42% |
+| Cabeza | Igual que el torso; además es pequeña | 13% (ojos) a 28% (cráneo) |
+
+- **Cobertura:** cada brazo útil cubre la cabeza y el torso (14%) y cada pierna
+  útil también (3%). Un brazo o una pierna **inutilizado** deja de cubrir, así
+  que el acierto en cabeza y torso **sube**. Ejemplo: inutilizar el antebrazo del
+  arma del orco sube el acierto en su torso de 42% a 54%.
+- Las piernas además esquivan: si están heridas, todo el cuerpo es más fácil de
+  acertar y cuesta huir.
+- En guardia (Defender), toda zona es más difícil de alcanzar.
+
+### 6.2 Daño: combates más largos
+
+- Cada arma tiene una **fuerza de golpe** con un rango estrecho (espada 14–17,
+  maza 15–19, lanza 12–16), para que el daño dependa poco de la suerte.
+- Cada parte convierte esa fuerza, por separado, en:
+  - **vida perdida:** poca en brazos y piernas, más en torso y cabeza;
+  - **desgaste de la parte:** brazos y piernas se inutilizan en 4 a 6 golpes.
+- Así atacar los brazos tiene sentido aunque quiten poca vida: abren la defensa y
+  debilitan al rival.
+- Los combates duran unos **20–27 turnos** (antes, unos 11).
+
+### 6.3 Efectos provisionales de las funciones (B.2)
+
+- Visión baja: menos precisión.
+- Movimiento de piernas bajo: esquiva menos y le cuesta huir.
+- Movimiento del brazo del arma bajo: pega más débil (con el brazo inutilizado, un
+  25% menos).
+- Golpe en la mano del arma: puede soltarla. Si el brazo del arma ya no puede
+  sostenerla (también por una lesión en el cuello), la suelta siempre. Si la mano
+  dominante queda inutilizada, recoge el arma con la otra mano ("mano torpe":
+  menos precisión y daño).
+- Sin arma se pelea con los puños, que aturden y desarman mucho menos. Sin
+  brazos útiles, a **patadas** (dependen de las piernas).
+- Golpe en el cráneo: puede aturdir (pierde un turno). Si la conciencia baja
+  demasiado, se desmaya y pierde el combate.
 - Las heridas se registran por tipo (corte, contusión, perforación, fractura) para
   conectarlas después con el sangrado, el dolor y las infecciones.
-- **Dificultad de los rivales** (simulada): bandido fácil, lancero medio, orco difícil.
+
+### 6.4 Rivales
+
+Cada rival sigue un plan según su personalidad y a veces improvisa (25%):
+
+- **Bandido (astuto):** va por la mano de tu arma para desarmarte.
+- **Orco (bruto)** y **Lancero (preciso):** si tu cabeza y tu torso están bien
+  cubiertos (menos de 40% de acierto), primero atacan tu brazo del arma para
+  abrir tu guardia. Después, el orco va a tu cráneo y el lancero a tu cuello y
+  tus ojos.
+
+### 6.5 Equilibrio (simulado)
+
+Victorias del rey en miles de combates simulados, promedio de las tres armas,
+según cómo elige a qué atacar:
+
+| Cómo ataca el rey | Bandido | Lancero | Orco |
+|---|---|---|---|
+| Inutiliza el brazo del arma y luego va al cuerpo | 96% | 89% | 76% |
+| Inutiliza los dos brazos y luego va al cuerpo | 94% | 74% | 76% |
+| La parte del torso que más daña | 83% | 51% | 37% |
+| Como la IA de los rivales | 80% | 50% | 39% |
+| Siempre al abdomen | 70% | 34% | 21% |
+| Primero las piernas | 58% | 20% | 15% |
+| Siempre al cráneo | 43% | 19% | 18% |
+| Siempre al cuello | 33% | 12% | 8% |
+| Partes al azar | 19% | 3% | 1% |
+
+- Inutilizar primero el brazo del arma rinde mucho más que ir directo al
+  abdomen, pero ninguna parte sola gana siempre.
+- Dificultad de los rivales: bandido fácil, lancero medio, orco difícil.
 
 ## 7. Pendientes
 

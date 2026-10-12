@@ -19,11 +19,15 @@ Cada APK nuevo se instala encima del anterior, sin desinstalar.
 2. **Combate:** tu rey a la izquierda y el rival a la derecha. En tu turno:
    - **Atacar:** eliges una de las 6 zonas y luego una de sus partes; la lupa
      amplía la zona para tocar partes pequeñas. Cada botón muestra la
-     probabilidad de acierto y el daño posible.
-   - **Defender:** esquivas más y recibes la mitad de daño hasta tu próximo turno.
+     probabilidad de acierto y el daño posible; en brazos y piernas, también
+     cuántos golpes faltan para inutilizarlos.
+   - **Defender:** te defiendes mejor y recibes la mitad de daño hasta tu próximo turno.
    - **Cambiar o recoger el arma**, y **Huir**.
-   - **Estado:** funciones de supervivencia y partes heridas de ambos.
-3. Las heridas cambian el color de cada parte (sin gore) y afectan sus funciones:
+   - **Estado:** funciones de supervivencia, cobertura y partes heridas de ambos.
+3. **Táctica:** los brazos son fáciles de acertar pero quitan poca vida; la
+   cabeza y el torso quitan más, pero los cubren los brazos y las piernas. Cada
+   brazo o pierna que inutilizas deja más expuestos la cabeza y el torso.
+4. Las heridas cambian el color de cada parte (sin gore) y afectan sus funciones:
    sin ojos se apunta peor, con la mano del arma herida se puede soltar, un golpe
    en el cráneo puede aturdir o desmayar, etc. Las reglas son **provisionales**.
 
@@ -52,7 +56,7 @@ Cada APK nuevo se instala encima del anterior, sin desinstalar.
 | `datos_rivales.gd` | Rivales de la demo y aspecto del rey |
 | `luchador.gd` | Estado de un combatiente: vida, integridad de cada parte, lateralidad |
 | `motor_combate.gd` | Reglas: acierto, daño, fracturas, desarme, aturdimiento, desmayo |
-| `ia_enemigo.gd` | Cómo deciden los rivales según su personalidad |
+| `ia_enemigo.gd` | Cómo deciden los rivales: el plan de su personalidad, y a veces improvisan |
 | `figura.gd` / `plantilla_humanoide.gd` | Dibujo del cuerpo por partes, heridas y animaciones |
 | `combate.gd` | Flujo de turnos e interfaz del combate |
 
@@ -60,10 +64,14 @@ Cada APK nuevo se instala encima del anterior, sin desinstalar.
 
 ```sh
 godot --headless --import
-godot --headless --script res://pruebas/ejecutar.gd            # pruebas de las reglas
+godot --headless --script res://pruebas/ejecutar.gd            # pruebas de las reglas y del equilibrio
 godot --headless --script res://pruebas/partida_automatica.gd  # combates completos pulsando botones
-godot --headless --script res://pruebas/simular.gd             # equilibrio: miles de combates
+godot --headless --script res://pruebas/simular.gd             # equilibrio: miles de combates por estrategia
 ```
+
+El simulador compara estrategias del rey (por ejemplo, ir directo al abdomen o
+inutilizar primero el brazo del arma) contra cada rival. Se pueden elegir algunas:
+`godot --headless --script res://pruebas/simular.gd -- brazo_arma abdomen arma=maza combates=200`.
 
 ## Compilación automática
 
