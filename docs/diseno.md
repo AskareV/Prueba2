@@ -183,7 +183,7 @@ y después se va a la cabeza o el torso.
   - **desgaste de la parte:** brazos y piernas se inutilizan en 4 a 6 golpes.
 - Así atacar los brazos tiene sentido aunque quiten poca vida: abren la defensa y
   debilitan al rival.
-- Los combates duran unos **20–27 turnos** (antes, unos 11).
+- Los combates duran unos **20 a 28 turnos** (antes, unos 11).
 
 ### 6.3 Efectos provisionales de las funciones (B.2)
 
@@ -219,15 +219,15 @@ según cómo elige a qué atacar:
 
 | Cómo ataca el rey | Bandido | Lancero | Orco |
 |---|---|---|---|
-| Inutiliza el brazo del arma y luego va al cuerpo | 96% | 89% | 76% |
-| Inutiliza los dos brazos y luego va al cuerpo | 94% | 74% | 76% |
-| La parte del torso que más daña | 83% | 51% | 37% |
-| Como la IA de los rivales | 80% | 50% | 39% |
-| Siempre al abdomen | 70% | 34% | 21% |
-| Primero las piernas | 58% | 20% | 15% |
-| Siempre al cráneo | 43% | 19% | 18% |
-| Siempre al cuello | 33% | 12% | 8% |
-| Partes al azar | 19% | 3% | 1% |
+| Inutiliza el brazo del arma y luego va al cuerpo | 96% | 88% | 72% |
+| Inutiliza los dos brazos y luego va al cuerpo | 94% | 76% | 72% |
+| La parte del torso que más daña | 82% | 53% | 39% |
+| Como la IA de los rivales | 81% | 52% | 39% |
+| Siempre al abdomen | 70% | 33% | 23% |
+| Primero las piernas | 55% | 20% | 16% |
+| Siempre al cráneo | 40% | 18% | 17% |
+| Siempre al cuello | 37% | 15% | 7% |
+| Partes al azar | 23% | 2% | 1% |
 
 - Inutilizar primero el brazo del arma rinde mucho más que ir directo al
   abdomen, pero ninguna parte sola gana siempre.
