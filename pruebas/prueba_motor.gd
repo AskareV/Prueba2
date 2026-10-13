@@ -321,26 +321,3 @@ func prueba_golpes_mostrados_coinciden_con_los_reales() -> void:
 					verificar(reales >= mostrado.x and reales <= mostrado.y,
 						"%s, %s, %s: muestra %d–%d golpes y hicieron falta %d" % [arma_id, caso, parte_id, mostrado.x, mostrado.y, reales])
 
-
-func prueba_punteria_sube_al_fallar_y_se_pierde_al_acertar() -> void:
-	var rng := rng_fijo(61)
-	var rey := DatosRivales.crear_rey(true, "espada")
-	var orco := DatosRivales.crear_rival("orco")
-	orco.vida = 100000
-	var base := MotorCombate.prob_acierto(rey, orco, "ojo_izq")
-	var vio_fallo := false
-	var vio_acierto_tras_fallo := false
-	for intento in 200:
-		var antes := rey.fallos_seguidos
-		var r := MotorCombate.resolver_ataque(rey, orco, "ojo_izq", rng, intento)
-		if not r["acierto"]:
-			verificar_igual(rey.fallos_seguidos, antes + 1, "Cada fallo suma puntería")
-			vio_fallo = true
-		else:
-			verificar_igual(rey.fallos_seguidos, 0, "Al acertar se pierde la puntería")
-			vio_acierto_tras_fallo = vio_acierto_tras_fallo or antes > 0
-		orco.integridad["ojo_izq"] = 100.0
-	verificar(vio_fallo and vio_acierto_tras_fallo, "Hubo fallos y aciertos tras fallar")
-	rey.fallos_seguidos = 2
-	verificar_cerca(MotorCombate.prob_acierto(rey, orco, "ojo_izq"), base + 2.0 * MotorCombate.PUNTERIA_POR_FALLO,
-		"Dos fallos seguidos suman dos veces la puntería")

@@ -17,8 +17,6 @@ const FUERZA_MINIMA := 0.75
 const DESARME_POR_HERIDA := 0.25
 const PENALIZACION_MANO_TORPE_DANIO := 0.85
 const REDUCCION_DANIO_EN_GUARDIA := 0.5
-## Puntería: acierto extra por cada ataque fallado seguido (se pierde al acertar).
-const PUNTERIA_POR_FALLO := 0.1
 
 
 static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
@@ -32,7 +30,6 @@ static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: Strin
 	if atacante.mano_torpe and not atacante.desarmado:
 		prob *= PENALIZACION_MANO_TORPE_PRECISION
 	prob *= 1.0 - defensor.defensa(DatosCuerpo.zona_de(parte_id))
-	prob += PUNTERIA_POR_FALLO * atacante.fallos_seguidos
 	return clampf(prob, ACIERTO_MIN, ACIERTO_MAX)
 
 
@@ -125,9 +122,7 @@ static func resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: St
 	}
 	atacante.ataques += 1
 	if rng.randf() >= prob_acierto(atacante, defensor, parte_id):
-		atacante.fallos_seguidos += 1
 		return resultado
-	atacante.fallos_seguidos = 0
 
 	var danio_min: int = arma["danio_min"]
 	var danio_max: int = arma["danio_max"]

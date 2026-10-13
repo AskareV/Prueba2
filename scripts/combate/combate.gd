@@ -859,10 +859,9 @@ func _mostrar_estado() -> void:
 	fila.add_child(_columna_estado(_enemigo, _enemigo.nombre))
 	var reglas := _etiqueta_simple("Reglas provisionales: cada brazo y pierna útil cubre la cabeza y el torso "
 		+ "(cobertura); al inutilizarlo es más fácil acertarles. Brazos y piernas quitan poca vida pero se "
-		+ "inutilizan rápido; sin brazos útiles se pelea a patadas. Cada fallo seguido da +10% de puntería al "
-		+ "siguiente ataque. La visión afecta la precisión; las piernas, la esquiva y la huida; el brazo del "
-		+ "arma, el daño. La mano del arma puede soltarla; el cráneo puede aturdir o desmayar. El sangrado, el "
-		+ "dolor y las infecciones vendrán después.", 16, Estilo.TEXTO_SUAVE)
+		+ "inutilizan rápido; sin brazos útiles se pelea a patadas. La visión afecta la precisión; las piernas, "
+		+ "la esquiva y la huida; el brazo del arma, el daño. La mano del arma puede soltarla; el cráneo puede "
+		+ "aturdir o desmayar. El sangrado, el dolor y las infecciones vendrán después.", 16, Estilo.TEXTO_SUAVE)
 	reglas.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	reglas.custom_minimum_size = Vector2(1100, 0)
 	columna.add_child(reglas)

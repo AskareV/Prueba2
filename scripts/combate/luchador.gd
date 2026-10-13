@@ -38,8 +38,6 @@ var aturdido := false
 var defendiendo := false
 ## Inconsciente: queda fuera de combate.
 var desmayado := false
-## Ataques fallados seguidos: cada uno afina la puntería del siguiente.
-var fallos_seguidos := 0
 
 ## parte -> integridad (0 a 100).
 var integridad: Dictionary = {}

@@ -173,9 +173,6 @@ y después se va a la cabeza o el torso.
 - Las piernas además esquivan: si están heridas, el torso, la cabeza y las
   piernas son más fáciles de acertar (los brazos no esquivan) y cuesta huir.
 - En guardia (Defender), toda zona es más difícil de alcanzar.
-- **Puntería:** cada ataque fallado seguido da **+10%** de acierto al siguiente;
-  se pierde al acertar. Vale para todos y se ve en los botones y en el panel
-  ("Puntería +10%"). Así casi no hay rachas largas de fallos.
 
 ### 6.2 Daño: combates más largos
 
@@ -189,7 +186,7 @@ y después se va a la cabeza o el torso.
     cuello.
 - Así atacar los brazos tiene sentido aunque quiten poca vida: abren la defensa y
   debilitan al rival.
-- Los combates duran unos **18 a 24 turnos** (antes, unos 11).
+- Los combates duran unos **21 a 26 turnos** (antes, unos 11).
 
 ### 6.3 Efectos provisionales de las funciones (B.2)
 
@@ -224,23 +221,15 @@ según cómo elige a qué atacar:
 
 | Cómo ataca el rey | Bandido | Lancero | Orco |
 |---|---|---|---|
-| Inutiliza el brazo del arma y luego va al cuerpo | 98% | 93% | 78% |
-| Inutiliza los dos brazos y luego va al cuerpo | 95% | 87% | 77% |
-| La parte del torso que más daña | 90% | 68% | 51% |
-| Como la IA de los rivales | 85% | 56% | 39% |
-| Siempre al abdomen | 81% | 52% | 35% |
-| Siempre al cráneo | 62% | 41% | 38% |
-| Siempre al cuello | 56% | 34% | 22% |
-| Primero las piernas | 32% | 10% | 8% |
+| Inutiliza el brazo del arma y luego va al cuerpo | 97% | 91% | 75% |
+| Inutiliza los dos brazos y luego va al cuerpo | 94% | 86% | 79% |
+| La parte del torso que más daña | 79% | 56% | 36% |
+| Como la IA de los rivales | 75% | 48% | 29% |
+| Siempre al abdomen | 65% | 40% | 21% |
+| Siempre al cráneo | 36% | 22% | 20% |
+| Primero las piernas | 33% | 12% | 7% |
+| Siempre al cuello | 28% | 14% | 6% |
 | Partes al azar | 17% | 4% | 1% |
-
-Combates con una racha de 4 o más fallos seguidos del rey:
-
-| Cómo ataca el rey | Sin puntería | Con puntería |
-|---|---|---|
-| Inutiliza el brazo del arma y luego va al cuerpo | 41% | 8% |
-| Como la IA de los rivales | 53% | 16% |
-| Siempre al abdomen | 79% | 21% |
 
 - Inutilizar primero el brazo del arma rinde mucho más que ir directo al
   abdomen, y contra cada rival atacar siempre la misma parte rinde menos que
