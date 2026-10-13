@@ -3,6 +3,8 @@ extends RefCounted
 ## de equilibrio. El rival lo maneja la IA; el rey sigue una estrategia.
 
 const MAX_TURNOS := 200
+## Fallos seguidos que ya se sienten como mala suerte.
+const RACHA_LARGA := 4
 ## Estrategias del rey:
 ## - ia: la misma IA que usan los rivales.
 ## - azar: cualquier parte, sin pensar.
@@ -16,21 +18,25 @@ const ESTRATEGIAS := ["ia", "azar", "abdomen", "torso", "craneo", "cuello", "bra
 
 
 ## Juega un combate completo. Devuelve victorias (1 o 0), turnos, desmayos,
-## vida final del rey y ataques y aciertos de cada uno.
+## vida final del rey, ataques y aciertos de cada uno, y si alguno tuvo una racha
+## de RACHA_LARGA fallos seguidos (rachas_rey, rachas_rival: 1 o 0).
 static func combatir(arma_id: String, rival_id: String, estrategia: String, diestro: bool,
 		rng: RandomNumberGenerator) -> Dictionary:
 	var rey := DatosRivales.crear_rey(diestro, arma_id)
 	var rival := DatosRivales.crear_rival(rival_id)
 	var turno := 0
+	var racha := {"rey": [0, 0], "rival": [0, 0]}
 	while turno < MAX_TURNOS:
 		turno += 1
-		actuar(rey, rival, rng, turno, estrategia)
+		_actuar_contando(rey, rival, rng, turno, estrategia, racha["rey"])
 		if rival.fuera_de_combate():
 			break
-		actuar(rival, rey, rng, turno, "ia")
+		_actuar_contando(rival, rey, rng, turno, "ia", racha["rival"])
 		if rey.fuera_de_combate():
 			break
 	return {
+		"rachas_rey": 1 if racha["rey"][1] >= RACHA_LARGA else 0,
+		"rachas_rival": 1 if racha["rival"][1] >= RACHA_LARGA else 0,
 		"victorias": 1 if rival.fuera_de_combate() and not rey.fuera_de_combate() else 0,
 		"turnos": turno,
 		"desmayos": 1 if rey.desmayado or rival.desmayado else 0,
@@ -38,6 +44,21 @@ static func combatir(arma_id: String, rival_id: String, estrategia: String, dies
 		"ataques_rey": rey.ataques, "aciertos_rey": rey.aciertos,
 		"ataques_rival": rival.ataques, "aciertos_rival": rival.aciertos,
 	}
+
+
+## Actúa y lleva la cuenta de fallos seguidos: racha = [actual, máxima].
+static func _actuar_contando(yo: Luchador, otro: Luchador, rng: RandomNumberGenerator, turno: int,
+		estrategia: String, racha: Array) -> void:
+	var ataques := yo.ataques
+	var aciertos := yo.aciertos
+	actuar(yo, otro, rng, turno, estrategia)
+	if yo.ataques == ataques:
+		return
+	if yo.aciertos > aciertos:
+		racha[0] = 0
+	else:
+		racha[0] += 1
+		racha[1] = maxi(racha[1], racha[0])
 
 
 ## Hace actuar a un luchador como en la escena de combate.

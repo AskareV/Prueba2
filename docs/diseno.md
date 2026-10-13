@@ -137,8 +137,8 @@ Descartados: sistema digestivo, habla y audición.
 Reglas **provisionales** para probar el sistema de cuerpo. Se ajustarán cuando
 definamos armas y daño.
 
-- **Vida:** el héroe tiene **100**. Rivales de la demo: Bandido 80, Orco 110 y
-  Lancero 100.
+- **Vida:** el héroe tiene **100**. Rivales de la demo: Bandido 80, Orco 105 y
+  Lancero 95.
 - **Tres tipos de arma:**
 
 | Tipo | Arma de la demo | Característica provisional |
@@ -161,18 +161,21 @@ y después se va a la cabeza o el torso.
 
 | Zona | Cómo se defiende | Acierto con espada, rival sano |
 |---|---|---|
-| Brazos | Van delante para bloquear: no esquivan | 53% (mano) a 72% |
+| Brazos | Van delante para bloquear: no esquivan | 64% (mano) a 85% |
 | Piernas | Esquivan (igual que antes) | 42% (pie) a 60% (muslo) |
-| Torso | Esquiva y lo **cubren** los brazos y las piernas | 40–42% |
-| Cabeza | Igual que el torso; además es pequeña | 13% (ojos) a 28% (cráneo) |
+| Torso | Esquiva y lo **cubren** los brazos y las piernas | 46–48% |
+| Cabeza | Igual que el torso; además es pequeña | 16% (ojos) a 33% (cráneo) |
 
-- **Cobertura:** cada brazo útil cubre la cabeza y el torso (14%) y cada pierna
+- **Cobertura:** cada brazo útil cubre la cabeza y el torso (10%) y cada pierna
   útil también (3%). Un brazo o una pierna **inutilizado** deja de cubrir, así
   que el acierto en cabeza y torso **sube**. Ejemplo: inutilizar el antebrazo del
-  arma del orco sube el acierto en su torso de 42% a 54%.
-- Las piernas además esquivan: si están heridas, todo el cuerpo es más fácil de
-  acertar y cuesta huir.
+  arma del orco sube el acierto en su tórax de 48% a 57%.
+- Las piernas además esquivan: si están heridas, el torso, la cabeza y las
+  piernas son más fáciles de acertar (los brazos no esquivan) y cuesta huir.
 - En guardia (Defender), toda zona es más difícil de alcanzar.
+- **Puntería:** cada ataque fallado seguido da **+10%** de acierto al siguiente;
+  se pierde al acertar. Vale para todos y se ve en los botones y en el panel
+  ("Puntería +10%"). Así casi no hay rachas largas de fallos.
 
 ### 6.2 Daño: combates más largos
 
@@ -180,10 +183,13 @@ y después se va a la cabeza o el torso.
   maza 15–19, lanza 12–16), para que el daño dependa poco de la suerte.
 - Cada parte convierte esa fuerza, por separado, en:
   - **vida perdida:** poca en brazos y piernas, más en torso y cabeza;
-  - **desgaste de la parte:** brazos y piernas se inutilizan en 4 a 6 golpes.
+  - **desgaste de la parte:** brazos y piernas se inutilizan en 3 a 7 golpes,
+    según el arma (la lanza tarda más). El botón muestra cuántos faltan, por
+    ejemplo "Inutilizar: 4–5 golpes", contando la guardia y las lesiones de
+    cuello.
 - Así atacar los brazos tiene sentido aunque quiten poca vida: abren la defensa y
   debilitan al rival.
-- Los combates duran unos **20 a 28 turnos** (antes, unos 11).
+- Los combates duran unos **18 a 24 turnos** (antes, unos 11).
 
 ### 6.3 Efectos provisionales de las funciones (B.2)
 
@@ -207,10 +213,9 @@ y después se va a la cabeza o el torso.
 Cada rival sigue un plan según su personalidad y a veces improvisa (25%):
 
 - **Bandido (astuto):** va por la mano de tu arma para desarmarte.
-- **Orco (bruto)** y **Lancero (preciso):** si tu cabeza y tu torso están bien
-  cubiertos (menos de 40% de acierto), primero atacan tu brazo del arma para
-  abrir tu guardia. Después, el orco va a tu cráneo y el lancero a tu cuello y
-  tus ojos.
+- **Orco (bruto):** quiere tu cráneo. Si su acierto ahí es menor de 40%,
+  primero ataca tu brazo del arma para abrir tu guardia.
+- **Lancero (preciso):** igual, pero quiere tu cuello.
 
 ### 6.5 Equilibrio (simulado)
 
@@ -219,18 +224,27 @@ según cómo elige a qué atacar:
 
 | Cómo ataca el rey | Bandido | Lancero | Orco |
 |---|---|---|---|
-| Inutiliza el brazo del arma y luego va al cuerpo | 96% | 88% | 72% |
-| Inutiliza los dos brazos y luego va al cuerpo | 94% | 76% | 72% |
-| La parte del torso que más daña | 82% | 53% | 39% |
-| Como la IA de los rivales | 81% | 52% | 39% |
-| Siempre al abdomen | 70% | 33% | 23% |
-| Primero las piernas | 55% | 20% | 16% |
-| Siempre al cráneo | 40% | 18% | 17% |
-| Siempre al cuello | 37% | 15% | 7% |
-| Partes al azar | 23% | 2% | 1% |
+| Inutiliza el brazo del arma y luego va al cuerpo | 98% | 93% | 78% |
+| Inutiliza los dos brazos y luego va al cuerpo | 95% | 87% | 77% |
+| La parte del torso que más daña | 90% | 68% | 51% |
+| Como la IA de los rivales | 85% | 56% | 39% |
+| Siempre al abdomen | 81% | 52% | 35% |
+| Siempre al cráneo | 62% | 41% | 38% |
+| Siempre al cuello | 56% | 34% | 22% |
+| Primero las piernas | 32% | 10% | 8% |
+| Partes al azar | 17% | 4% | 1% |
+
+Combates con una racha de 4 o más fallos seguidos del rey:
+
+| Cómo ataca el rey | Sin puntería | Con puntería |
+|---|---|---|
+| Inutiliza el brazo del arma y luego va al cuerpo | 41% | 8% |
+| Como la IA de los rivales | 53% | 16% |
+| Siempre al abdomen | 79% | 21% |
 
 - Inutilizar primero el brazo del arma rinde mucho más que ir directo al
-  abdomen, pero ninguna parte sola gana siempre.
+  abdomen, y contra cada rival atacar siempre la misma parte rinde menos que
+  abrir la guardia.
 - Dificultad de los rivales: bandido fácil, lancero medio, orco difícil.
 
 ## 7. Pendientes

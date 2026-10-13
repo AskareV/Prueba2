@@ -27,7 +27,7 @@ const RIVALES := {
 		},
 	},
 	"orco": {
-		"nombre": "Orco", "articulo": "el", "vida": 110, "diestro": false, "arma": "maza",
+		"nombre": "Orco", "articulo": "el", "vida": 105, "diestro": false, "arma": "maza",
 		"personalidad": "bruto",
 		"aspecto": {
 			"piel": Color("#6aa84f"), "torso": Color("#6b4423"), "hombros": Color("#8a8f99"),
@@ -38,7 +38,7 @@ const RIVALES := {
 		},
 	},
 	"lancero": {
-		"nombre": "Lancero", "articulo": "el", "vida": 100, "diestro": true, "arma": "lanza",
+		"nombre": "Lancero", "articulo": "el", "vida": 95, "diestro": true, "arma": "lanza",
 		"personalidad": "preciso",
 		"aspecto": {
 			"piel": Color("#c68642"), "torso": Color("#2c6e6a"), "hombros": Color("#b0b7c3"),

@@ -15,6 +15,8 @@ const ARMA := 4
 const FIN := 5
 
 var _rng := RandomNumberGenerator.new()
+## Parte que el bot planea atacar (elegida como la IA de los rivales).
+var _plan := ""
 
 
 func _initialize() -> void:
@@ -39,7 +41,10 @@ func _initialize() -> void:
 				else:
 					print("  NO TERMINÓ: %s con %s" % [rival_id, arma_id])
 	print("Combates terminados: %d de %d %s" % [terminados, total, str(resultados)])
-	quit(0 if terminados == total else 1)
+	var victorias: int = resultados.get("¡Victoria!", 0)
+	if victorias == 0:
+		print("  NINGUNA VICTORIA: el final con victoria no se probó")
+	quit(0 if terminados == total and victorias > 0 else 1)
 
 
 ## Devuelve el título del resultado ("¡Victoria!", "Derrota", "Escapaste") o "" si no terminó.
@@ -79,9 +84,11 @@ func _elegir_accion(escena: Control) -> void:
 		escena.call("_mostrar_estado")
 		escena.call("_cerrar_ventana")
 		return
+	var boton_arma: Button = escena.get("_boton_arma")
 	if tirada < 0.1:
 		escena.call("_al_pulsar_defender")
-	elif tirada < 0.15 or jugador.desarmado:
+	elif (tirada < 0.15 or jugador.desarmado) and not boton_arma.disabled:
+		# Desarmado y sin manos útiles el botón está deshabilitado: ataca (puños o patadas).
 		escena.call("_al_pulsar_arma")
 	elif tirada < 0.17:
 		escena.call("_al_pulsar_huir")
@@ -99,9 +106,14 @@ func _elegir_arma(escena: Control) -> void:
 	escena.call("_al_elegir_arma", otras[_rng.randi() % otras.size()])
 
 
+## Casi siempre ataca con un plan, como la IA de los rivales; a veces al azar.
 func _elegir_zona(escena: Control) -> void:
 	var zonas := DatosCuerpo.ZONAS.keys()
 	var zona_id: String = zonas[_rng.randi() % zonas.size()]
+	_plan = ""
+	if _rng.randf() < 0.75:
+		_plan = IAEnemigo.elegir_parte(escena.get("_jugador"), escena.get("_enemigo"), _rng)
+		zona_id = DatosCuerpo.zona_de(_plan)
 	if _rng.randf() < 0.1:
 		escena.call("_volver_atras")
 		return
@@ -112,7 +124,7 @@ func _elegir_zona(escena: Control) -> void:
 func _elegir_parte(escena: Control) -> void:
 	var zona_id: String = escena.get("_zona")
 	var partes := DatosCuerpo.partes_de(zona_id)
-	var parte_id: String = partes[_rng.randi() % partes.size()]
+	var parte_id: String = _plan if partes.has(_plan) else partes[_rng.randi() % partes.size()]
 	if _rng.randf() < 0.5:
 		escena.call("_al_elegir_parte", parte_id)
 		return

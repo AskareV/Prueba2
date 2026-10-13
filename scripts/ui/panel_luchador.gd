@@ -9,6 +9,8 @@ const COLORES_ESTADO := {
 	"Mano torpe": Color("#8e24aa"),
 	"En guardia": Color("#1e88e5"),
 }
+## Chip de la puntería ganada al fallar (ver MotorCombate.PUNTERIA_POR_FALLO).
+const COLOR_PUNTERIA := Color("#00897b")
 
 var _luchador: Luchador
 var _titulo: String
@@ -69,6 +71,9 @@ func actualizar() -> void:
 		hijo.queue_free()
 	for estado in _estados_activos():
 		_estados.add_child(_chip(estado, COLORES_ESTADO[estado]))
+	if _luchador.fallos_seguidos > 0 and not _luchador.fuera_de_combate():
+		var extra := roundi(MotorCombate.PUNTERIA_POR_FALLO * _luchador.fallos_seguidos * 100.0)
+		_estados.add_child(_chip("Puntería +%d%%" % extra, COLOR_PUNTERIA))
 	_alertas.text = _texto_alertas()
 
 

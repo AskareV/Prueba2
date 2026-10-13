@@ -119,4 +119,6 @@ func prueba_sin_brazos_pelea_a_patadas() -> void:
 	verificar_igual(rey.arma_actual(), "punos", "Con un brazo útil todavía usa los puños")
 	rey.integridad["antebrazo_izq"] = 5.0
 	verificar_igual(rey.arma_actual(), "patadas", "Sin brazos útiles, a patadas")
-	verificar_cerca(rey.fuerza_ataque(), rey.mov_piernas(), "Las patadas dependen de las piernas")
+	verificar_cerca(rey.fuerza_ataque(), 1.0, "Con las piernas sanas, patadas con toda la fuerza")
+	rey.integridad["muslo_der"] = 40.0
+	verificar_cerca(rey.fuerza_ataque(), 0.7, "Las patadas dependen de las piernas")

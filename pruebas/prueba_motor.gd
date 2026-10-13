@@ -267,16 +267,80 @@ func prueba_brazos_quitan_poca_vida_pero_se_inutilizan_pronto() -> void:
 	verificar(vida_brazo * 2.0 < vida_torax, "Un golpe en el brazo quita mucha menos vida que en el tórax")
 	for parte_id in DatosCuerpo.partes_de("brazo_der"):
 		var golpes := MotorCombate.golpes_para_inutilizar(rey, bandido, parte_id)
-		verificar(golpes >= 4 and golpes <= 7, "%s se inutiliza en 4 a 7 golpes (%d)" % [parte_id, golpes])
+		verificar(golpes.x >= 3 and golpes.y <= 7, "%s se inutiliza en 3 a 7 golpes (%s)" % [parte_id, golpes])
 
 
 func prueba_golpes_para_inutilizar() -> void:
 	var rey := DatosRivales.crear_rey(true, "espada")
 	var bandido := DatosRivales.crear_rival("bandido")
 	var sana := MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq")
+	verificar(sana.x <= sana.y, "Con golpes fuertes hacen falta menos que con flojos")
 	bandido.integridad["mano_izq"] = 50.0
-	verificar(MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq") < sana, "Una mano herida necesita menos golpes")
+	verificar(MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq").y < sana.y, "Una mano herida necesita menos golpes")
 	bandido.integridad["mano_izq"] = 15.0
-	verificar_igual(MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq"), 1, "En el límite basta un golpe")
+	verificar_igual(MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq"), Vector2i(1, 1), "En el límite basta un golpe")
 	bandido.integridad["mano_izq"] = 10.0
-	verificar_igual(MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq"), 0, "Ya inutilizada no necesita golpes")
+	verificar_igual(MotorCombate.golpes_para_inutilizar(rey, bandido, "mano_izq"), Vector2i.ZERO, "Ya inutilizada no necesita golpes")
+
+
+## Golpea con resolver_ataque hasta que el brazo o la pierna deja de servir.
+## Devuelve cuántos golpes acertados hicieron falta.
+func _golpes_reales(atacante: Luchador, defensor: Luchador, parte_id: String, rng: RandomNumberGenerator) -> int:
+	var zona_id := DatosCuerpo.zona_de(parte_id)
+	var golpes := 0
+	for intento in 200:
+		var defendiendo := defensor.defendiendo
+		var r := MotorCombate.resolver_ataque(atacante, defensor, parte_id, rng, intento)
+		if r["acierto"]:
+			golpes += 1
+			# La guardia dura solo un golpe: se quita al empezar el turno del defensor.
+			defensor.defendiendo = false
+		else:
+			defensor.defendiendo = defendiendo
+		if not defensor.extremidad_util(zona_id):
+			return golpes
+	return -1
+
+
+## Lo que dice el botón "Inutilizar" se cumple con golpes de verdad, también con
+## el cuello inutilizado (la extremidad sirve menos) y con el rival en guardia.
+func prueba_golpes_mostrados_coinciden_con_los_reales() -> void:
+	var rng := rng_fijo(51)
+	for arma_id in DatosArmas.ELEGIBLES:
+		var rey := DatosRivales.crear_rey(true, arma_id)
+		for caso in ["sano", "cuello", "guardia"]:
+			for parte_id in ["hombro_izq", "mano_izq", "antebrazo_der", "muslo_der", "pie_izq"]:
+				for repeticion in 15:
+					var rival := DatosRivales.crear_rival("orco")
+					rival.vida = 100000
+					if caso == "cuello":
+						rival.integridad["cuello"] = 10.0
+					rival.defendiendo = caso == "guardia"
+					var mostrado := MotorCombate.golpes_para_inutilizar(rey, rival, parte_id)
+					var reales := _golpes_reales(rey, rival, parte_id, rng)
+					verificar(reales >= mostrado.x and reales <= mostrado.y,
+						"%s, %s, %s: muestra %d–%d golpes y hicieron falta %d" % [arma_id, caso, parte_id, mostrado.x, mostrado.y, reales])
+
+
+func prueba_punteria_sube_al_fallar_y_se_pierde_al_acertar() -> void:
+	var rng := rng_fijo(61)
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var orco := DatosRivales.crear_rival("orco")
+	orco.vida = 100000
+	var base := MotorCombate.prob_acierto(rey, orco, "ojo_izq")
+	var vio_fallo := false
+	var vio_acierto_tras_fallo := false
+	for intento in 200:
+		var antes := rey.fallos_seguidos
+		var r := MotorCombate.resolver_ataque(rey, orco, "ojo_izq", rng, intento)
+		if not r["acierto"]:
+			verificar_igual(rey.fallos_seguidos, antes + 1, "Cada fallo suma puntería")
+			vio_fallo = true
+		else:
+			verificar_igual(rey.fallos_seguidos, 0, "Al acertar se pierde la puntería")
+			vio_acierto_tras_fallo = vio_acierto_tras_fallo or antes > 0
+		orco.integridad["ojo_izq"] = 100.0
+	verificar(vio_fallo and vio_acierto_tras_fallo, "Hubo fallos y aciertos tras fallar")
+	rey.fallos_seguidos = 2
+	verificar_cerca(MotorCombate.prob_acierto(rey, orco, "ojo_izq"), base + 2.0 * MotorCombate.PUNTERIA_POR_FALLO,
+		"Dos fallos seguidos suman dos veces la puntería")

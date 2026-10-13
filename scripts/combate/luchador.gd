@@ -12,7 +12,7 @@ const ESQUIVA_BASE := 0.05
 const ESQUIVA_PIERNAS := 0.12
 ## Cobertura de cabeza y torso: cuánto las protege cada brazo útil (bloquea) y
 ## cada pierna útil (se aparta). Un brazo o pierna inutilizado ya no cubre.
-const COBERTURA_POR_BRAZO := 0.14
+const COBERTURA_POR_BRAZO := 0.10
 const COBERTURA_POR_PIERNA := 0.03
 ## En guardia, toda zona es más difícil de alcanzar.
 const DEFENSA_GUARDIA := 0.2
@@ -38,6 +38,8 @@ var aturdido := false
 var defendiendo := false
 ## Inconsciente: queda fuera de combate.
 var desmayado := false
+## Ataques fallados seguidos: cada uno afina la puntería del siguiente.
+var fallos_seguidos := 0
 
 ## parte -> integridad (0 a 100).
 var integridad: Dictionary = {}

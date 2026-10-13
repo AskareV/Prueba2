@@ -24,22 +24,38 @@ func _initialize() -> void:
 			estrategias.append(argumento)
 	if estrategias.is_empty():
 		estrategias = Simulacion.ESTRATEGIAS
+	for estrategia in estrategias:
+		if not Simulacion.ESTRATEGIAS.has(estrategia):
+			printerr("Estrategia desconocida: %s (válidas: %s)" % [estrategia, ", ".join(Simulacion.ESTRATEGIAS)])
+			quit(1)
+			return
+	for arma_id in armas:
+		if not DatosArmas.ELEGIBLES.has(arma_id):
+			printerr("Arma desconocida: %s (válidas: %s)" % [arma_id, ", ".join(DatosArmas.ELEGIBLES)])
+			quit(1)
+			return
+	if combates <= 0:
+		printerr("combates debe ser mayor que 0")
+		quit(1)
+		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 42
-	print("Arma    Rival     Estrategia  Victorias  Turnos  Acierto rey  Acierto rival  Desmayos  Vida rey")
+	print("Arma    Rival     Estrategia  Victorias  Turnos  Acierto rey  Acierto rival  Desmayos  Vida rey  Rachas rey  Rachas rival")
 	for arma_id in armas:
 		for rival_id in DatosRivales.ORDEN:
 			for estrategia in estrategias:
 				var t := {"victorias": 0, "turnos": 0, "desmayos": 0, "vida_rey": 0,
-					"ataques_rey": 0, "aciertos_rey": 0, "ataques_rival": 0, "aciertos_rival": 0}
+					"ataques_rey": 0, "aciertos_rey": 0, "ataques_rival": 0, "aciertos_rival": 0,
+					"rachas_rey": 0, "rachas_rival": 0}
 				for i in combates:
 					var r := Simulacion.combatir(arma_id, rival_id, estrategia, i % 2 == 0, rng)
 					for clave in r:
 						t[clave] += r[clave]
-				print("%-7s %-9s %-10s %7.1f%%  %6.1f  %9.1f%%  %11.1f%%  %6.1f%%  %8.1f" % [
+				print("%-7s %-9s %-10s %7.1f%%  %6.1f  %9.1f%%  %11.1f%%  %6.1f%%  %8.1f  %8.1f%%  %10.1f%%" % [
 					arma_id, rival_id, estrategia, 100.0 * t["victorias"] / combates,
 					float(t["turnos"]) / combates,
 					100.0 * t["aciertos_rey"] / maxi(t["ataques_rey"], 1),
 					100.0 * t["aciertos_rival"] / maxi(t["ataques_rival"], 1),
-					100.0 * t["desmayos"] / combates, float(t["vida_rey"]) / combates])
+					100.0 * t["desmayos"] / combates, float(t["vida_rey"]) / combates,
+					100.0 * t["rachas_rey"] / combates, 100.0 * t["rachas_rival"] / combates])
 	quit()

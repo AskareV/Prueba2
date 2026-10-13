@@ -26,7 +26,9 @@ Cada APK nuevo se instala encima del anterior, sin desinstalar.
    - **Estado:** funciones de supervivencia, cobertura y partes heridas de ambos.
 3. **Táctica:** los brazos son fáciles de acertar pero quitan poca vida; la
    cabeza y el torso quitan más, pero los cubren los brazos y las piernas. Cada
-   brazo o pierna que inutilizas deja más expuestos la cabeza y el torso.
+   brazo o pierna que inutilizas deja más expuestos la cabeza y el torso. Cada
+   fallo seguido da +10% de puntería al siguiente ataque, para que no haya
+   rachas largas de mala suerte.
 4. Las heridas cambian el color de cada parte (sin gore) y afectan sus funciones:
    sin ojos se apunta peor, con la mano del arma herida se puede soltar, un golpe
    en el cráneo puede aturdir o desmayar, etc. Las reglas son **provisionales**.

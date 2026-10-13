@@ -385,7 +385,8 @@ func _al_elegir_zona(zona_id: String) -> void:
 		var nombre: String = DatosCuerpo.PARTES[parte_id]["corto"]
 		if _enemigo.nivel(parte_id) >= 3:
 			nombre += " (%s)" % _enemigo.estado(parte_id).to_lower()
-		var texto := "%s\n%d%% · %d–%d de daño" % [nombre, roundi(prob * 100.0), rango.x, rango.y]
+		var danio := "%d" % rango.x if rango.x == rango.y else "%d–%d" % [rango.x, rango.y]
+		var texto := "%s\n%d%% · %s de daño" % [nombre, roundi(prob * 100.0), danio]
 		var tactica := _texto_tactico(parte_id)
 		if tactica != "":
 			texto += "\n" + tactica
@@ -408,7 +409,9 @@ func _texto_tactico(parte_id: String) -> String:
 	if not _enemigo.extremidad_util(zona_id):
 		return "Pierna ya inutilizada" if zona_id.begins_with("pierna_") else "Brazo ya inutilizado"
 	var golpes := MotorCombate.golpes_para_inutilizar(_jugador, _enemigo, parte_id)
-	return "Inutilizar: %d %s" % [golpes, "golpe" if golpes == 1 else "golpes"]
+	if golpes.x == golpes.y:
+		return "Inutilizar: %d %s" % [golpes.x, "golpe" if golpes.x == 1 else "golpes"]
+	return "Inutilizar: %d–%d golpes" % [golpes.x, golpes.y]
 
 
 ## Amplía la zona en la lupa, centrada y tan grande como quepa.
@@ -451,7 +454,7 @@ func _al_pulsar_defender() -> void:
 	_estado = Estado.ESPERANDO
 	_ocultar_controles()
 	_jugador.defendiendo = true
-	_agregar_mensaje("Te pones en guardia: esquivas más y recibes la mitad de daño.")
+	_agregar_mensaje("Te pones en guardia: te defiendes mejor y recibes la mitad de daño.")
 	_actualizar_paneles()
 	await _pausa(0.6)
 	await _turno_del_rival()
@@ -856,9 +859,10 @@ func _mostrar_estado() -> void:
 	fila.add_child(_columna_estado(_enemigo, _enemigo.nombre))
 	var reglas := _etiqueta_simple("Reglas provisionales: cada brazo y pierna útil cubre la cabeza y el torso "
 		+ "(cobertura); al inutilizarlo es más fácil acertarles. Brazos y piernas quitan poca vida pero se "
-		+ "inutilizan rápido; sin brazos útiles se pelea a patadas. La visión afecta la precisión; las piernas, "
-		+ "la esquiva y la huida; el brazo del arma, el daño. La mano del arma puede soltarla; el cráneo puede "
-		+ "aturdir o desmayar. El sangrado, el dolor y las infecciones vendrán después.", 16, Estilo.TEXTO_SUAVE)
+		+ "inutilizan rápido; sin brazos útiles se pelea a patadas. Cada fallo seguido da +10% de puntería al "
+		+ "siguiente ataque. La visión afecta la precisión; las piernas, la esquiva y la huida; el brazo del "
+		+ "arma, el daño. La mano del arma puede soltarla; el cráneo puede aturdir o desmayar. El sangrado, el "
+		+ "dolor y las infecciones vendrán después.", 16, Estilo.TEXTO_SUAVE)
 	reglas.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	reglas.custom_minimum_size = Vector2(1100, 0)
 	columna.add_child(reglas)

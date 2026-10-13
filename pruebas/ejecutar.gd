@@ -18,6 +18,11 @@ func _initialize() -> void:
 	for ruta in ARCHIVOS:
 		var guion: GDScript = load(ruta)
 		print(ruta.get_file())
+		if guion == null or not guion.can_instantiate():
+			total += 1
+			fallidas += 1
+			print("  FALLA  no se pudo cargar el archivo (¿error de sintaxis?)")
+			continue
 		for metodo in guion.get_script_method_list():
 			var nombre: String = metodo["name"]
 			if not nombre.begins_with("prueba_"):

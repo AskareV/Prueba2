@@ -71,8 +71,8 @@ static func parte_para_inutilizar(yo: Luchador, rival: Luchador, zona_id: String
 	var mejor := ""
 	var menos_turnos := INF
 	for parte_id in DatosCuerpo.partes_de(zona_id):
-		var golpes := maxi(MotorCombate.golpes_para_inutilizar(yo, rival, parte_id), 1)
-		var turnos := golpes / MotorCombate.prob_acierto(yo, rival, parte_id)
+		var golpes := MotorCombate.golpes_para_inutilizar(yo, rival, parte_id)
+		var turnos := maxf((golpes.x + golpes.y) / 2.0, 1.0) / MotorCombate.prob_acierto(yo, rival, parte_id)
 		if turnos < menos_turnos:
 			menos_turnos = turnos
 			mejor = parte_id

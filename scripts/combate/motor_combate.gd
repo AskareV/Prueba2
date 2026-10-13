@@ -17,6 +17,8 @@ const FUERZA_MINIMA := 0.75
 const DESARME_POR_HERIDA := 0.25
 const PENALIZACION_MANO_TORPE_DANIO := 0.85
 const REDUCCION_DANIO_EN_GUARDIA := 0.5
+## Puntería: acierto extra por cada ataque fallado seguido (se pierde al acertar).
+const PUNTERIA_POR_FALLO := 0.1
 
 
 static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
@@ -30,6 +32,7 @@ static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: Strin
 	if atacante.mano_torpe and not atacante.desarmado:
 		prob *= PENALIZACION_MANO_TORPE_PRECISION
 	prob *= 1.0 - defensor.defensa(DatosCuerpo.zona_de(parte_id))
+	prob += PUNTERIA_POR_FALLO * atacante.fallos_seguidos
 	return clampf(prob, ACIERTO_MIN, ACIERTO_MAX)
 
 
@@ -67,16 +70,34 @@ static func multiplicador_desgaste(atacante: Luchador, defensor: Luchador, parte
 	return fragilidad * multiplicador_golpe(atacante, defensor, parte_id)
 
 
-## Golpes acertados (de fuerza media) que faltan para inutilizar esa parte; 0 si
-## ya lo está.
-static func golpes_para_inutilizar(atacante: Luchador, defensor: Luchador, parte_id: String) -> int:
-	var restante: float = defensor.integridad[parte_id] - Luchador.INUTILIZADA
+## Golpes acertados que faltan para inutilizar esa parte o, en brazos y piernas,
+## para que la extremidad deje de servir (con el cuello inutilizado basta menos).
+## Devuelve (golpes si todos pegan fuerte, golpes si todos pegan flojo); (0, 0)
+## si ya está inutilizada.
+static func golpes_para_inutilizar(atacante: Luchador, defensor: Luchador, parte_id: String) -> Vector2i:
+	var zona_id := DatosCuerpo.zona_de(parte_id)
+	var umbral := Luchador.INUTILIZADA
+	if DatosCuerpo.ZONAS[zona_id]["defensa"] != "cubierta":
+		if not defensor.extremidad_util(zona_id):
+			return Vector2i.ZERO
+		umbral = minf(Luchador.INUTILIZADA / defensor.factor_columna(), 100.0)
+	var restante: float = defensor.integridad[parte_id] - umbral
 	if restante < 0.0:
-		return 0
+		return Vector2i.ZERO
 	var arma: Dictionary = DatosArmas.arma(atacante.arma_actual())
-	var fuerza_media := (float(arma["danio_min"]) + float(arma["danio_max"])) / 2.0
-	var desgaste := maxf(fuerza_media * multiplicador_desgaste(atacante, defensor, parte_id), 0.01)
-	return floori(restante / desgaste) + 1
+	var primero := multiplicador_desgaste(atacante, defensor, parte_id)
+	# La guardia solo protege del próximo golpe.
+	var siguientes := primero / REDUCCION_DANIO_EN_GUARDIA if defensor.defendiendo else primero
+	return Vector2i(
+		_golpes_hasta(restante, arma["danio_max"] * primero, arma["danio_max"] * siguientes),
+		_golpes_hasta(restante, arma["danio_min"] * primero, arma["danio_min"] * siguientes))
+
+
+## Golpes hasta que el desgaste acumulado supere "restante".
+static func _golpes_hasta(restante: float, primero: float, siguientes: float) -> int:
+	if primero > restante:
+		return 1
+	return floori((restante - primero) / maxf(siguientes, 0.01)) + 2
 
 
 ## Daño mínimo y máximo de un golpe acertado en esa parte.
@@ -104,7 +125,9 @@ static func resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: St
 	}
 	atacante.ataques += 1
 	if rng.randf() >= prob_acierto(atacante, defensor, parte_id):
+		atacante.fallos_seguidos += 1
 		return resultado
+	atacante.fallos_seguidos = 0
 
 	var danio_min: int = arma["danio_min"]
 	var danio_max: int = arma["danio_max"]
