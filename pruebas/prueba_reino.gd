@@ -165,6 +165,19 @@ func prueba_el_botin_de_un_enemigo_es_del_nivel_del_lugar() -> void:
 	juego.free()
 
 
+func prueba_el_estres_llega_justo_al_maximo() -> void:
+	var juego := EstadoReino.new()
+	juego.nueva_partida(true)
+	for i in 50:
+		juego.sumar_estres(1.4)
+	verificar(juego.estres >= DatosAventura.ESTRES_MAXIMO, "50 pasos de 1,4 llegan a 70 (sin quedar en 69,999…)")
+	juego.sumar_estres(500.0)
+	verificar_cerca(juego.estres, 100.0, "No pasa de 100")
+	juego.sumar_estres(-500.0)
+	verificar_cerca(juego.estres, 0.0, "No baja de 0")
+	juego.free()
+
+
 func prueba_la_semana_reinicia_lo_que_estaba_en_curso() -> void:
 	var juego := EstadoReino.new()
 	juego.nueva_partida(true)

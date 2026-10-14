@@ -205,11 +205,16 @@ func _pelear(de_verdad: bool) -> String:
 	var escena := await _esperar_escena(COMBATE)
 	if escena == null:
 		return ""
+	# Semilla fija: el combate de prueba termina siempre igual (con victoria).
+	(escena.get("_rng") as RandomNumberGenerator).seed = 11
 	if de_verdad:
 		var cuadros := 0
 		while int(escena.get("_estado")) != FIN and cuadros < MAX_CUADROS:
 			await process_frame
 			cuadros += 1
+			# Solo elige cuando el combate acepta toques, para no gastar números al azar.
+			if not escena.call("_entrada_libre"):
+				continue
 			match int(escena.get("_estado")):
 				ACCIONES:
 					escena.call("_al_pulsar_atacar")

@@ -274,7 +274,7 @@ Banderín **oscuro** = mazmorra; banderín **rojo** = zona de siete días.
 |---|---|---|---|---|
 | Madriguera goblin | Mazmorra | Fácil | Goblins, goblins lanceros, chamanes goblin | 1 |
 | Guarida de bandidos | Mazmorra | Fácil / medio | Ladrones, matones, bandidos | 1,2 |
-| Fortaleza orca | Mazmorra | Medio | Orcos guerreros, cazadores y chamanes | 1,4 |
+| Fortaleza orca | Mazmorra | Medio | Orcos, orcos guerreros, cazadores y chamanes | 1,4 |
 | Ciudadela maldita | Mazmorra | Difícil | Caballeros negros, cultistas, verdugos | 1,6 |
 | Bosque sombrío | Zona | Fácil | Goblins, goblins lanceros, chamanes goblin, ladrones | 5 por día |
 | Ruinas del castillo | Zona | Fácil / medio | Ladrones, matones, bandidos, chamanes goblin | 5 por día |
@@ -312,8 +312,9 @@ un suceso al azar.
 | Descanso | 10% | −10 de estrés |
 | Trampa | 5% | +10 de estrés |
 
-*Volver a casa* termina la salida (y la semana) en cualquier momento. Perder un
-combate o llegar a 70 de estrés también la termina.
+*Volver a casa* termina la salida (y la semana) en cualquier momento; el botón
+"atrás" del celular no la termina mientras sigue en curso, para no perder la
+semana sin querer. Perder un combate o llegar a 70 de estrés también la termina.
 
 ### 7.5 Botín y calidades
 

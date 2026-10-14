@@ -5,7 +5,8 @@ extends RefCounted
 ## Aspecto: colores por grupo de partes y accesorios. "ancho" y "alto"
 ## deforman el cuerpo; "escala" cambia el tamaño en pantalla.
 ## Datos opcionales de los enemigos del reino (provisionales):
-## - nivel: 1 fácil a 4 difícil; decide la calidad del botín que sueltan.
+## - nivel: dificultad del enemigo, de 1 fácil a 4 difícil (informativo: el
+##   botín es del nivel del lugar donde se lo vence).
 ## - oro: [mínimo, máximo] que dan al vencerlos.
 ## - armadura: por grupo de zonas ("cabeza", "torso", "brazos", "piernas"),
 ##   [física, mágica]. Ver MotorCombate.multiplicador_armadura.

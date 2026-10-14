@@ -31,6 +31,8 @@ var _ocupado := false
 ## Objeto elegido en el inventario: {"id": n} de la mochila o {"ranura": r} del equipo.
 var _seleccion := {}
 var _venta_pendiente := false
+## Posición de la mochila, para no volver arriba al tocar un objeto.
+var _scroll_mochila := 0
 ## Ventana del lugar elegido en el mapa, o null.
 var _ventana_lugar: Control
 var _oficio := "audiencias"
@@ -90,8 +92,7 @@ func _crear_franja() -> void:
 	franja.add_child(_barra_estres)
 	_aviso = UIReino.etiqueta("", 18, UIReino.COLOR_AVISO)
 	_aviso.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_aviso.clip_text = true
+	_aviso.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	franja.add_child(_aviso)
 	_actualizar_franja()
 
@@ -115,6 +116,8 @@ func _al_pulsar_pestana(pestana: String) -> void:
 	if pestana == "salir":
 		_salir()
 		return
+	if pestana != _pestana:
+		_scroll_mochila = 0
 	_mostrar_pestana(pestana)
 
 
@@ -230,6 +233,7 @@ func _crear_equipo() -> void:
 			_al_elegir_equipo.bind(ranura), Vector2(400, 60), 18)
 		boton.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		boton.clip_text = true
+		boton.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		var color := Color("#3a3f5c") if objeto.is_empty() else DatosBotin.color_calidad(objeto["calidad"])
 		Estilo.con_franja(boton, color)
 		boton.disabled = objeto.is_empty()
@@ -252,6 +256,8 @@ func _crear_mochila() -> void:
 	desplazable.size = Vector2(440, 530)
 	desplazable.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_contenido.add_child(desplazable)
+	desplazable.get_v_scroll_bar().value_changed.connect(func(valor: float) -> void: _scroll_mochila = int(valor))
+	desplazable.set_deferred("scroll_vertical", _scroll_mochila)
 	var rejilla := GridContainer.new()
 	rejilla.columns = 2
 	rejilla.add_theme_constant_override("h_separation", 8)
@@ -260,7 +266,10 @@ func _crear_mochila() -> void:
 	if Juego.inventario.is_empty():
 		rejilla.add_child(UIReino.parrafo("Vacía. El botín de mazmorras y zonas aparece aquí.", 400, 18))
 	for objeto in Juego.inventario:
-		rejilla.add_child(UIReino.boton_objeto(objeto, _al_elegir_mochila.bind(objeto["id"]), Vector2(212, 74)))
+		var boton := UIReino.boton_objeto(objeto, _al_elegir_mochila.bind(objeto["id"]), Vector2(212, 74))
+		# Deja pasar el arrastre: así la mochila se desliza con el dedo sobre los objetos.
+		boton.mouse_filter = Control.MOUSE_FILTER_PASS
+		rejilla.add_child(boton)
 
 
 func _crear_detalle() -> void:
@@ -474,7 +483,7 @@ func _crear_detalle_oficio() -> void:
 	columna.add_child(UIReino.parrafo("Probabilidad de que un día salga bien: %d%% (sube con el dominio, ahora %d de 100)." % [
 		roundi(DatosTrabajos.prob_exito(dominio) * 100.0), roundi(dominio)], 530, 18))
 	columna.add_child(UIReino.parrafo("Estrés de la semana: +%d. Si los siete días salen bien, cobras %d de oro extra." % [
-		roundi(float(oficio["estres"]) * DatosTrabajos.DIAS), int(oficio["pago"]) * DatosTrabajos.BONO_SEMANA_PERFECTA], 530, 18))
+		String.num(float(oficio["estres"]) * DatosTrabajos.DIAS), int(oficio["pago"]) * DatosTrabajos.BONO_SEMANA_PERFECTA], 530, 18))
 	var boton := UIReino.boton("Trabajar esta semana", _al_trabajar, Vector2(530, 70), 24)
 	if not Juego.puede_trabajar():
 		boton.disabled = true
@@ -525,7 +534,7 @@ func _al_trabajar() -> void:
 	var resumen := "Ganaste %d de oro" % resultado["oro"]
 	if int(resultado["bono"]) > 0:
 		resumen += " (incluye %d por la semana perfecta)" % resultado["bono"]
-	columna.add_child(UIReino.parrafo("%s. Estrés +%d." % [resumen, roundi(resultado["estres"])], 530, 19, Estilo.TEXTO))
+	columna.add_child(UIReino.parrafo("%s. Estrés +%s." % [resumen, String.num(resultado["estres"])], 530, 19, Estilo.TEXTO))
 	columna.add_child(UIReino.boton("Listo", _al_terminar_trabajo, Vector2(530, 64), 22))
 	_actualizar_franja()
 	_avisar("Terminó la semana %d. Empieza la semana %d." % [semana, Juego.semana])

@@ -69,7 +69,8 @@ func descansar() -> void:
 
 
 func sumar_estres(cantidad: float) -> void:
-	estres = clampf(estres + cantidad, 0.0, 100.0)
+	# Redondeado a centésimas: sumar 1,4 cincuenta veces debe dar 70 justo, no 69,999…
+	estres = clampf(snappedf(estres + cantidad, 0.01), 0.0, 100.0)
 
 
 # --- Inventario y equipo ---

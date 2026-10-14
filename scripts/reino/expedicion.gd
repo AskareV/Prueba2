@@ -7,6 +7,9 @@ extends Control
 const ESCENA_REINO := "res://escenas/reino.tscn"
 const ESCENA_COMBATE := "res://escenas/combate.tscn"
 const ESCENA_PROPIA := "res://escenas/expedicion.tscn"
+## Milisegundos tras abrir la pantalla en que "atrás" se ignora: un doble
+## "atrás" en el resultado de un combate no debe terminar la salida.
+const ESPERA_ATRAS_MS := 800
 
 var _datos: Dictionary
 var _barra_estres: Barra
@@ -14,9 +17,11 @@ var _botones_dia: Array[Button] = []
 var _descripcion: Label
 var _boton_volver: Button
 var _saliendo := false
+var _abierto_en := 0
 
 
 func _ready() -> void:
+	_abierto_en = Time.get_ticks_msec()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if Juego.expedicion.is_empty():
 		_volver_al_reino()
@@ -63,9 +68,14 @@ func _crear_interfaz(area: Control) -> void:
 	area.add_child(_boton_volver)
 
 
+## "Atrás" solo termina una salida que ya terminó (como la mazmorra, una salida
+## en curso se deja con "Volver a casa", para no perder la semana sin querer).
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_GO_BACK_REQUEST and not _saliendo and not _datos.is_empty():
-		_al_volver()
+	if what != NOTIFICATION_WM_GO_BACK_REQUEST or _saliendo or _datos.is_empty():
+		return
+	if _cortada() or _terminada():
+		if Time.get_ticks_msec() - _abierto_en >= ESPERA_ATRAS_MS:
+			_al_volver()
 
 
 # --- Días ---
@@ -114,6 +124,11 @@ func _terminada() -> bool:
 	return Juego.expedicion["dias"].size() >= DatosAventura.DIAS_ZONA
 
 
+## La salida se cortó por una derrota o por llegar al estrés máximo.
+func _cortada() -> bool:
+	return Juego.expedicion.get("derrota", false) or Juego.expedicion.get("agotado", false)
+
+
 func _comprobar_estres() -> void:
 	if Juego.estres >= DatosAventura.ESTRES_MAXIMO and not _terminada():
 		Juego.expedicion["agotado"] = true
@@ -147,7 +162,7 @@ func _procesar_combate() -> void:
 func _actualizar() -> void:
 	UIReino.actualizar_estres(_barra_estres, Juego.estres)
 	var dias: Array = Juego.expedicion["dias"]
-	var cortado: bool = Juego.expedicion.get("derrota", false) or Juego.expedicion.get("agotado", false)
+	var cortado := _cortada()
 	for i in _botones_dia.size():
 		var boton := _botones_dia[i]
 		if i < dias.size():

@@ -9,6 +9,8 @@ const ESCENA_REINO := "res://escenas/reino.tscn"
 const ESCENA_COMBATE := "res://escenas/combate.tscn"
 const ESCENA_PROPIA := "res://escenas/mazmorra.tscn"
 const DIRECCIONES := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
+## Líneas que caben en el panel de mensajes (se ven las últimas).
+const LINEAS_REGISTRO := 9
 
 ## La ayuda se muestra sola la primera vez que se entra a una mazmorra.
 static var ayuda_vista := false
@@ -68,6 +70,7 @@ func _crear_cabecera(area: Control) -> void:
 	fila.add_theme_constant_override("separation", 18)
 	area.add_child(fila)
 	var ayuda := UIReino.boton("?", _mostrar_ayuda, Vector2(60, 56), 30)
+	ayuda.focus_mode = Control.FOCUS_NONE
 	ayuda.add_theme_color_override("font_color", Color("#7cb342"))
 	fila.add_child(ayuda)
 	var etiqueta := UIReino.etiqueta("Estrés", 22)
@@ -88,6 +91,7 @@ func _crear_lateral(area: Control) -> void:
 	area.add_child(panel)
 	_registro = UIReino.parrafo("", 256, 17, Estilo.TEXTO)
 	_registro.custom_minimum_size = Vector2(256, 230)
+	_registro.max_lines_visible = LINEAS_REGISTRO
 	panel.add_child(_registro)
 	# Cruceta: sustituye a las flechas del teclado del juego original.
 	var cruceta := GridContainer.new()
@@ -104,6 +108,8 @@ func _crear_lateral(area: Control) -> void:
 			cruceta.add_child(hueco)
 			continue
 		var boton := UIReino.boton("", _mover.bind(direccion), Vector2(88, 88))
+		# Sin foco: si no, las flechas del teclado moverían el foco entre botones.
+		boton.focus_mode = Control.FOCUS_NONE
 		var flecha := Flecha.new()
 		flecha.direccion = direccion
 		flecha.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -263,10 +269,7 @@ func _salir(motivo: String) -> void:
 	_saliendo = true
 	var semana := Juego.semana
 	Juego.pasar_semana()
-	var extra := ""
-	if not _mensajes.is_empty():
-		extra = " " + _mensajes[-1]
-	Juego.aviso = "%s%s Terminó la semana %d." % [motivo, extra, semana]
+	Juego.aviso = "%s Terminó la semana %d." % [motivo, semana]
 	_volver_al_reino()
 
 
@@ -281,6 +284,7 @@ func _mensaje(texto: String) -> void:
 	_mensajes.append(texto)
 	if _registro != null:
 		_registro.text = "\n".join(_mensajes.slice(maxi(_mensajes.size() - 4, 0)))
+		_registro.lines_skipped = maxi(_registro.get_line_count() - LINEAS_REGISTRO, 0)
 
 
 func _actualizar() -> void:

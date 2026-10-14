@@ -96,6 +96,18 @@ class Banderin:
 		size = Vector2(ANCHO, ALTO + 26)
 		mouse_filter = Control.MOUSE_FILTER_STOP
 
+	## Solo cuenta lo dibujado (mástil, bandera y nombre): el rectángulo entero
+	## de un banderín pisa el nombre del vecino.
+	func _has_point(punto: Vector2) -> bool:
+		if Rect2(ANCHO / 2.0 - 30.0, 0.0, 86.0, ALTO + 8.0).has_point(punto):
+			return true
+		var ancho_nombre := _medida_nombre().x
+		return Rect2((ANCHO - ancho_nombre) / 2.0, ALTO + 2.0, ancho_nombre, 24.0).has_point(punto)
+
+	func _medida_nombre() -> Vector2:
+		var nombre: String = DatosAventura.lugar(lugar_id)["nombre"]
+		return get_theme_default_font().get_string_size(nombre, HORIZONTAL_ALIGNMENT_LEFT, -1, 16)
+
 	func _gui_input(event: InputEvent) -> void:
 		var suelto := false
 		if event is InputEventMouseButton:
@@ -116,7 +128,7 @@ class Banderin:
 		draw_circle(base, 6.0, MapaReino.COLOR_TINTA)
 		var fuente := get_theme_default_font()
 		var nombre: String = DatosAventura.lugar(lugar_id)["nombre"]
-		var medida := fuente.get_string_size(nombre, HORIZONTAL_ALIGNMENT_LEFT, -1, 16)
+		var medida := _medida_nombre()
 		var posicion := Vector2((ANCHO - medida.x) / 2.0, ALTO + 20)
 		draw_string_outline(fuente, posicion, nombre, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color("#f3e7c9"))
 		draw_string(fuente, posicion, nombre, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, MapaReino.COLOR_TINTA)

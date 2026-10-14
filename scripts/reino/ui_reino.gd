@@ -85,7 +85,8 @@ static func barra_estres() -> Barra:
 static func actualizar_estres(barra: Barra, estres: float) -> void:
 	barra.valor = estres / DatosAventura.ESTRES_MAXIMO
 	barra.color_fijo = color_estres(estres)
-	barra.texto = "%d / %d" % [roundi(estres), roundi(DatosAventura.ESTRES_MAXIMO)]
+	# Hacia abajo: la barra no debe mostrar 70 mientras el rey sigue por debajo.
+	barra.texto = "%d / %d" % [floori(estres), roundi(DatosAventura.ESTRES_MAXIMO)]
 
 
 ## Ignora los toques un momento al entrar a una pantalla: un doble toque en la
@@ -108,5 +109,6 @@ static func boton_objeto(objeto: Dictionary, al_pulsar: Callable, tamano: Vector
 	var nuevo := boton(texto, al_pulsar, tamano, 16)
 	nuevo.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	nuevo.clip_text = true
+	nuevo.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	Estilo.con_franja(nuevo, DatosBotin.color_calidad(objeto["calidad"]))
 	return nuevo
