@@ -146,6 +146,25 @@ func prueba_vender_y_equipar() -> void:
 	juego.free()
 
 
+func prueba_el_botin_de_un_enemigo_es_del_nivel_del_lugar() -> void:
+	var juego := EstadoReino.new()
+	juego.nueva_partida(true)
+	juego.rng.seed = 3
+	# El orco de la demo no tiene nivel propio: en un lugar de nivel 3 suelta botín de nivel 3.
+	var objetos := 0
+	for i in 60:
+		var oro_antes := juego.oro
+		var botin := juego.recompensa_enemigo("orco", 3)
+		verificar_igual(juego.oro, oro_antes + int(botin["oro"]), "Suma el oro")
+		verificar(int(botin["oro"]) >= 9, "Sin oro propio, paga según el nivel del lugar")
+		var objeto: Dictionary = botin["objeto"]
+		if not objeto.is_empty():
+			objetos += 1
+			verificar_igual(objeto["nivel"], 3, "El objeto es del nivel del lugar")
+	verificar(objetos > 0, "A veces suelta un objeto")
+	juego.free()
+
+
 func prueba_la_semana_reinicia_lo_que_estaba_en_curso() -> void:
 	var juego := EstadoReino.new()
 	juego.nueva_partida(true)

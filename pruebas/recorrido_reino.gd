@@ -29,8 +29,8 @@ func _initialize() -> void:
 	_juego = root.get_node("Juego") as EstadoReino
 	_juego.nueva_partida(true)
 	_juego.rng.seed = 5
-	for paso in [_recorrer_menu_y_pestanas, _recorrer_mazmorra, _recorrer_zona, _recorrer_inventario,
-			_recorrer_trabajo]:
+	for paso in [_recorrer_menu_y_pestanas, _recorrer_mazmorra, _recorrer_estres_maximo, _recorrer_zona,
+			_recorrer_inventario, _recorrer_trabajo]:
 		await paso.call()
 		# Tras un fallo se corta: los pasos siguientes dependen de la pantalla.
 		if not _fallos.is_empty():
@@ -142,6 +142,36 @@ func _recorrer_mazmorra() -> void:
 	_verificar(_juego.semana == semana + 1, "Salir de la mazmorra termina la semana")
 	_verificar(_juego.mazmorra.is_empty(), "La mazmorra se reinicia al salir")
 	_verificar((reino_nuevo.get("_aviso") as Label).text != "", "Al volver hay un aviso")
+
+
+## Con el estrés casi al máximo, el paso hacia un enemigo saca al rey de la
+## mazmorra en vez de empezar la pelea.
+func _recorrer_estres_maximo() -> void:
+	var reino := current_scene
+	_juego.estres = 0.0
+	reino.call("_al_explorar", "guarida_bandidos")
+	var mazmorra := await _esperar_escena(MAZMORRA)
+	if mazmorra == null:
+		return
+	mazmorra.call("_ocultar_ayuda")
+	var semana: int = _juego.semana
+	var probado := false
+	for pasos in 100:
+		var plano: Dictionary = _juego.mazmorra["plano"]
+		var paso := _paso_hacia(plano, _juego.mazmorra["pos"], plano["enemigos"].keys())
+		var destino: Vector2i = _juego.mazmorra["pos"] + paso
+		if plano["enemigos"].has(destino):
+			_juego.estres = DatosAventura.ESTRES_MAXIMO - 0.5
+			probado = true
+		mazmorra.call("_mover", paso)
+		await process_frame
+		if _juego.mazmorra.is_empty() or not _juego.combate.is_empty():
+			break
+	_verificar(probado, "Llegar al lado de un enemigo")
+	_verificar(_juego.combate.is_empty(), "Con el estrés al máximo no empieza la pelea")
+	if await _esperar_escena(REINO) == null:
+		return
+	_verificar(_juego.semana == semana + 1, "Salir por estrés termina la semana")
 
 
 ## Primer paso del camino más corto hasta alguna de las metas. Con "esquivar",

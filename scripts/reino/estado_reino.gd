@@ -155,16 +155,18 @@ func crear_rey() -> Luchador:
 
 # --- Botín ---
 
-## Recompensa por vencer a un enemigo: oro y, a veces, un objeto (ya guardado).
+## Recompensa por vencer a un enemigo en un lugar de ese nivel: oro y, a veces,
+## un objeto (ya guardado). El objeto es del nivel del lugar; el oro, el del
+## enemigo (o según el nivel del lugar si no tiene).
 ## Devuelve {"oro": n, "objeto": objeto o vacío}.
-func recompensa_enemigo(enemigo_id: String) -> Dictionary:
+func recompensa_enemigo(enemigo_id: String, nivel: int) -> Dictionary:
 	var datos := DatosRivales.rival(enemigo_id)
-	var rango: Array = datos.get("oro", [2, 6])
+	var rango: Array = datos.get("oro", [3 * nivel, 8 * nivel])
 	var ganado := rng.randi_range(rango[0], rango[1])
 	oro += ganado
 	var objeto := {}
 	if rng.randf() < DatosAventura.PROB_BOTIN_ENEMIGO:
-		objeto = agregar(DatosBotin.generar(datos.get("nivel", 1), rng))
+		objeto = agregar(DatosBotin.generar(nivel, rng))
 	return {"oro": ganado, "objeto": objeto}
 
 

@@ -136,6 +136,9 @@ func _mostrar_pestana(pestana: String) -> void:
 		"trabajo":
 			_crear_trabajo()
 	_actualizar_franja()
+	# Lo nuevo puede quedar justo bajo el dedo (ej. "Listo" sobre "Trabajar esta
+	# semana", "Equipar" sobre "Quitar"): un doble toque no debe pulsarlo.
+	UIReino.bloquear_toques(self, 0.35)
 
 
 func _salir() -> void:
@@ -358,6 +361,8 @@ func _al_descansar() -> void:
 	Juego.descansar()
 	_avisar("Descansaste. Empieza la semana %d." % Juego.semana)
 	_actualizar_franja()
+	# Un doble toque no debe descansar dos semanas.
+	UIReino.bloquear_toques(self, 0.35)
 
 
 # --- Aventura ---

@@ -292,6 +292,8 @@ Como en *My Pet Protector*, adaptado al celular:
   objeto. **H** = salida: al volver a pisarla se sale de la mazmorra.
 - Ganar un combate: +3 de estrés. Perder: +50 y el rey vuelve al castillo.
   Huir: vuelve a la casilla anterior y el enemigo sigue ahí.
+- Con 70 de estrés el rey vuelve a casa en ese mismo paso, aunque vaya hacia
+  un enemigo (no empieza la pelea).
 - La primera vez se muestra una ayuda con la leyenda (botón **?**).
 - Cada mazmorra tiene 5 o 6 enemigos y 3 o 4 cofres, nunca a menos de 3 pasos
   de la H. Los cofres prefieren los callejones sin salida.
@@ -316,7 +318,8 @@ combate o llegar a 70 de estrés también la termina.
 ### 7.5 Botín y calidades
 
 - Enemigo vencido: oro y **40%** de soltar un objeto. Cofre: siempre un objeto
-  y 5 a 15 de oro × nivel.
+  y 5 a 15 de oro × nivel. El objeto es siempre del nivel del lugar donde se
+  encontró (de ahí salen su calidad y su material).
 - Objeto: 35% **arma** (espada, maza, lanza o bastón) y 65% **armadura**
   (casco, peto, brazales o grebas).
 - El material depende del nivel del lugar: bronce, hierro, acero, obsidiana.

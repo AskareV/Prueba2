@@ -4,15 +4,20 @@ extends Control
 
 const ESCENA_REINO := "res://escenas/reino.tscn"
 const ESCENA_DEMO := "res://escenas/preparacion.tscn"
+## Milisegundos tras abrir el menú en que "atrás" no cierra el juego: un doble
+## "atrás" desde el reino no debe cerrarlo sin querer (la partida no se guarda).
+const ESPERA_SALIR_MS := 800
 
 var _fondo: FondoMazmorra
 var _antorchas: Antorchas
 var _vineta: Vineta
 var _botones: VBoxContainer
 var _eleccion: PanelContainer
+var _abierto_en := 0
 
 
 func _ready() -> void:
+	_abierto_en = Time.get_ticks_msec()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fondo = FondoMazmorra.new()
 	add_child(_fondo)
@@ -94,7 +99,7 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		if _eleccion.visible:
 			_al_cancelar()
-		else:
+		elif Time.get_ticks_msec() - _abierto_en >= ESPERA_SALIR_MS:
 			get_tree().quit()
 
 

@@ -178,18 +178,26 @@ func _mover(direccion: Vector2i) -> void:
 	_revelar(destino)
 	if destino != plano["entrada"]:
 		Juego.mazmorra["salio"] = true
-	if plano["enemigos"].has(destino):
-		_iniciar_combate(destino)
-		return
 	if plano["cofres"].has(destino):
 		_abrir_cofre(destino)
 	if destino == plano["entrada"] and Juego.mazmorra["salio"]:
 		_salir("Saliste de %s." % _datos["nombre"])
 		return
-	if Juego.estres >= DatosAventura.ESTRES_MAXIMO:
-		_salir("El estrés llegó a %d: es hora de volver a casa." % roundi(DatosAventura.ESTRES_MAXIMO))
+	# Con el estrés al máximo se vuelve a casa, aunque el paso sea hacia un enemigo.
+	if _comprobar_estres():
+		return
+	if plano["enemigos"].has(destino):
+		_iniciar_combate(destino)
 		return
 	_actualizar()
+
+
+## Si el estrés llegó al máximo, sale de la mazmorra y devuelve true.
+func _comprobar_estres() -> bool:
+	if Juego.estres < DatosAventura.ESTRES_MAXIMO:
+		return false
+	_salir("El estrés llegó a %d: es hora de volver a casa." % roundi(DatosAventura.ESTRES_MAXIMO))
+	return true
 
 
 ## Descubre la casilla y sus cuatro vecinas.
@@ -230,20 +238,20 @@ func _procesar_combate() -> void:
 		"victoria":
 			Juego.mazmorra["plano"]["enemigos"].erase(combate["celda"])
 			Juego.sumar_estres(DatosAventura.ESTRES_VICTORIA)
-			var botin := Juego.recompensa_enemigo(combate["rival"])
+			var botin := Juego.recompensa_enemigo(combate["rival"], int(_datos["nivel"]))
 			var texto := "Venciste al %s: %d de oro" % [nombre, botin["oro"]]
 			var objeto: Dictionary = botin["objeto"]
 			if not objeto.is_empty():
 				texto += " y %s (%s)" % [objeto["nombre"], DatosBotin.nombre_calidad(objeto["calidad"]).to_lower()]
 			_mensaje(texto + ".")
-			if Juego.estres >= DatosAventura.ESTRES_MAXIMO:
-				_salir("El estrés llegó a %d: es hora de volver a casa." % roundi(DatosAventura.ESTRES_MAXIMO))
+			_comprobar_estres()
 		"derrota":
 			Juego.sumar_estres(DatosAventura.ESTRES_DERROTA)
 			_salir("El %s te venció. Te llevan de vuelta al castillo." % nombre)
 		_:
 			Juego.mazmorra["pos"] = Juego.mazmorra["anterior"]
 			_mensaje("Huiste del %s." % nombre)
+			_comprobar_estres()
 
 
 # --- Salida ---

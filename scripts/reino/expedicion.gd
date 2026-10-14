@@ -129,7 +129,7 @@ func _procesar_combate() -> void:
 	match String(combate["resultado"]):
 		"victoria":
 			Juego.sumar_estres(DatosAventura.ESTRES_VICTORIA)
-			var botin := Juego.recompensa_enemigo(combate["rival"])
+			var botin := Juego.recompensa_enemigo(combate["rival"], int(_datos["nivel"]))
 			var texto := "Venciste al %s: %d de oro" % [nombre, botin["oro"]]
 			var objeto: Dictionary = botin["objeto"]
 			if not objeto.is_empty():
