@@ -27,6 +27,7 @@ const COLORES_HERIDA := {
 	"Contusión": Color("#6a3d9a"),
 	"Perforación": Color("#8e1b2c"),
 	"Fractura": Color("#4a3a75"),
+	"Quemadura": Color("#e65100"),
 }
 ## Cuánto se tiñe una parte según su nivel de herida (0 a 4).
 const INTENSIDAD_HERIDA := [0.0, 0.2, 0.36, 0.5, 0.6]
@@ -377,6 +378,8 @@ func _dibujar_accesorio() -> void:
 			_dibujar_colmillos()
 		"casco":
 			_dibujar_casco(cabeza, radio)
+		"orejas":
+			_dibujar_orejas(cabeza, radio)
 
 
 ## Pelo (o frente de la capucha): cubre la parte de arriba de la cabeza.
@@ -424,6 +427,17 @@ func _dibujar_colmillos() -> void:
 			boca + Vector2(7 * lado, 1), boca + Vector2(12 * lado, 1), boca + Vector2(10 * lado, -9)])
 		draw_colored_polygon(colmillo, COLOR_OJO)
 		_contorno(colmillo, CONTORNO, 1.5)
+
+
+## Orejas puntiagudas de los goblins.
+func _dibujar_orejas(cabeza: Vector2, radio: Vector2) -> void:
+	for lado in [-1.0, 1.0]:
+		var oreja := PackedVector2Array([
+			cabeza + Vector2(radio.x * 0.82 * lado, -radio.y * 0.25),
+			cabeza + Vector2((radio.x + 30) * lado, -radio.y * 0.75),
+			cabeza + Vector2(radio.x * 0.9 * lado, radio.y * 0.2)])
+		draw_colored_polygon(oreja, _color_aspecto("piel"))
+		_contorno(oreja, CONTORNO, 2.0)
 
 
 func _dibujar_casco(cabeza: Vector2, radio: Vector2) -> void:
@@ -478,6 +492,14 @@ func _dibujar_arma(arma_id: String, origen: Vector2, giro: float, escala := 1.0)
 			draw_colored_polygon(punta, COLOR_ACERO)
 			_contorno(punta, CONTORNO, 2.0)
 			draw_rect(Rect2(-5, -153, 10, 8), Color("#5d4037"))
+		"baston":
+			var vara := Rect2(-4, -120, 8, 150)
+			draw_rect(vara, Color("#6d4c41"))
+			draw_rect(vara, CONTORNO, false, 1.5)
+			var brillo := 0.75 + 0.25 * sin(_tiempo * 4.0)
+			draw_circle(Vector2(0, -132), 15.0, Color("#26a69a").lightened(0.3 * brillo))
+			draw_arc(Vector2(0, -132), 15.0, 0.0, TAU, 24, CONTORNO, 2.0, true)
+			draw_circle(Vector2(-4, -136), 4.0, Color(1, 1, 1, 0.6))
 	draw_set_transform(desplazamiento)
 
 
@@ -506,6 +528,10 @@ func _dibujar_marcas() -> void:
 		var perforaciones := mini(int(conteo.get("Perforación", 0)), 3)
 		for i in perforaciones:
 			draw_circle(centro + Vector2((i - (perforaciones - 1) / 2.0) * 7.0, 0), 2.6, Color("#5a0010"))
+		var quemaduras := mini(int(conteo.get("Quemadura", 0)), 3)
+		for i in quemaduras:
+			draw_arc(centro + Vector2((i - (quemaduras - 1) / 2.0) * 9.0, 0), 4.0, 0.0, TAU, 12,
+				Color("#bf360c"), 2.0, true)
 		if luchador.fracturas.has(parte_id):
 			var zigzag := PackedVector2Array([
 				centro + Vector2(-7, -5), centro + Vector2(-2, 1), centro + Vector2(2, -3), centro + Vector2(7, 4)])

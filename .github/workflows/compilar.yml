@@ -81,6 +81,7 @@ jobs:
           set -o pipefail
           timeout 300 godot --headless --script res://pruebas/ejecutar.gd 2>&1 | tee pruebas.log
           timeout 300 godot --headless --script res://pruebas/partida_automatica.gd 2>&1 | tee -a pruebas.log
+          timeout 300 godot --headless --script res://pruebas/recorrido_reino.gd 2>&1 | tee -a pruebas.log
           if grep -E "SCRIPT ERROR|Parse Error" pruebas.log; then
             echo "::error::Hubo errores de script durante las pruebas"
             exit 1

@@ -12,16 +12,21 @@ const ARMAS := {
 	"espada": {"nombre": "Espada", "tipo": "cortante", "danio_min": 14, "danio_max": 17, "precision": 0.85},
 	"maza": {"nombre": "Maza", "tipo": "contundente", "danio_min": 15, "danio_max": 19, "precision": 0.78},
 	"lanza": {"nombre": "Lanza", "tipo": "punzante", "danio_min": 12, "danio_max": 16, "precision": 0.9},
+	"baston": {"nombre": "Bastón", "tipo": "arcano", "danio_min": 11, "danio_max": 14, "precision": 0.88},
 	"punos": {"nombre": "Puños", "tipo": "contundente", "danio_min": 4, "danio_max": 5, "precision": 0.85, "efectos": 0.4},
 	"patadas": {"nombre": "Patadas", "tipo": "contundente", "danio_min": 9, "danio_max": 11, "precision": 0.8, "efectos": 0.5},
 }
 
-## Armas que se pueden elegir. Sin arma se pelea con los puños o, si ningún
-## brazo sirve, a patadas.
+## Armas que se pueden elegir en la demo. Sin arma se pelea con los puños o, si
+## ningún brazo sirve, a patadas. El bastón solo aparece en el reino (botín y
+## enemigos).
 const ELEGIBLES := ["espada", "maza", "lanza"]
 
 ## Color de cada tipo de arma en los botones.
-const COLORES_TIPO := {"cortante": Color("#ef5350"), "contundente": Color("#ab47bc"), "punzante": Color("#29b6f6")}
+const COLORES_TIPO := {
+	"cortante": Color("#ef5350"), "contundente": Color("#ab47bc"), "punzante": Color("#29b6f6"),
+	"arcano": Color("#26a69a"),
+}
 
 ## Datos por tipo de arma:
 ## - herida: cómo se registra el golpe (para el sangrado e infecciones futuras).
@@ -29,6 +34,8 @@ const COLORES_TIPO := {"cortante": Color("#ef5350"), "contundente": Color("#ab47
 ## - prob_aturdir: base para aturdir con un golpe en el cráneo.
 ## - prob_desarmar: base para hacer soltar el arma con un golpe en la mano.
 ## - afinidad: multiplicador de daño por tipo de parte (1.0 si no aparece).
+## - danio: "fisico" (lo frena la armadura) o "magico" (lo frena la resistencia
+##   mágica). "fisico" si no aparece.
 const TIPOS := {
 	"cortante": {
 		"nombre": "Cortante",
@@ -63,6 +70,16 @@ const TIPOS := {
 			"mano": 0.85, "pie": 0.85,
 		},
 	},
+	"arcano": {
+		"nombre": "Arcano",
+		"herida": "Quemadura",
+		"descripcion": "Daño mágico: lo frena la resistencia mágica, no la armadura.",
+		"exp_tamano": 0.8,
+		"prob_aturdir": 0.1,
+		"prob_desarmar": 0.05,
+		"afinidad": {},
+		"danio": "magico",
+	},
 }
 
 
@@ -76,6 +93,10 @@ static func tipo(tipo_id: String) -> Dictionary:
 
 static func tipo_de(arma_id: String) -> Dictionary:
 	return TIPOS[ARMAS[arma_id]["tipo"]]
+
+
+static func es_magico(tipo_id: String) -> bool:
+	return TIPOS[tipo_id].get("danio", "fisico") == "magico"
 
 
 static func afinidad(tipo_id: String, parte_id: String) -> float:

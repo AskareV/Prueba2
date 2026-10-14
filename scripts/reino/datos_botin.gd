@@ -1,0 +1,174 @@
+class_name DatosBotin
+extends RefCounted
+## Botín del rey: armas y piezas de armadura con calidad normal, rara, épica o
+## legendaria. Todos los números son provisionales.
+
+const CALIDADES := ["normal", "raro", "epico", "legendario"]
+
+## Por calidad: multiplicadores del daño del arma y de la armadura, precisión
+## extra del arma y precio de venta base.
+const DATOS_CALIDAD := {
+	"normal": {
+		"nombre": "Normal", "color": Color("#c8ccd8"), "mult_arma": 1.0, "mult_armadura": 1.0,
+		"precision": 0.0, "precio": 8,
+	},
+	"raro": {
+		"nombre": "Raro", "color": Color("#42a5f5"), "mult_arma": 1.15, "mult_armadura": 1.3,
+		"precision": 0.02, "precio": 30,
+	},
+	"epico": {
+		"nombre": "Épico", "color": Color("#ba68c8"), "mult_arma": 1.35, "mult_armadura": 1.7,
+		"precision": 0.04, "precio": 120,
+	},
+	"legendario": {
+		"nombre": "Legendario", "color": Color("#ffa726"), "mult_arma": 1.6, "mult_armadura": 2.2,
+		"precision": 0.06, "precio": 500,
+	},
+}
+
+## Probabilidad (%) de cada calidad, en el orden de CALIDADES, según el nivel del
+## lugar: 1 fácil, 2 fácil/medio, 3 medio, 4 difícil.
+const PROB_CALIDAD := {
+	1: [75.0, 20.0, 4.5, 0.5],
+	2: [65.0, 26.0, 8.0, 1.0],
+	3: [55.0, 30.0, 12.0, 3.0],
+	4: [40.0, 35.0, 19.0, 6.0],
+}
+
+## Material según el nivel del lugar donde se encontró.
+const MATERIALES := ["de bronce", "de hierro", "de acero", "de obsidiana"]
+
+## Ranuras de equipo. "zonas": zonas del cuerpo que protege esa pieza.
+const RANURAS := {
+	"arma": {"nombre": "Arma", "zonas": []},
+	"casco": {"nombre": "Casco", "zonas": ["cabeza"]},
+	"peto": {"nombre": "Peto", "zonas": ["torso"]},
+	"brazales": {"nombre": "Brazales", "zonas": ["brazo_der", "brazo_izq"]},
+	"grebas": {"nombre": "Grebas", "zonas": ["pierna_der", "pierna_izq"]},
+}
+const ORDEN_RANURAS := ["arma", "casco", "peto", "brazales", "grebas"]
+const PIEZAS := ["casco", "peto", "brazales", "grebas"]
+
+## Armadura base de cada pieza según el nivel (1 a 4), antes de la calidad.
+const ARMADURA_BASE := {
+	"casco": [6, 12, 20, 30],
+	"peto": [10, 18, 28, 40],
+	"brazales": [5, 10, 16, 24],
+	"grebas": [6, 12, 18, 26],
+}
+## Dos estilos de armadura: de metal (mucha armadura, poca resistencia mágica)
+## o con runas (al revés). "peso": probabilidad (%) de que salga.
+const ESTILOS := {
+	"metal": {"fisica": 1.0, "magica": 0.25, "peso": 75.0},
+	"runas": {"fisica": 0.55, "magica": 1.0, "peso": 25.0},
+}
+
+## Armas que pueden salir como botín (ver DatosArmas).
+const ARMAS_BOTIN := ["espada", "maza", "lanza", "baston"]
+## Probabilidad de que el botín sea un arma; si no, una pieza de armadura.
+const PROB_ARMA := 0.35
+## Cuánto más fuerte es un arma por cada nivel del lugar.
+const MEJORA_POR_NIVEL := 0.25
+
+
+## Sortea la calidad según el nivel del lugar.
+static func sortear_calidad(nivel: int, rng: RandomNumberGenerator) -> String:
+	var tabla: Array = PROB_CALIDAD[clampi(nivel, 1, 4)]
+	var tirada := rng.randf() * 100.0
+	for i in CALIDADES.size():
+		tirada -= tabla[i]
+		if tirada < 0.0:
+			return CALIDADES[i]
+	return CALIDADES[-1]
+
+
+## Crea un objeto de botín. "ranura" vacía = arma o pieza al azar; "calidad"
+## vacía = se sortea. No tiene "id": lo pone el inventario al guardarlo.
+static func generar(nivel: int, rng: RandomNumberGenerator, ranura := "", calidad := "") -> Dictionary:
+	nivel = clampi(nivel, 1, 4)
+	if calidad == "":
+		calidad = sortear_calidad(nivel, rng)
+	if ranura == "":
+		ranura = "arma" if rng.randf() < PROB_ARMA else PIEZAS[rng.randi() % PIEZAS.size()]
+	var objeto := {"ranura": ranura, "calidad": calidad, "nivel": nivel}
+	if ranura == "arma":
+		_completar_arma(objeto, ARMAS_BOTIN[rng.randi() % ARMAS_BOTIN.size()])
+	else:
+		var estilo := "runas" if rng.randf() * 100.0 < ESTILOS["runas"]["peso"] else "metal"
+		_completar_pieza(objeto, estilo)
+	objeto["precio"] = precio_venta(objeto)
+	return objeto
+
+
+## Arma de botín de esa base ("espada", "maza"...), nivel y calidad.
+static func crear_arma(base: String, nivel: int, calidad: String) -> Dictionary:
+	var objeto := {"ranura": "arma", "calidad": calidad, "nivel": clampi(nivel, 1, 4)}
+	_completar_arma(objeto, base)
+	objeto["precio"] = precio_venta(objeto)
+	return objeto
+
+
+static func _completar_arma(objeto: Dictionary, base: String) -> void:
+	var arma: Dictionary = DatosArmas.arma(base)
+	var calidad: Dictionary = DATOS_CALIDAD[objeto["calidad"]]
+	var nivel: int = objeto["nivel"]
+	var mult: float = (1.0 + MEJORA_POR_NIVEL * (nivel - 1)) * calidad["mult_arma"]
+	objeto["base"] = base
+	objeto["nombre"] = "%s %s" % [arma["nombre"], MATERIALES[nivel - 1]]
+	objeto["danio_min"] = maxi(1, roundi(arma["danio_min"] * mult))
+	objeto["danio_max"] = maxi(objeto["danio_min"], roundi(arma["danio_max"] * mult))
+	objeto["precision"] = minf(float(arma["precision"]) + float(calidad["precision"]), 0.99)
+
+
+static func _completar_pieza(objeto: Dictionary, estilo: String) -> void:
+	var ranura: String = objeto["ranura"]
+	var nivel: int = objeto["nivel"]
+	var valor: float = ARMADURA_BASE[ranura][nivel - 1] * float(DATOS_CALIDAD[objeto["calidad"]]["mult_armadura"])
+	objeto["estilo"] = estilo
+	objeto["nombre"] = "%s %s" % [RANURAS[ranura]["nombre"], MATERIALES[nivel - 1]]
+	if estilo == "runas":
+		objeto["nombre"] += " con runas"
+	objeto["armadura"] = roundi(valor * ESTILOS[estilo]["fisica"])
+	objeto["resistencia_magica"] = roundi(valor * ESTILOS[estilo]["magica"])
+
+
+## Oro que da venderlo: depende sobre todo de la calidad, y algo del nivel.
+static func precio_venta(objeto: Dictionary) -> int:
+	var base: int = DATOS_CALIDAD[objeto["calidad"]]["precio"]
+	return roundi(base * (1.0 + 0.5 * (int(objeto["nivel"]) - 1)))
+
+
+static func nombre_calidad(calidad: String) -> String:
+	return DATOS_CALIDAD[calidad]["nombre"]
+
+
+static func color_calidad(calidad: String) -> Color:
+	return DATOS_CALIDAD[calidad]["color"]
+
+
+## Reducción de daño en porcentaje que da ese valor de armadura (ej. 100 -> 50).
+static func porcentaje_reduccion(valor: float) -> int:
+	return roundi((1.0 - MotorCombate.multiplicador_armadura(valor)) * 100.0)
+
+
+## Líneas de texto con los datos del objeto, para mostrarlo.
+static func describir(objeto: Dictionary) -> PackedStringArray:
+	var lineas: PackedStringArray = []
+	lineas.append("%s · nivel %d" % [nombre_calidad(objeto["calidad"]), objeto["nivel"]])
+	if objeto["ranura"] == "arma":
+		var tipo: Dictionary = DatosArmas.tipo_de(objeto["base"])
+		lineas.append("Daño %d–%d · %s" % [objeto["danio_min"], objeto["danio_max"], String(tipo["nombre"]).to_lower()])
+		lineas.append("Precisión %d%%" % roundi(float(objeto["precision"]) * 100.0))
+		if DatosArmas.es_magico(DatosArmas.arma(objeto["base"])["tipo"]):
+			lineas.append("Daño mágico")
+	else:
+		var zonas: Array = RANURAS[objeto["ranura"]]["zonas"]
+		var nombres: PackedStringArray = []
+		for zona_id in zonas:
+			nombres.append(String(DatosCuerpo.ZONAS[zona_id]["nombre"]).to_lower())
+		lineas.append("Protege: %s" % ", ".join(nombres))
+		lineas.append("Armadura %d (−%d%% daño físico)" % [objeto["armadura"], porcentaje_reduccion(objeto["armadura"])])
+		lineas.append("Resist. mágica %d (−%d%% daño mágico)" % [
+			objeto["resistencia_magica"], porcentaje_reduccion(objeto["resistencia_magica"])])
+	lineas.append("Se vende por %d de oro" % objeto["precio"])
+	return lineas

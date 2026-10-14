@@ -3,6 +3,7 @@ extends Control
 ## El contenido se diseña en un área de 1280×720 centrada, que siempre cabe.
 
 const ESCENA_COMBATE := "res://escenas/combate.tscn"
+const ESCENA_MENU := "res://escenas/menu_principal.tscn"
 const DIFICULTAD := {"bandido": "Fácil", "lancero": "Medio", "orco": "Difícil"}
 
 var _fondo: FondoMazmorra
@@ -54,7 +55,7 @@ func _bloquear_toques(segundos: float) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
-		get_tree().quit()
+		_al_volver_al_menu()
 
 
 func _reubicar() -> void:
@@ -73,6 +74,14 @@ func _crear_titulo() -> void:
 	var subtitulo := _etiqueta("Prototipo del sistema de cuerpo: 21 partes en 6 zonas · reglas provisionales",
 		19, Vector2(42, 80))
 	subtitulo.add_theme_color_override("font_color", Estilo.TEXTO_SUAVE)
+	# En el navegador no hay botón "atrás" de Android: este vuelve al menú.
+	var menu := Button.new()
+	menu.text = "Menú principal"
+	menu.add_theme_font_size_override("font_size", 20)
+	menu.position = Vector2(1050, 24)
+	menu.custom_minimum_size = Vector2(200, 60)
+	menu.pressed.connect(_al_volver_al_menu)
+	_contenido.add_child(menu)
 
 
 func _crear_rey() -> void:
@@ -225,3 +234,7 @@ func _actualizar_rey() -> void:
 
 func _al_combatir() -> void:
 	get_tree().change_scene_to_file.call_deferred(ESCENA_COMBATE)
+
+
+func _al_volver_al_menu() -> void:
+	get_tree().change_scene_to_file.call_deferred(ESCENA_MENU)

@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Mi Juego"
 config/version="0.2.0"
-run/main_scene="res://escenas/preparacion.tscn"
+run/main_scene="res://escenas/menu_principal.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 config/quit_on_go_back=false
@@ -22,6 +22,7 @@ config/quit_on_go_back=false
 Tema="*res://scripts/estilo.gd"
 Partida="*res://scripts/partida.gd"
 Orientacion="*res://scripts/orientacion.gd"
+Juego="*res://scripts/reino/estado_reino.gd"
 
 [display]
 

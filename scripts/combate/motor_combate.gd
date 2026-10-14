@@ -20,7 +20,7 @@ const REDUCCION_DANIO_EN_GUARDIA := 0.5
 
 
 static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
-	var arma: Dictionary = DatosArmas.arma(atacante.arma_actual())
+	var arma: Dictionary = atacante.datos_arma()
 	var tipo: Dictionary = DatosArmas.tipo(arma["tipo"])
 	var tamano: float = DatosCuerpo.PARTES[parte_id]["tamano"]
 	var exponente: float = tipo["exp_tamano"]
@@ -42,11 +42,19 @@ static func prob_acierto_zona(atacante: Luchador, defensor: Luchador, zona_id: S
 	return suma / partes.size()
 
 
+## Armadura y resistencia mágica, como en League of Legends: el daño se
+## multiplica por 100 / (100 + valor). Con 100, la mitad; con 200, un tercio.
+static func multiplicador_armadura(valor: float) -> float:
+	return 100.0 / (100.0 + maxf(valor, 0.0))
+
+
 ## Fuerza del golpe respecto de la del arma: tipo de arma contra esa parte,
-## estado del brazo que ataca y guardia del defensor.
+## estado del brazo que ataca, armadura de esa zona y guardia del defensor.
 static func multiplicador_golpe(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
-	var arma: Dictionary = DatosArmas.arma(atacante.arma_actual())
+	var arma: Dictionary = atacante.datos_arma()
 	var mult := DatosArmas.afinidad(arma["tipo"], parte_id)
+	var magico := DatosArmas.es_magico(arma["tipo"])
+	mult *= multiplicador_armadura(defensor.proteccion(DatosCuerpo.zona_de(parte_id), magico))
 	mult *= FUERZA_MINIMA + (1.0 - FUERZA_MINIMA) * atacante.fuerza_ataque()
 	if atacante.mano_torpe and not atacante.desarmado:
 		mult *= PENALIZACION_MANO_TORPE_DANIO
@@ -81,7 +89,7 @@ static func golpes_para_inutilizar(atacante: Luchador, defensor: Luchador, parte
 	var restante: float = defensor.integridad[parte_id] - umbral
 	if restante < 0.0:
 		return Vector2i.ZERO
-	var arma: Dictionary = DatosArmas.arma(atacante.arma_actual())
+	var arma: Dictionary = atacante.datos_arma()
 	var primero := multiplicador_desgaste(atacante, defensor, parte_id)
 	# La guardia solo protege del próximo golpe.
 	var siguientes := primero / REDUCCION_DANIO_EN_GUARDIA if defensor.defendiendo else primero
@@ -99,7 +107,7 @@ static func _golpes_hasta(restante: float, primero: float, siguientes: float) ->
 
 ## Daño mínimo y máximo de un golpe acertado en esa parte.
 static func rango_danio(atacante: Luchador, defensor: Luchador, parte_id: String) -> Vector2i:
-	var arma: Dictionary = DatosArmas.arma(atacante.arma_actual())
+	var arma: Dictionary = atacante.datos_arma()
 	var mult := multiplicador_danio(atacante, defensor, parte_id)
 	var minimo: int = arma["danio_min"]
 	var maximo: int = arma["danio_max"]
@@ -112,7 +120,7 @@ static func rango_danio(atacante: Luchador, defensor: Luchador, parte_id: String
 static func resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: String,
 		rng: RandomNumberGenerator, turno: int) -> Dictionary:
 	var arma_id := atacante.arma_actual()
-	var arma: Dictionary = DatosArmas.arma(arma_id)
+	var arma: Dictionary = atacante.datos_arma()
 	var tipo_id: String = arma["tipo"]
 	var tipo: Dictionary = DatosArmas.tipo(tipo_id)
 	var resultado := {

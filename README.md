@@ -1,8 +1,9 @@
 # Mi Juego (nombre provisional)
 
 Juego 2D horizontal para celular hecho con [Godot 4.7](https://godotengine.org/).
-Por ahora contiene una **demo de combate por turnos** con el sistema de cuerpo de
-21 partes. El diseño acordado está en [`docs/diseno.md`](docs/diseno.md).
+Por ahora contiene una **versión preliminar del reino** (mazmorras, zonas, botín,
+inventario y trabajos) y una **demo de combate por turnos** con el sistema de
+cuerpo de 21 partes. El diseño acordado está en [`docs/diseno.md`](docs/diseno.md).
 
 ## Jugar
 
@@ -11,6 +12,25 @@ Por ahora contiene una **demo de combate por turnos** con el sistema de cuerpo d
 
 Al instalar el APK, Android pide permitir "instalar apps de fuentes desconocidas".
 Cada APK nuevo se instala encima del anterior, sin desinstalar.
+
+## El reino (preliminar)
+
+Desde el menú principal: *Nueva partida* (eliges si el rey es diestro o zurdo)
+o *Continuar*. Arriba están las pestañas:
+
+- **Rey:** la ficha del rey (sus características están por definir).
+- **Inventario:** el botín. Tocas un objeto para equiparlo o venderlo (calidad
+  normal, rara, épica o legendaria; vale más cuanto mejor es).
+- **Ciudad:** en construcción.
+- **Aventura:** mapa con 4 mazmorras (banderín oscuro) y 3 zonas de siete días
+  (banderín rojo). En la mazmorra te mueves con la cruceta o tocando una casilla
+  vecina; cada paso suma estrés, las espadas son enemigos, los cofres dan botín
+  y la **H** es la salida. Las mazmorras se reinician cada semana.
+- **Trabajo:** trabajos del rey que dan oro a cambio de estrés.
+- **Salir:** vuelve al menú principal.
+
+La armadura reduce el daño como en *League of Legends*: daño × 100 / (100 + armadura).
+Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 
 ## La demo de combate
 
@@ -36,10 +56,11 @@ Cada APK nuevo se instala encima del anterior, sin desinstalar.
 | Carpeta / archivo | Contenido |
 |---|---|
 | `project.godot` | Configuración del proyecto (horizontal, 1280×720, se adapta a cualquier pantalla) |
-| `escenas/` | `preparacion.tscn` (pantalla inicial) y `combate.tscn` |
+| `escenas/` | `menu_principal.tscn` (pantalla inicial), `reino.tscn`, `mazmorra.tscn`, `expedicion.tscn`, `preparacion.tscn` (demo) y `combate.tscn` |
+| `scripts/reino/` | Reino: estado de la partida (`Juego`), botín, mazmorras, zonas, trabajos y sus pantallas |
 | `scripts/combate/` | Reglas del combate y dibujo de los luchadores |
 | `scripts/ui/` | Barras y paneles de la interfaz |
-| `scripts/` | Globales: `estilo.gd` (tema), `partida.gd` (elecciones), `orientacion.gd` (aviso para girar el teléfono en el navegador) |
+| `scripts/` | Globales: `estilo.gd` (tema), `partida.gd` (elecciones de la demo), `orientacion.gd` (aviso para girar el teléfono en el navegador) |
 | `pruebas/` | Pruebas automáticas, partida automática y simulador de equilibrio |
 | `docs/diseno.md` | Documento de diseño |
 | `assets/` | Imágenes, sonidos y fuentes (por ahora todo se dibuja con código) |
@@ -52,13 +73,24 @@ Cada APK nuevo se instala encima del anterior, sin desinstalar.
 | Archivo | Qué hace |
 |---|---|
 | `datos_cuerpo.gd` | Las 21 partes, las 6 zonas y las funciones de supervivencia |
-| `datos_armas.gd` | Los tres tipos de arma y sus números provisionales |
-| `datos_rivales.gd` | Rivales de la demo y aspecto del rey |
+| `datos_armas.gd` | Las armas (espada, maza, lanza y bastón mágico) y sus números provisionales |
+| `datos_rivales.gd` | Rivales de la demo, enemigos del reino y aspecto del rey |
 | `luchador.gd` | Estado de un combatiente: vida, integridad de cada parte, lateralidad |
-| `motor_combate.gd` | Reglas: acierto, daño, fracturas, desarme, aturdimiento, desmayo |
+| `motor_combate.gd` | Reglas: acierto, daño, armadura, fracturas, desarme, aturdimiento, desmayo |
 | `ia_enemigo.gd` | Cómo deciden los rivales: el plan de su personalidad, y a veces improvisan |
 | `figura.gd` / `plantilla_humanoide.gd` | Dibujo del cuerpo por partes, heridas y animaciones |
 | `combate.gd` | Flujo de turnos e interfaz del combate |
+
+### Archivos principales del reino
+
+| Archivo | Qué hace |
+|---|---|
+| `estado_reino.gd` | La partida (global `Juego`): semana, oro, estrés, inventario, equipo |
+| `datos_botin.gd` | Calidades, armas y armaduras de botín, precios de venta |
+| `datos_aventura.gd` | Mazmorras, zonas, sucesos de los siete días |
+| `generador_mazmorra.gd` | Crea el plano de cada mazmorra según la semana |
+| `datos_trabajos.gd` | Trabajos del rey |
+| `reino.gd`, `mazmorra.gd`, `expedicion.gd`, `menu_principal.gd` | Pantallas |
 
 ## Pruebas
 
@@ -66,6 +98,7 @@ Cada APK nuevo se instala encima del anterior, sin desinstalar.
 godot --headless --import
 godot --headless --script res://pruebas/ejecutar.gd            # pruebas de las reglas y del equilibrio
 godot --headless --script res://pruebas/partida_automatica.gd  # combates completos pulsando botones
+godot --headless --script res://pruebas/recorrido_reino.gd     # recorre el reino: mazmorra, zona, inventario y trabajo
 godot --headless --script res://pruebas/simular.gd             # equilibrio: miles de combates por estrategia
 ```
 
@@ -78,12 +111,12 @@ inutilizar primero el brazo del arma) contra cada rival. Se pueden elegir alguna
 Cada `push` ejecuta GitHub Actions, que:
 
 1. Descarga Godot y sus plantillas de exportación.
-2. Ejecuta las pruebas y una partida automática.
+2. Ejecuta las pruebas, una partida automática y un recorrido del reino.
 3. Exporta la versión web y la publica en la rama `gh-pages` (GitHub Pages).
 4. Exporta el APK firmado y lo publica en *Releases* (se conservan las últimas 5 versiones).
 
 El número de versión (`0.2.N`) aumenta solo en cada compilación y se ve en la pantalla
-de preparación.
+de preparación de la demo.
 
 ### Activar GitHub Pages (una sola vez)
 

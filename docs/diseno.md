@@ -236,14 +236,176 @@ según cómo elige a qué atacar:
   abrir la guardia.
 - Dificultad de los rivales: bandido fácil, lancero medio, orco difícil.
 
-## 7. Pendientes
+## 7. Reino (versión preliminar)
 
-- Armas y daño definitivos; armaduras por zona.
+Todo lo de esta sección es **provisional** y usa dibujos y números de relleno.
+
+Al abrir el juego aparece el **menú principal**: *Continuar (semana N)* si hay
+una partida, *Nueva partida* (pregunta si el rey es diestro o zurdo) y *Demo de
+combate* (la demo anterior). La pantalla del reino tiene pestañas arriba:
+
+| Pestaña | Contenido |
+|---|---|
+| **Rey** | Ficha del rey ("Char info"). Sus características están por definir. |
+| **Inventario** | Equipo puesto, mochila con el botín, equipar y vender. |
+| **Ciudad** | En construcción. Aquí irán el descanso y la escuela. |
+| **Aventura** | Mapa con 4 mazmorras y 3 zonas. |
+| **Trabajo** | Trabajos dignos de un rey. |
+| **Salir** | Vuelve al menú principal (la partida sigue en *Continuar*). |
+
+### 7.1 Semanas y estrés
+
+- Cada semana se hace **una** actividad: una mazmorra, una salida de siete días
+  a una zona o una semana de trabajo. Al terminarla, pasa la semana.
+- Al pasar la semana **las mazmorras se reinician**: cambia el plano, vuelven
+  los enemigos y los cofres. El plano depende de la mazmorra y de la semana, así
+  que dentro de la misma semana siempre es el mismo.
+- **El juego no tiene fin por ahora:** las semanas siguen sin límite.
+- Estrés de 0 a 100. Con **70** o más el rey vuelve a casa y no puede salir de
+  aventura; con **60** o más no puede trabajar.
+- **Provisional:** en la Ciudad hay un botón *Descansar una semana* (−40 de
+  estrés) para no quedar bloqueado hasta que exista el descanso de verdad.
+
+### 7.2 Mapa de aventura
+
+Banderín **oscuro** = mazmorra; banderín **rojo** = zona de siete días.
+
+| Lugar | Tipo | Dificultad | Enemigos | Estrés por paso |
+|---|---|---|---|---|
+| Madriguera goblin | Mazmorra | Fácil | Goblins, goblins lanceros, chamanes goblin | 1 |
+| Guarida de bandidos | Mazmorra | Fácil / medio | Ladrones, matones, bandidos | 1,2 |
+| Fortaleza orca | Mazmorra | Medio | Orcos guerreros, cazadores y chamanes | 1,4 |
+| Ciudadela maldita | Mazmorra | Difícil | Caballeros negros, cultistas, verdugos | 1,6 |
+| Bosque sombrío | Zona | Fácil | Goblins, goblins lanceros, chamanes goblin, ladrones | 5 por día |
+| Ruinas del castillo | Zona | Fácil / medio | Ladrones, matones, bandidos, chamanes goblin | 5 por día |
+| Paso de la montaña | Zona | Medio | Orcos cazadores, guerreros y chamanes; matones | 5 por día |
+
+### 7.3 Mazmorras
+
+Como en *My Pet Protector*, adaptado al celular:
+
+- Cuadrícula de 15 × 9. Se mueve con la **cruceta** o **tocando una casilla
+  vecina** (en computadora, también con las flechas del teclado).
+- Cada paso suma estrés y **descubre las cuatro casillas vecinas**. La que sigue
+  negra después de descubrirla es un **muro**.
+- **Espadas cruzadas** = enemigo: empieza un combate. **Cofre** = oro y un
+  objeto. **H** = salida: al volver a pisarla se sale de la mazmorra.
+- Ganar un combate: +3 de estrés. Perder: +50 y el rey vuelve al castillo.
+  Huir: vuelve a la casilla anterior y el enemigo sigue ahí.
+- La primera vez se muestra una ayuda con la leyenda (botón **?**).
+- Cada mazmorra tiene 5 o 6 enemigos y 3 o 4 cofres, nunca a menos de 3 pasos
+  de la H. Los cofres prefieren los callejones sin salida.
+
+### 7.4 Zonas de siete días
+
+Casillas *Día 1* a *Día 7*. Cada toque revela el día siguiente: +5 de estrés y
+un suceso al azar.
+
+| Suceso | Probabilidad | Efecto |
+|---|---|---|
+| Combate | 30% | Un enemigo de la zona |
+| Nada | 25% | Día tranquilo |
+| Oro | 20% | 5 a 15 de oro × nivel de la zona |
+| Objeto | 10% | Un objeto de botín |
+| Descanso | 10% | −10 de estrés |
+| Trampa | 5% | +10 de estrés |
+
+*Volver a casa* termina la salida (y la semana) en cualquier momento. Perder un
+combate o llegar a 70 de estrés también la termina.
+
+### 7.5 Botín y calidades
+
+- Enemigo vencido: oro y **40%** de soltar un objeto. Cofre: siempre un objeto
+  y 5 a 15 de oro × nivel.
+- Objeto: 35% **arma** (espada, maza, lanza o bastón) y 65% **armadura**
+  (casco, peto, brazales o grebas).
+- El material depende del nivel del lugar: bronce, hierro, acero, obsidiana.
+  Cada nivel hace el arma un 25% más fuerte y la armadura más resistente.
+
+Probabilidad de cada calidad según la dificultad del lugar:
+
+| Calidad | Fácil | Fácil / medio | Medio | Difícil | Daño del arma | Armadura | Precisión |
+|---|---|---|---|---|---|---|---|
+| Normal | 75% | 65% | 55% | 40% | ×1 | ×1 | — |
+| Raro | 20% | 26% | 30% | 35% | ×1,15 | ×1,3 | +2% |
+| Épico | 4,5% | 8% | 12% | 19% | ×1,35 | ×1,7 | +4% |
+| Legendario | 0,5% | 1% | 3% | 6% | ×1,6 | ×2,2 | +6% |
+
+### 7.6 Armadura y resistencia mágica (como en League of Legends)
+
+- Daño recibido = daño × **100 / (100 + armadura)**. 50 de armadura quita 33%,
+  100 quita 50%, 200 quita 67%. Cada punto rinde lo mismo y nunca se llega a
+  100% de reducción.
+- La **armadura** frena el daño físico (espada, maza, lanza, puños, patadas).
+  La **resistencia mágica** frena el daño mágico (bastón).
+- Se aplica **por zona del cuerpo**: casco → cabeza; peto → torso; brazales →
+  los dos brazos; grebas → las dos piernas.
+- Las piezas **de metal** (75%) dan mucha armadura y poca resistencia mágica;
+  las piezas **con runas** (25%), al revés.
+- Los enemigos también llevan armadura: los goblins casi nada, el caballero
+  negro mucha, el cultista mucha resistencia mágica.
+- En las mazmorras y zonas el rey pelea con el arma que tiene equipada (se
+  cambia en el Inventario, no durante el combate).
+
+### 7.7 Vender
+
+En el Inventario se toca un objeto de la mochila y luego *Vender por N de oro*;
+hay que tocar otra vez para confirmar. Lo equipado no se vende (primero se
+quita o se cambia).
+
+| Calidad | Fácil | Fácil / medio | Medio | Difícil |
+|---|---|---|---|---|
+| Normal | 8 | 12 | 16 | 20 |
+| Raro | 30 | 45 | 60 | 75 |
+| Épico | 120 | 180 | 240 | 300 |
+| Legendario | 500 | 750 | 1000 | 1250 |
+
+### 7.8 Trabajos del rey
+
+Ocupan la semana entera. Cada día sale bien o mal: probabilidad 55% + dominio
+÷ 250 (máximo 95%). Solo se cobran los días buenos; cada día trabajado suma 2
+de dominio (hasta 100). Si los siete salen bien, se cobra el triple del pago
+diario de más.
+
+| Trabajo | Oro por día | Estrés de la semana |
+|---|---|---|
+| Audiencias reales | 10 | 14 |
+| Patrullar las murallas | 12 | 21 |
+| Entrenar a la guardia | 9 | 28 |
+| Cobrar impuestos | 16 | 24,5 |
+| Presidir el tribunal | 20 | 35 |
+| Negociar con mercaderes | 26 | 42 |
+
+### 7.9 Equilibrio de los enemigos (simulado)
+
+Victorias del rey en combates simulados con espada. "Con táctica" = inutiliza
+primero el brazo del arma y luego va al cuerpo; "sin plan" = como la IA de los
+rivales.
+
+| Equipo del rey | Goblins | Matón | Orco guerrero | Caballero negro | Verdugo |
+|---|---|---|---|---|---|
+| Inicial (espada de bronce) | ~100% | 47% sin plan | 0% sin plan | 0% | 1% con táctica |
+| Nivel 2 normal | ~100% | 80% sin plan | 6% sin plan | 4% con táctica | 7% con táctica |
+| Nivel 3 épico | ~100% | — | 98% con táctica | 69% con táctica | 82% con táctica |
+| Nivel 4 épico | ~100% | — | 100% con táctica | 90% con táctica | 92% con táctica |
+
+La idea: empezar por los goblins, equiparse y subir de mazmorra. En la difícil
+la táctica pesa mucho: con equipo de nivel 3 épico, sin plan se gana menos de
+una de cada cuatro peleas contra el caballero negro o el verdugo.
+
+### 7.10 Todavía no
+
+- La partida **no se guarda** al cerrar la aplicación.
+- Las heridas no pasan de un combate a otro: cada combate empieza con el rey sano.
+- Características del rey, la ciudad, el descanso y la escuela.
+
+## 8. Pendientes
+
+- Armas, armaduras y daño definitivos.
 - Integración del sangrado con la vida; recuperación después del combate.
 - Ambidiestros.
 - ¿Quién baja a la mazmorra: solo el rey, el rey con compañeros o héroes enviados?
 - ¿Hay límite de tiempo o amenazas periódicas sobre la ciudad?
 - ¿Qué devastó la ciudad?
 - Estilo visual (propuesta: pixel art retro).
-- Enemigos visibles en el mapa o encuentros al azar.
 - Nombre del juego.

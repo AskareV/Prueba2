@@ -39,6 +39,12 @@ var defendiendo := false
 ## Inconsciente: queda fuera de combate.
 var desmayado := false
 
+## Armadura por zona del cuerpo: zona -> {"fisica": n, "magica": n}. Frena el
+## daño como en League of Legends (ver MotorCombate.multiplicador_armadura).
+var armadura: Dictionary = {}
+## Arma de botín equipada (ver DatosBotin) o vacío para usar el arma básica.
+var arma_objeto: Dictionary = {}
+
 ## parte -> integridad (0 a 100).
 var integridad: Dictionary = {}
 ## Golpes recibidos: {parte, tipo, danio, turno}. Base para sangrado, dolor e infecciones.
@@ -92,6 +98,24 @@ func arma_actual() -> String:
 	if extremidad_util("brazo_der") or extremidad_util("brazo_izq"):
 		return "punos"
 	return "patadas"
+
+
+## Datos del arma con que pelea ahora: el arma de botín (con su daño y
+## precisión) o la básica, o los puños o patadas si está desarmado.
+func datos_arma() -> Dictionary:
+	if desarmado or arma_objeto.is_empty() or arma_objeto.get("base", arma) != arma:
+		return DatosArmas.arma(arma_actual())
+	var datos: Dictionary = DatosArmas.arma(arma).duplicate()
+	for clave in ["nombre", "danio_min", "danio_max", "precision"]:
+		if arma_objeto.has(clave):
+			datos[clave] = arma_objeto[clave]
+	return datos
+
+
+## Armadura (física o mágica) que protege esa zona.
+func proteccion(zona_id: String, magica: bool) -> float:
+	var datos: Dictionary = armadura.get(zona_id, {})
+	return float(datos.get("magica" if magica else "fisica", 0.0))
 
 
 func puede_empunar(lado: String) -> bool:

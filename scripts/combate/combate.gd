@@ -60,14 +60,23 @@ var _ventana: Control
 var _ventana_es_estado := false
 ## Segundos que faltan para volver a aceptar toques (ver PAUSA_ENTRE_MENUS).
 var _bloqueo := 0.0
+## true si el combate viene de una mazmorra o zona del reino (ver Juego.combate):
+## el rey pelea con su equipo y al terminar vuelve a ese lugar.
+var _modo_reino := false
+var _resultado := ""
 
 
 func _ready() -> void:
 	_rng.randomize()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_jugador = DatosRivales.crear_rey(Partida.diestro, Partida.arma)
-	_datos_rival = DatosRivales.rival(Partida.rival)
-	_enemigo = DatosRivales.crear_rival(Partida.rival)
+	_modo_reino = not Juego.combate.is_empty() and Juego.combate.get("resultado", "") == ""
+	var rival_id: String = Juego.combate["rival"] if _modo_reino else Partida.rival
+	if _modo_reino:
+		_jugador = Juego.crear_rey()
+	else:
+		_jugador = DatosRivales.crear_rey(Partida.diestro, Partida.arma)
+	_datos_rival = DatosRivales.rival(rival_id)
+	_enemigo = DatosRivales.crear_rival(rival_id)
 	_crear_escenario()
 	_crear_interfaz()
 	get_viewport().size_changed.connect(_reubicar)
@@ -128,6 +137,8 @@ func _crear_interfaz() -> void:
 	botones.add_child(_boton_estado)
 	_boton_menu = _boton("Menú", _al_pulsar_menu, Vector2(120, 54), 21)
 	botones.add_child(_boton_menu)
+	# En el reino no se abandona un combate a la mitad (se puede intentar huir).
+	_boton_menu.visible = not _modo_reino
 	_etiqueta_turno = Label.new()
 	_etiqueta_turno.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_etiqueta_turno.add_theme_font_size_override("font_size", 19)
@@ -595,7 +606,18 @@ func _ir_a_preparacion() -> void:
 	# Durante las animaciones no se sale, para no cortar un turno a la mitad.
 	if _estado == Estado.ESPERANDO:
 		return
+	if _modo_reino:
+		# En el reino solo se sale al terminar, de vuelta al lugar del combate.
+		if _estado == Estado.FIN and _resultado != "":
+			_volver_al_reino()
+		return
 	get_tree().change_scene_to_file.call_deferred(ESCENA_PREPARACION)
+
+
+## Deja el resultado en Juego.combate y vuelve a la mazmorra o zona.
+func _volver_al_reino() -> void:
+	Juego.combate["resultado"] = _resultado
+	get_tree().change_scene_to_file.call_deferred(Juego.combate["escena"])
 
 
 # --- Botones con pausa entre menús ---
@@ -648,7 +670,8 @@ func _mostrar_acciones() -> void:
 		_boton_arma.disabled = not (_jugador.puede_empunar("der") or _jugador.puede_empunar("izq"))
 	else:
 		_boton_arma.text = "Cambiar arma"
-		_boton_arma.disabled = false
+		# En el reino el rey pelea con el arma equipada (se cambia en el Inventario).
+		_boton_arma.disabled = _modo_reino
 	_boton_huir.text = "Huir\n%d%%" % roundi(MotorCombate.prob_huir(_jugador, _enemigo) * 100.0)
 	_etiqueta_turno.text = "Turno %d · Te toca" % _turno
 	_boton_menu.disabled = false
@@ -924,6 +947,7 @@ func _columna_estado(luchador: Luchador, titulo: String) -> VBoxContainer:
 
 func _mostrar_fin(resultado: String) -> void:
 	_estado = Estado.FIN
+	_resultado = resultado
 	_ocultar_controles()
 	_boton_menu.disabled = false
 	var titulo := ""
@@ -960,6 +984,9 @@ func _mostrar_fin(resultado: String) -> void:
 	botones.alignment = BoxContainer.ALIGNMENT_CENTER
 	botones.add_theme_constant_override("separation", 16)
 	columna.add_child(botones)
+	if _modo_reino:
+		botones.add_child(_boton("Continuar", _al_pulsar_menu, Vector2(260, 72), 24))
+		return
 	botones.add_child(_boton("Revancha", _al_pulsar_revancha, Vector2(230, 72), 24))
 	botones.add_child(_boton("Preparación", _al_pulsar_menu, Vector2(230, 72), 24))
 
