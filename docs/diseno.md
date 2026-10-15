@@ -148,7 +148,13 @@ definamos armas y daño.
 | Punzante | Lanza | Más precisa con partes pequeñas (ojos, cuello, manos); más daño en tórax y abdomen |
 
 - **Acciones:** Atacar (zona → parte), Defender (se defiende mejor y recibe la
-  mitad de daño), cambiar o recoger el arma, y Huir.
+  mitad de daño), Magia (ver 8.4), cambiar o recoger el arma, y Huir.
+- **Orden de turnos por velocidad** (como la barra de *Champions of Chaos*):
+  cada luchador avanza según su rapidez y actúa el que llega primero. Con la
+  misma rapidez se alternan; el bastante más rápido actúa **dos veces seguidas**
+  (nunca más de 2). Arriba, al centro, se ven los próximos 6 turnos. Las piernas
+  heridas frenan (hasta un 40% menos con las dos inutilizadas). Los rivales de
+  la demo tienen la rapidez del rey, así que se alternan como antes.
 - **Al apuntar:** cada botón muestra la probabilidad de acierto y, en las partes,
   el daño posible. En brazos y piernas también muestra cuántos golpes faltan para
   inutilizarlos. Al elegir una zona, una **lupa** la muestra ampliada para tocar
@@ -401,9 +407,97 @@ una de cada cuatro peleas contra el caballero negro o el verdugo.
 
 - La partida **no se guarda** al cerrar la aplicación.
 - Las heridas no pasan de un combate a otro: cada combate empieza con el rey sano.
-- Características del rey, la ciudad, el descanso y la escuela.
+- La ciudad, el descanso y la escuela.
 
-## 8. Pendientes
+## 8. Características del rey
+
+Siete características con tres partes cada una. **Todo empieza en 3**, y en 3
+no cambia nada: los efectos dependen de los puntos por encima de 3. Todos los
+números son **provisionales**.
+
+### 8.1 Cómo se suben
+
+- **Partida nueva:** las 7 principales en 3 y **15 puntos** para repartir entre
+  ellas. Un punto en una principal sube **+1 sus tres partes**.
+- **Al subir de nivel:** **1 punto** para una principal (sube sus tres partes) y
+  **7 puntos sueltos** para cualquier parte.
+- En la pestaña **Rey** se toca **+**, y los puntos quedan en verde hasta tocar
+  **Confirmar** (o **Deshacer**). La pestaña muestra "Rey (+)" si hay puntos.
+- **Experiencia:** 10 × nivel del lugar por vencer a un enemigo y 4 × nivel por
+  abrir un cofre. Subir del nivel N al siguiente pide 50 × N. Sin nivel máximo.
+- **Amuleto:** cada punto suyo por encima de 3 suma **0,1 a las otras 20 partes**.
+
+### 8.2 Qué hace cada parte (por cada punto sobre 3)
+
+| Característica | Parte | Efecto |
+|---|---|---|
+| Fuerza | Fuerza máxima | +3% de daño con armas físicas |
+| | Fuerza explosiva | +5% de aturdir, fractura más fácil, rompe la guardia del rival (+2% del daño que recibe al defenderse) y 2% de empujarlo un tercio de turno hacia atrás (máx. 25%) |
+| | Fuerza de agarre | Al defenderte recibes un 2% menos de daño (mínimo 25%); −5% de que te desarmen y +5% de desarmar; la mano torpe castiga un 6% menos |
+| Destreza | Precisión | +1% de acierto en todas las partes |
+| | Reflejos | −1% de acierto del rival en todas tus partes |
+| | Velocidad | +0,5 de rapidez en la barra de turnos (la base del rey es 13) y +2% de huir |
+| Aguante | Vitalidad | +5 de vida máxima (100 en la base) |
+| | Cardio | −4% de estrés por cada paso en la mazmorra |
+| | Recuperación | **Todavía sin efecto**: espera al sangrado y la curación de heridas |
+| Resiliencia | Compostura | −4% de estrés por combates (ganar o perder), trampas y trabajos |
+| | Resistencia | +3% de armadura y resistencia mágica del equipo; −3% de cualquier estado en contra (aturdir, desarmar, empujón) |
+| | Firmeza | −6% de quedar aturdido, −8% de ser empujado y aguanta más antes de desmayarse |
+| Suerte | Golpe de suerte | +1,5% de golpe crítico (×1,5 de daño, no cambia el acierto) |
+| | Buen ojo | +5% de probabilidad de calidades raras o mejores y +5% de oro, en cofres y enemigos |
+| | Amuleto | +0,1 a todas las demás partes; +5% de días buenos (oro, objeto, descanso) y −5% de trampas en las zonas |
+| Inteligencia | Arcano | +5% de daño mágico (bastón y hechizos) y +2 de vida por cada Curación |
+| | Estudio | +5% de experiencia |
+| | Mago | +5 de maná máximo (20 en la base) y +0,5 de maná por turno (2 en la base) |
+| Carisma | Negociación | +3% al vender (más adelante, precios de la ciudad) |
+| | Liderazgo | **Todavía sin efecto**: espera a los soldados de la ciudad |
+| | Presencia | +3% de pago en los trabajos. Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −10% de acierto, −15% de daño y −10% de rapidez |
+
+Ningún efecto que reduce algo baja de un 30% de lo normal. Coraje de los
+enemigos: goblins 2–3, ladrón 3, bandido 4, matón y lancero 5, orcos 5–6,
+cultista 8, caballero negro y verdugo 9.
+
+### 8.3 Rapidez de los enemigos
+
+| Rápidos | Normales | Lentos |
+|---|---|---|
+| Goblin 16, ladrón 16, goblin lancero 15, chamán goblin 14, orco cazador 14 | Cultista 13 (y los rivales de la demo, como el rey) | Caballero negro 12, chamán orco 12, orco guerrero 11, matón 11, verdugo 10 |
+
+El rey empieza con 13; cada punto de Velocidad suma 0,5.
+
+### 8.4 Maná y hechizos (provisionales)
+
+- Solo el rey usa maná: 20 al empezar el combate y +2 al empezar cada turno suyo.
+- **El bastón gasta 3 de maná por golpe.** Sin maná pega como un palo:
+  contundente y con la mitad de daño. Los enemigos con bastón no gastan maná.
+- **Hechizos** (botón **Magia**), que se pagan al lanzarlos y no necesitan arma:
+
+| Hechizo | Maná | Efecto |
+|---|---|---|
+| Llamarada | 6 | Fuego mágico contra la parte que elijas (10–13, como un ataque arcano) |
+| Curación | 8 | Recuperas 15 de vida (+2 por punto de Arcano) |
+| Ralentizar | 5 | El rival pierde medio turno en la barra |
+
+Por ahora el rey sabe los tres desde el principio.
+
+### 8.5 Equilibrio con características (simulado)
+
+Victorias del rey con espada y la barra de turnos, según cómo repartió sus 15
+puntos iniciales. "Parejo": 3 en Fuerza y 2 en cada una de las demás.
+"Guerrero": 5 en Fuerza, Destreza y Aguante.
+
+| Reparto | Ladrón (equipo inicial) | Orco cazador (nivel 2) | Caballero negro (nivel 3 épico) | Verdugo (nivel 3 épico) |
+|---|---|---|---|---|
+| Sin puntos | 80% | 21% | 19% (72% con táctica) | 57% |
+| Parejo | 96% | 71% | 68% (99% con táctica) | 93% |
+| Guerrero | 100% | 93% | 94% (99% con táctica) | 99% |
+
+Sin táctica, salvo donde se indica. **Ojo:** con los 15 puntos el rey ya es
+bastante más fuerte que antes, cada nivel suma 10 puntos más y los enemigos no
+suben. Hay que decidir si los enemigos crecen (con las semanas o con el nivel
+del rey) o si cada punto vale menos.
+
+## 9. Pendientes
 
 - Armas, armaduras y daño definitivos.
 - Integración del sangrado con la vida; recuperación después del combate.

@@ -38,6 +38,25 @@ var aturdido := false
 var defendiendo := false
 ## Inconsciente: queda fuera de combate.
 var desmayado := false
+## Su presencia lo supera: acierta y pega menos y es más lento (ver MotorCombate).
+var atemorizado := false
+
+## Subcaracterísticas (ver DatosEstadisticas): sub -> valor. Las que faltan valen
+## la base, que no cambia nada. Solo el rey las tiene ("tiene_estadisticas").
+var estadisticas: Dictionary = {}
+var tiene_estadisticas := false
+## Rapidez en la barra de turnos (ver OrdenTurnos).
+var rapidez := DatosEstadisticas.RAPIDEZ_BASE
+## Coraje ante la presencia del rey: si su Presencia lo supera de lejos, se atemoriza.
+var coraje := 0.0
+## Maná: solo lo usa el rey. Los enemigos con bastón no lo gastan.
+var usa_mana := false
+var mana_max := 0.0
+var mana := 0.0
+## Hechizo que está lanzando: mientras dura, ocupa el lugar del arma
+## (ver datos_arma y DatosHechizos).
+var hechizo: Dictionary = {}
+var _vida_base := 0
 
 ## Armadura por zona del cuerpo: zona -> {"fisica": n, "magica": n}. Frena el
 ## daño como en League of Legends (ver MotorCombate.multiplicador_armadura).
@@ -63,6 +82,7 @@ func _init(p_nombre: String, p_vida_max: int, p_diestro: bool, p_arma: String, p
 	nombre = p_nombre
 	vida_max = p_vida_max
 	vida = p_vida_max
+	_vida_base = p_vida_max
 	diestro = p_diestro
 	arma = p_arma
 	es_jugador = p_es_jugador
@@ -72,6 +92,57 @@ func _init(p_nombre: String, p_vida_max: int, p_diestro: bool, p_arma: String, p
 
 func fuera_de_combate() -> bool:
 	return vida <= 0 or desmayado
+
+
+# --- Características ---
+
+func valor_de(sub_id: String) -> float:
+	return float(estadisticas.get(sub_id, DatosEstadisticas.BASE))
+
+
+## Puntos de esa sub por encima de la base: de esto dependen sus efectos.
+func puntos(sub_id: String) -> float:
+	return maxf(valor_de(sub_id) - DatosEstadisticas.BASE, 0.0)
+
+
+## Fija las características del rey y lo que depende de ellas: vida, maná y rapidez.
+func aplicar_estadisticas(p_estadisticas: Dictionary) -> void:
+	estadisticas = p_estadisticas
+	tiene_estadisticas = true
+	vida_max = _vida_base + roundi(DatosEstadisticas.VIDA_POR_VITALIDAD * puntos("vitalidad"))
+	vida = vida_max
+	usa_mana = true
+	mana_max = DatosEstadisticas.MANA_BASE + DatosEstadisticas.MANA_POR_MAGO * puntos("mago")
+	mana = mana_max
+	rapidez = DatosEstadisticas.RAPIDEZ_BASE + DatosEstadisticas.RAPIDEZ_POR_VELOCIDAD * puntos("velocidad")
+
+
+## Maná que recupera al empezar cada uno de sus turnos.
+func regeneracion_mana() -> float:
+	return DatosEstadisticas.REGENERACION_BASE + DatosEstadisticas.REGENERACION_POR_MAGO * puntos("mago")
+
+
+func regenerar_mana() -> void:
+	if usa_mana:
+		mana = minf(mana + regeneracion_mana(), mana_max)
+
+
+## Rapidez real: las piernas heridas y el miedo lo frenan.
+func rapidez_efectiva() -> float:
+	var valor_rapidez := rapidez * (0.6 + 0.4 * mov_piernas())
+	if atemorizado:
+		valor_rapidez *= MotorCombate.ATEMORIZADO_RAPIDEZ
+	return maxf(valor_rapidez, 1.0)
+
+
+## Probabilidad de golpe crítico: solo con puntos de Golpe de suerte sobre la base.
+func prob_critico() -> float:
+	return DatosEstadisticas.CRITICO_POR_SUERTE * puntos("golpe_suerte")
+
+
+## Multiplicador de una penalización de la mano torpe (ej. 0.85): el agarre la achica.
+func penalizacion_mano_torpe(base: float) -> float:
+	return 1.0 - (1.0 - base) * DatosEstadisticas.reduccion(puntos("fuerza_agarre"), DatosEstadisticas.MANO_TORPE_POR_AGARRE)
 
 
 # --- Lateralidad y arma ---
@@ -100,22 +171,41 @@ func arma_actual() -> String:
 	return "patadas"
 
 
-## Datos del arma con que pelea ahora: el arma de botín (con su daño y
-## precisión) o la básica, o los puños o patadas si está desarmado.
+## Datos del arma con que pelea ahora: el hechizo que está lanzando, el arma de
+## botín (con su daño y precisión) o la básica, o los puños o patadas si está
+## desarmado. Sin maná, el bastón pega como un palo.
 func datos_arma() -> Dictionary:
+	if not hechizo.is_empty():
+		return hechizo
+	var datos: Dictionary
 	if desarmado or arma_objeto.is_empty() or arma_objeto.get("base", arma) != arma:
-		return DatosArmas.arma(arma_actual())
-	var datos: Dictionary = DatosArmas.arma(arma).duplicate()
-	for clave in ["nombre", "danio_min", "danio_max", "precision"]:
-		if arma_objeto.has(clave):
-			datos[clave] = arma_objeto[clave]
+		datos = DatosArmas.arma(arma_actual())
+	else:
+		datos = DatosArmas.arma(arma).duplicate()
+		for clave in ["nombre", "danio_min", "danio_max", "precision"]:
+			if arma_objeto.has(clave):
+				datos[clave] = arma_objeto[clave]
+	if sin_mana_para_baston():
+		datos = DatosHechizos.baston_sin_mana(datos)
 	return datos
 
 
-## Armadura (física o mágica) que protege esa zona.
+## Pelea con el bastón y no le alcanza el maná para su golpe mágico.
+func sin_mana_para_baston() -> bool:
+	return usa_mana and not desarmado and arma == "baston" and mana < DatosHechizos.COSTE_BASTON
+
+
+## Paga el maná de un golpe con el bastón (los hechizos se pagan al lanzarlos).
+func pagar_ataque() -> void:
+	if hechizo.is_empty() and usa_mana and not desarmado and arma == "baston" and mana >= DatosHechizos.COSTE_BASTON:
+		mana -= DatosHechizos.COSTE_BASTON
+
+
+## Armadura (física o mágica) que protege esa zona; la Resistencia la hace rendir más.
 func proteccion(zona_id: String, magica: bool) -> float:
 	var datos: Dictionary = armadura.get(zona_id, {})
-	return float(datos.get("magica" if magica else "fisica", 0.0))
+	var valor_armadura := float(datos.get("magica" if magica else "fisica", 0.0))
+	return valor_armadura * DatosEstadisticas.aumento(puntos("resistencia"), DatosEstadisticas.ARMADURA_POR_RESISTENCIA)
 
 
 func puede_empunar(lado: String) -> bool:

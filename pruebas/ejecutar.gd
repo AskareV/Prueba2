@@ -10,6 +10,7 @@ const ARCHIVOS := [
 	"res://pruebas/prueba_ia.gd",
 	"res://pruebas/prueba_equilibrio.gd",
 	"res://pruebas/prueba_reino.gd",
+	"res://pruebas/prueba_estadisticas.gd",
 ]
 
 

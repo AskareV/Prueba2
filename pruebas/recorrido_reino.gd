@@ -2,8 +2,9 @@ extends SceneTree
 ## Recorre el reino sin ventana, pulsando lo mismo que el jugador, para detectar
 ## errores en el flujo entre pantallas:
 ##   godot --headless --script res://pruebas/recorrido_reino.gd
-## Menú -> reino (todas las pestañas) -> mazmorra (pelear, abrir cofres y salir
-## por la H) -> zona de siete días -> inventario (equipar y vender) -> trabajo.
+## Menú -> reino (todas las pestañas; repartir los puntos del rey) -> mazmorra
+## (pelear, abrir cofres y salir por la H) -> zona de siete días -> inventario
+## (equipar y vender) -> trabajo.
 
 const MENU := "res://escenas/menu_principal.tscn"
 const REINO := "res://escenas/reino.tscn"
@@ -16,6 +17,7 @@ const ACCIONES := 1
 const ZONA := 2
 const PARTE := 3
 const FIN := 5
+const MAGIA := 6
 
 var _rng := RandomNumberGenerator.new()
 var _fallos: Array[String] = []
@@ -71,11 +73,36 @@ func _recorrer_menu_y_pestanas() -> void:
 	for pestana in ["rey", "inventario", "ciudad", "aventura", "trabajo"]:
 		reino.call("_mostrar_pestana", pestana)
 		await process_frame
+	await _repartir_puntos(reino)
 	reino.call("_mostrar_pestana", "aventura")
 	for lugar_id in DatosAventura.ORDEN_MAZMORRAS + DatosAventura.ORDEN_ZONAS:
 		reino.call("_al_elegir_lugar", lugar_id)
 		await process_frame
 		reino.call("_cerrar_lugar")
+		await process_frame
+
+
+## Reparte los puntos del rey en la pestaña Rey (con deshacer y confirmar).
+func _repartir_puntos(reino: Node) -> void:
+	reino.call("_mostrar_pestana", "rey")
+	await process_frame
+	var principales: int = _juego.puntos_principales
+	var fuerza_antes: float = _juego.valor_sub("fuerza_maxima")
+	reino.call("_al_sumar_principal", "fuerza")
+	reino.call("_al_deshacer_puntos")
+	_verificar(_juego.valor_sub("fuerza_maxima") == fuerza_antes, "Deshacer no aplica los puntos")
+	for i in principales:
+		reino.call("_al_sumar_principal", DatosEstadisticas.ORDEN[i % DatosEstadisticas.ORDEN.size()])
+		await process_frame
+	reino.call("_al_elegir_estadistica", "amuleto")
+	await process_frame
+	reino.call("_al_confirmar_puntos")
+	await process_frame
+	_verificar(_juego.puntos_principales == 0, "Se reparten todos los puntos principales")
+	_verificar(_juego.valor_sub("fuerza_maxima") > fuerza_antes, "Un punto en Fuerza sube sus partes")
+	if _juego.puntos_sub > 0:
+		reino.call("_al_sumar_sub", "velocidad")
+		reino.call("_al_confirmar_puntos")
 		await process_frame
 
 
@@ -140,6 +167,7 @@ func _recorrer_mazmorra() -> void:
 	if reino_nuevo == null:
 		return
 	_verificar(_juego.semana == semana + 1, "Salir de la mazmorra termina la semana")
+	_verificar(_juego.nivel > 1 or _juego.xp > 0, "Ganar combates y abrir cofres da experiencia")
 	_verificar(_juego.mazmorra.is_empty(), "La mazmorra se reinicia al salir")
 	_verificar((reino_nuevo.get("_aviso") as Label).text != "", "Al volver hay un aviso")
 
@@ -209,6 +237,7 @@ func _pelear(de_verdad: bool) -> String:
 	(escena.get("_rng") as RandomNumberGenerator).seed = 11
 	if de_verdad:
 		var cuadros := 0
+		var magia_usada := false
 		while int(escena.get("_estado")) != FIN and cuadros < MAX_CUADROS:
 			await process_frame
 			cuadros += 1
@@ -217,7 +246,14 @@ func _pelear(de_verdad: bool) -> String:
 				continue
 			match int(escena.get("_estado")):
 				ACCIONES:
-					escena.call("_al_pulsar_atacar")
+					# Una vez, un hechizo (Ralentizar); después, ataques.
+					if not magia_usada:
+						escena.call("_al_pulsar_magia")
+					else:
+						escena.call("_al_pulsar_atacar")
+				MAGIA:
+					magia_usada = true
+					escena.call("_al_elegir_hechizo", "ralentizar")
 				ZONA:
 					var zonas := DatosCuerpo.ZONAS.keys()
 					escena.call("_al_elegir_zona", zonas[_rng.randi() % zonas.size()])
@@ -282,6 +318,7 @@ func _recorrer_inventario() -> void:
 	_verificar(_juego.equipo.get("peto", {}).get("id", -1) == peto["id"], "Equipar el peto")
 	var casco: Dictionary = _juego.inventario[0]
 	var oro: int = _juego.oro
+	var precio: int = _juego.precio_venta(casco)
 	reino.call("_al_elegir_mochila", casco["id"])
 	await process_frame
 	reino.call("_al_vender")
@@ -289,7 +326,7 @@ func _recorrer_inventario() -> void:
 	await process_frame
 	reino.call("_al_vender")
 	await process_frame
-	_verificar(_juego.oro == oro + int(casco["precio"]), "Vender suma el oro")
+	_verificar(_juego.oro == oro + precio, "Vender suma el oro (con Negociación)")
 
 
 ## Trabaja una semana y espera a que se muestren los siete días.

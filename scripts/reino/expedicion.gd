@@ -86,7 +86,7 @@ func _al_pulsar_dia(indice: int) -> void:
 		return
 	Juego.sumar_estres(DatosAventura.ESTRES_POR_DIA)
 	var nivel: int = _datos["nivel"]
-	var suceso := DatosAventura.sortear_suceso(Juego.rng)
+	var suceso := DatosAventura.sortear_suceso(Juego.rng, Juego.puntos_de("amuleto"))
 	match suceso:
 		"combate":
 			var posibles: Array = _datos["enemigos"]
@@ -107,8 +107,9 @@ func _al_pulsar_dia(indice: int) -> void:
 			Juego.sumar_estres(-10.0)
 			_registrar("Descanso", "Acampas junto a un arroyo y descansas: −10 de estrés.")
 		"trampa":
-			Juego.sumar_estres(10.0)
-			_registrar("Trampa", "Caes en una trampa de cazadores: +10 de estrés.")
+			var estres := Juego.estres_mental(10.0)
+			Juego.sumar_estres(estres)
+			_registrar("Trampa", "Caes en una trampa de cazadores: +%s de estrés." % String.num(snappedf(estres, 0.1)))
 		_:
 			_registrar("Tranquilo", "Un día tranquilo de marcha. No pasa nada.")
 	_comprobar_estres()
@@ -143,15 +144,15 @@ func _procesar_combate() -> void:
 	var nombre: String = DatosRivales.rival(combate["rival"])["nombre"]
 	match String(combate["resultado"]):
 		"victoria":
-			Juego.sumar_estres(DatosAventura.ESTRES_VICTORIA)
+			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_VICTORIA))
 			var botin := Juego.recompensa_enemigo(combate["rival"], int(_datos["nivel"]))
 			var texto := "Venciste al %s: %d de oro" % [nombre, botin["oro"]]
 			var objeto: Dictionary = botin["objeto"]
 			if not objeto.is_empty():
 				texto += " y %s (%s)" % [objeto["nombre"], DatosBotin.nombre_calidad(objeto["calidad"]).to_lower()]
-			_registrar("Victoria", texto + ".")
+			_registrar("Victoria", "%s. %s." % [texto, Juego.texto_xp(botin)])
 		"derrota":
-			Juego.sumar_estres(DatosAventura.ESTRES_DERROTA)
+			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_DERROTA))
 			_registrar("Derrota", "El %s te venció." % nombre)
 			Juego.expedicion["derrota"] = true
 		_:

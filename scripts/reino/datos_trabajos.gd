@@ -48,22 +48,29 @@ static func prob_exito(dominio: float) -> float:
 	return minf(EXITO_BASE + dominio / EXITO_DIVISOR, 0.95)
 
 
+## Pago por día que sale bien, con el multiplicador de Presencia.
+static func pago_dia(oficio_id: String, multiplicador := 1.0) -> int:
+	return roundi(int(OFICIOS[oficio_id]["pago"]) * multiplicador)
+
+
 ## Simula la semana de trabajo. Devuelve {"dias": [bool], "oro": n,
-## "estres": n, "bono": n, "dominio": nuevo dominio}.
-static func trabajar_semana(oficio_id: String, dominio: float, rng: RandomNumberGenerator) -> Dictionary:
+## "pago_dia": n, "estres": n, "bono": n, "dominio": nuevo dominio}.
+static func trabajar_semana(oficio_id: String, dominio: float, rng: RandomNumberGenerator,
+		multiplicador_pago := 1.0) -> Dictionary:
 	var oficio: Dictionary = OFICIOS[oficio_id]
+	var pago := pago_dia(oficio_id, multiplicador_pago)
 	var dias: Array[bool] = []
 	var oro := 0
 	for dia in DIAS:
 		var bien := rng.randf() < prob_exito(dominio)
 		dias.append(bien)
 		if bien:
-			oro += int(oficio["pago"])
+			oro += pago
 		dominio = minf(dominio + DOMINIO_POR_DIA, 100.0)
 	var bono := 0
 	if not dias.has(false):
-		bono = int(oficio["pago"]) * BONO_SEMANA_PERFECTA
+		bono = pago * BONO_SEMANA_PERFECTA
 	return {
-		"dias": dias, "oro": oro + bono, "bono": bono, "estres": float(oficio["estres"]) * DIAS,
+		"dias": dias, "oro": oro + bono, "pago_dia": pago, "bono": bono, "estres": float(oficio["estres"]) * DIAS,
 		"dominio": dominio,
 	}

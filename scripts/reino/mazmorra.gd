@@ -178,7 +178,7 @@ func _mover(direccion: Vector2i) -> void:
 	var destino: Vector2i = origen + direccion
 	if not GeneradorMazmorra.es_suelo(plano["celdas"], destino):
 		return
-	Juego.sumar_estres(_datos["estres_por_paso"])
+	Juego.sumar_estres(Juego.estres_de_paso(_datos["estres_por_paso"]))
 	Juego.mazmorra["anterior"] = origen
 	Juego.mazmorra["pos"] = destino
 	_revelar(destino)
@@ -218,8 +218,8 @@ func _abrir_cofre(celda: Vector2i) -> void:
 	Juego.mazmorra["plano"]["cofres"].erase(celda)
 	var botin := Juego.abrir_cofre(int(_datos["nivel"]))
 	var objeto: Dictionary = botin["objeto"]
-	_mensaje("Abres un cofre: %d de oro y %s (%s)." % [botin["oro"], objeto["nombre"],
-		DatosBotin.nombre_calidad(objeto["calidad"]).to_lower()])
+	_mensaje("Abres un cofre: %d de oro y %s (%s). %s." % [botin["oro"], objeto["nombre"],
+		DatosBotin.nombre_calidad(objeto["calidad"]).to_lower(), Juego.texto_xp(botin)])
 
 
 # --- Combate ---
@@ -243,16 +243,16 @@ func _procesar_combate() -> void:
 	match String(combate["resultado"]):
 		"victoria":
 			Juego.mazmorra["plano"]["enemigos"].erase(combate["celda"])
-			Juego.sumar_estres(DatosAventura.ESTRES_VICTORIA)
+			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_VICTORIA))
 			var botin := Juego.recompensa_enemigo(combate["rival"], int(_datos["nivel"]))
 			var texto := "Venciste al %s: %d de oro" % [nombre, botin["oro"]]
 			var objeto: Dictionary = botin["objeto"]
 			if not objeto.is_empty():
 				texto += " y %s (%s)" % [objeto["nombre"], DatosBotin.nombre_calidad(objeto["calidad"]).to_lower()]
-			_mensaje(texto + ".")
+			_mensaje("%s. %s." % [texto, Juego.texto_xp(botin)])
 			_comprobar_estres()
 		"derrota":
-			Juego.sumar_estres(DatosAventura.ESTRES_DERROTA)
+			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_DERROTA))
 			_salir("El %s te venció. Te llevan de vuelta al castillo." % nombre)
 		_:
 			Juego.mazmorra["pos"] = Juego.mazmorra["anterior"]

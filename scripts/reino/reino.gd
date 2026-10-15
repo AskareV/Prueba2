@@ -36,6 +36,10 @@ var _scroll_mochila := 0
 ## Ventana del lugar elegido en el mapa, o null.
 var _ventana_lugar: Control
 var _oficio := "audiencias"
+## Pestaña Rey: puntos repartidos sin confirmar y la característica o sub elegida.
+var _pend_principal := {}
+var _pend_sub := {}
+var _elegida := ""
 var _detalle_oficio: Control
 
 
@@ -99,6 +103,9 @@ func _crear_franja() -> void:
 
 func _actualizar_franja() -> void:
 	_etiqueta_semana.text = "Semana %d" % Juego.semana
+	# Aviso en la pestaña Rey cuando hay puntos por repartir.
+	var por_repartir := Juego.puntos_principales + Juego.puntos_sub > 0
+	_botones_pestana["rey"].text = "Rey (+)" if por_repartir else String(NOMBRES_PESTANA["rey"])
 	_etiqueta_oro.text = "Oro: %d" % Juego.oro
 	UIReino.actualizar_estres(_barra_estres, Juego.estres)
 
@@ -159,22 +166,220 @@ func _notification(what: int) -> void:
 
 # --- Rey ---
 
+const ANCHO_TARJETA := 240.0
+const ALTO_TARJETA := 280.0
+const COLOR_PENDIENTE := Color("#81c784")
+
+
 func _crear_rey() -> void:
-	var figura := Figura.new()
-	figura.configurar(Juego.crear_rey(), DatosRivales.ASPECTO_REY, true)
-	figura.escala_base = 1.0
-	figura.position = Vector2(300, 520)
-	_contenido.add_child(figura)
+	_crear_resumen_rey()
+	# Siete tarjetas (una por característica) y la descripción en la octava casilla.
+	for i in DatosEstadisticas.ORDEN.size():
+		var tarjeta := _tarjeta_caracteristica(DatosEstadisticas.ORDEN[i])
+		tarjeta.position = _posicion_tarjeta(i)
+		_contenido.add_child(tarjeta)
+	var descripcion := _tarjeta_descripcion()
+	descripcion.position = _posicion_tarjeta(7)
+	_contenido.add_child(descripcion)
+
+
+func _posicion_tarjeta(indice: int) -> Vector2:
+	return Vector2(280 + (indice % 4) * (ANCHO_TARJETA + 10), (indice / 4) * (ALTO_TARJETA + 10))
+
+
+## Columna izquierda: nivel, experiencia, valores que salen de las
+## características, puntos por repartir y confirmar o deshacer.
+func _crear_resumen_rey() -> void:
 	var panel := UIReino.panel()
-	panel.position = Vector2(560, 40)
-	panel.custom_minimum_size = Vector2(660, 0)
+	panel.position = Vector2(10, 0)
+	panel.custom_minimum_size = Vector2(260, 0)
 	_contenido.add_child(panel)
 	var columna := VBoxContainer.new()
-	columna.add_theme_constant_override("separation", 10)
+	columna.add_theme_constant_override("separation", 6)
 	panel.add_child(columna)
-	columna.add_child(UIReino.etiqueta("El Rey", 34, UIReino.COLOR_TITULO))
-	columna.add_child(UIReino.etiqueta("Diestro" if Juego.diestro else "Zurdo", 22))
-	columna.add_child(UIReino.parrafo("Características: por definir. Aquí irán las del rey.", 620, 20))
+	columna.add_child(UIReino.etiqueta("El Rey · %s" % ("Diestro" if Juego.diestro else "Zurdo"), 24, UIReino.COLOR_TITULO))
+	columna.add_child(UIReino.etiqueta("Nivel %d" % Juego.nivel, 22))
+	var barra := Barra.new()
+	barra.custom_minimum_size = Vector2(230, 22)
+	barra.tamano_fuente = 14
+	barra.color_fijo = Color("#7e57c2")
+	barra.valor = float(Juego.xp) / Juego.xp_para_subir()
+	barra.texto = "Experiencia %d / %d" % [Juego.xp, Juego.xp_para_subir()]
+	columna.add_child(barra)
+	var rey := Juego.crear_rey()
+	columna.add_child(UIReino.etiqueta("Vida %d · Maná %d" % [rey.vida_max, roundi(rey.mana_max)], 17, Estilo.TEXTO_SUAVE))
+	columna.add_child(UIReino.etiqueta("Rapidez %s" % _formato(rey.rapidez), 17, Estilo.TEXTO_SUAVE))
+	var principales := _puntos_principales_libres()
+	var sueltos := _puntos_sub_libres()
+	columna.add_child(UIReino.etiqueta("Puntos principales: %d" % principales, 19,
+		UIReino.COLOR_TITULO if principales > 0 else Estilo.TEXTO_SUAVE))
+	columna.add_child(UIReino.etiqueta("Puntos sueltos: %d" % sueltos, 19,
+		UIReino.COLOR_TITULO if sueltos > 0 else Estilo.TEXTO_SUAVE))
+	if principales > 0 or sueltos > 0:
+		columna.add_child(UIReino.parrafo("Toca + en una característica (sube sus 3 partes) o en una de sus partes.", 240, 15))
+	if _hay_pendientes():
+		var confirmar := UIReino.boton("Confirmar", _al_confirmar_puntos, Vector2(240, 54), 21)
+		Estilo.con_franja(confirmar, COLOR_PENDIENTE)
+		columna.add_child(confirmar)
+		columna.add_child(UIReino.boton("Deshacer", _al_deshacer_puntos, Vector2(240, 48), 19))
+
+
+func _tarjeta_caracteristica(car_id: String) -> PanelContainer:
+	var datos: Dictionary = DatosEstadisticas.CARACTERISTICAS[car_id]
+	var tarjeta := UIReino.panel()
+	tarjeta.custom_minimum_size = Vector2(ANCHO_TARJETA, ALTO_TARJETA)
+	tarjeta.size = tarjeta.custom_minimum_size
+	var columna := VBoxContainer.new()
+	columna.add_theme_constant_override("separation", 6)
+	tarjeta.add_child(columna)
+	var cabecera := HBoxContainer.new()
+	columna.add_child(cabecera)
+	var nombre := UIReino.boton(datos["nombre"], _al_elegir_estadistica.bind(car_id), Vector2(0, 44), 18)
+	nombre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nombre.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	# Recortado: un nombre largo no debe ensanchar la tarjeta.
+	nombre.clip_text = true
+	nombre.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_compactar(nombre)
+	nombre.add_theme_color_override("font_color", datos["color"])
+	cabecera.add_child(nombre)
+	var cambiado := _pend_principal.has(car_id)
+	cabecera.add_child(_etiqueta_valor(Juego.valor_principal(car_id, _pend_principal), cambiado, 21))
+	if _puntos_principales_libres() > 0:
+		cabecera.add_child(_compactar(UIReino.boton("+", _al_sumar_principal.bind(car_id), Vector2(44, 44), 24)))
+	for sub_id in datos["subs"]:
+		var fila := HBoxContainer.new()
+		columna.add_child(fila)
+		var sub_nombre := UIReino.boton(DatosEstadisticas.SUBS[sub_id]["nombre"], _al_elegir_estadistica.bind(sub_id),
+			Vector2(0, 46), 15)
+		sub_nombre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sub_nombre.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		sub_nombre.clip_text = true
+		sub_nombre.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		_compactar(sub_nombre)
+		if _elegida == sub_id:
+			Estilo.con_franja(sub_nombre, datos["color"])
+		fila.add_child(sub_nombre)
+		var valor := Juego.valor_sub(sub_id, _pend_principal, _pend_sub)
+		var sub_cambiada := not is_equal_approx(valor, Juego.valor_sub(sub_id))
+		fila.add_child(_etiqueta_valor(valor, sub_cambiada, 17))
+		if _puntos_sub_libres() > 0:
+			fila.add_child(_compactar(UIReino.boton("+", _al_sumar_sub.bind(sub_id), Vector2(44, 46), 22)))
+	return tarjeta
+
+
+## Octava casilla: qué hace la característica o sub elegida.
+func _tarjeta_descripcion() -> PanelContainer:
+	var tarjeta := UIReino.panel()
+	tarjeta.custom_minimum_size = Vector2(ANCHO_TARJETA, ALTO_TARJETA)
+	var columna := VBoxContainer.new()
+	columna.add_theme_constant_override("separation", 6)
+	tarjeta.add_child(columna)
+	if DatosEstadisticas.SUBS.has(_elegida):
+		var sub: Dictionary = DatosEstadisticas.SUBS[_elegida]
+		columna.add_child(UIReino.etiqueta(sub["nombre"], 21, UIReino.COLOR_TITULO))
+		columna.add_child(UIReino.parrafo(sub["descripcion"], 220, 16, Estilo.TEXTO))
+		if sub.get("sin_efecto", false):
+			columna.add_child(UIReino.parrafo("Todavía sin efecto: falta el sistema del que depende.", 220, 15, Color("#ef9a9a")))
+	elif DatosEstadisticas.CARACTERISTICAS.has(_elegida):
+		var car: Dictionary = DatosEstadisticas.CARACTERISTICAS[_elegida]
+		columna.add_child(UIReino.etiqueta(car["nombre"], 21, UIReino.COLOR_TITULO))
+		columna.add_child(UIReino.parrafo("Un punto aquí sube +1 sus tres partes:", 220, 16, Estilo.TEXTO))
+		for sub_id in car["subs"]:
+			columna.add_child(UIReino.etiqueta("· " + String(DatosEstadisticas.SUBS[sub_id]["nombre"]), 16))
+	else:
+		columna.add_child(UIReino.etiqueta("Características", 21, UIReino.COLOR_TITULO))
+		columna.add_child(UIReino.parrafo("Toca un nombre para ver qué hace. Todo empieza en 3; cada punto por encima mejora un poco.", 220, 16))
+	return tarjeta
+
+
+## Botón con menos margen a los lados, para que quepa en una tarjeta.
+func _compactar(boton: Button) -> Button:
+	for estado in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
+		# Del tema del juego (el botón todavía no está en el árbol).
+		var copia := Estilo.tema().get_stylebox(estado, "Button").duplicate() as StyleBox
+		copia.content_margin_left = 8
+		copia.content_margin_right = 8
+		boton.add_theme_stylebox_override(estado, copia)
+	return boton
+
+
+func _etiqueta_valor(valor: float, cambiado: bool, tamano: int) -> Label:
+	var etiqueta := UIReino.etiqueta(_formato(valor), tamano, COLOR_PENDIENTE if cambiado else Estilo.TEXTO)
+	etiqueta.custom_minimum_size = Vector2(36, 0)
+	etiqueta.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	return etiqueta
+
+
+## "5" o "5,3".
+func _formato(valor: float) -> String:
+	if absf(valor - roundf(valor)) < 0.05:
+		return "%d" % roundi(valor)
+	return String.num(snappedf(valor, 0.1)).replace(".", ",")
+
+
+func _suma(diccionario: Dictionary) -> int:
+	var total := 0
+	for clave in diccionario:
+		total += int(diccionario[clave])
+	return total
+
+
+func _puntos_principales_libres() -> int:
+	return Juego.puntos_principales - _suma(_pend_principal)
+
+
+func _puntos_sub_libres() -> int:
+	return Juego.puntos_sub - _suma(_pend_sub)
+
+
+func _hay_pendientes() -> bool:
+	return not _pend_principal.is_empty() or not _pend_sub.is_empty()
+
+
+## Rehace la pestaña Rey sin bloquear los toques: un + repetido solo suma puntos
+## sin confirmar, que se pueden deshacer.
+func _redibujar_rey() -> void:
+	for hijo in _contenido.get_children():
+		hijo.queue_free()
+	_crear_rey()
+	_actualizar_franja()
+
+
+func _al_sumar_principal(car_id: String) -> void:
+	if _puntos_principales_libres() <= 0:
+		return
+	_pend_principal[car_id] = int(_pend_principal.get(car_id, 0)) + 1
+	_elegida = car_id
+	_redibujar_rey()
+
+
+func _al_sumar_sub(sub_id: String) -> void:
+	if _puntos_sub_libres() <= 0:
+		return
+	_pend_sub[sub_id] = int(_pend_sub.get(sub_id, 0)) + 1
+	_elegida = sub_id
+	_redibujar_rey()
+
+
+func _al_elegir_estadistica(clave: String) -> void:
+	_elegida = clave
+	_redibujar_rey()
+
+
+func _al_confirmar_puntos() -> void:
+	if not Juego.aplicar_puntos(_pend_principal, _pend_sub):
+		return
+	_pend_principal = {}
+	_pend_sub = {}
+	_avisar("Puntos aplicados.")
+	_mostrar_pestana("rey")
+
+
+func _al_deshacer_puntos() -> void:
+	_pend_principal = {}
+	_pend_sub = {}
+	_redibujar_rey()
 
 
 # --- Inventario ---
@@ -285,7 +490,7 @@ func _crear_detalle() -> void:
 		columna.add_child(UIReino.parrafo("Toca un objeto para ver sus datos, equiparlo o venderlo.", 330, 19))
 		return
 	columna.add_child(UIReino.parrafo(objeto["nombre"], 330, 24, DatosBotin.color_calidad(objeto["calidad"])))
-	for linea in DatosBotin.describir(objeto):
+	for linea in DatosBotin.describir(objeto, Juego.precio_venta(objeto)):
 		columna.add_child(UIReino.parrafo(linea, 330, 18, Estilo.TEXTO))
 	if _seleccion.has("ranura"):
 		var quitar := UIReino.boton("Quitar", _al_quitar, Vector2(330, 62), 22)
@@ -295,7 +500,7 @@ func _crear_detalle() -> void:
 			columna.add_child(UIReino.parrafo("El arma se cambia equipando otra.", 330, 16))
 		return
 	columna.add_child(UIReino.boton("Equipar", _al_equipar, Vector2(330, 62), 22))
-	var texto_venta := "Vender por %d de oro" % objeto["precio"]
+	var texto_venta := "Vender por %d de oro" % Juego.precio_venta(objeto)
 	if _venta_pendiente:
 		texto_venta = "¿Seguro? Toca para vender"
 	var vender := UIReino.boton(texto_venta, _al_vender, Vector2(330, 62), 20)
@@ -455,7 +660,8 @@ func _crear_trabajo() -> void:
 	for oficio_id in DatosTrabajos.ORDEN:
 		var oficio: Dictionary = DatosTrabajos.OFICIOS[oficio_id]
 		var dominio: float = Juego.dominio.get(oficio_id, 0.0)
-		var boton := UIReino.boton("%s\n%d oro por día · dominio %d%%" % [oficio["nombre"], oficio["pago"], roundi(dominio)],
+		var pago := DatosTrabajos.pago_dia(oficio_id, Juego.multiplicador_pago())
+		var boton := UIReino.boton("%s\n%d oro por día · dominio %d%%" % [oficio["nombre"], pago, roundi(dominio)],
 			_al_elegir_oficio.bind(oficio_id), Vector2(320, 92), 19)
 		boton.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		boton.toggle_mode = true
@@ -479,11 +685,13 @@ func _crear_detalle_oficio() -> void:
 	var dominio: float = Juego.dominio.get(_oficio, 0.0)
 	columna.add_child(UIReino.etiqueta(oficio["nombre"], 28, UIReino.COLOR_TITULO))
 	columna.add_child(UIReino.parrafo(oficio["descripcion"], 530, 19, Estilo.TEXTO))
-	columna.add_child(UIReino.parrafo("Pago por cada día que sale bien: %d de oro." % oficio["pago"], 530, 18))
+	var pago := DatosTrabajos.pago_dia(_oficio, Juego.multiplicador_pago())
+	columna.add_child(UIReino.parrafo("Pago por cada día que sale bien: %d de oro." % pago, 530, 18))
 	columna.add_child(UIReino.parrafo("Probabilidad de que un día salga bien: %d%% (sube con el dominio, ahora %d de 100)." % [
 		roundi(DatosTrabajos.prob_exito(dominio) * 100.0), roundi(dominio)], 530, 18))
-	columna.add_child(UIReino.parrafo("Estrés de la semana: +%d. Si los siete días salen bien, cobras %d de oro extra." % [
-		String.num(float(oficio["estres"]) * DatosTrabajos.DIAS), int(oficio["pago"]) * DatosTrabajos.BONO_SEMANA_PERFECTA], 530, 18))
+	columna.add_child(UIReino.parrafo("Estrés de la semana: +%s. Si los siete días salen bien, cobras %d de oro extra." % [
+		String.num(snappedf(Juego.estres_mental(float(oficio["estres"]) * DatosTrabajos.DIAS), 0.1)),
+		pago * DatosTrabajos.BONO_SEMANA_PERFECTA], 530, 18))
 	var boton := UIReino.boton("Trabajar esta semana", _al_trabajar, Vector2(530, 70), 24)
 	if not Juego.puede_trabajar():
 		boton.disabled = true
@@ -527,14 +735,14 @@ func _al_trabajar() -> void:
 	var dias: Array = resultado["dias"]
 	for i in dias.size():
 		await get_tree().create_timer(PAUSA_DIA).timeout
-		var texto := "Día %d: salió bien (+%d de oro)" % [i + 1, oficio["pago"]] if dias[i] \
+		var texto := "Día %d: salió bien (+%d de oro)" % [i + 1, resultado["pago_dia"]] if dias[i] \
 			else "Día %d: salió mal (sin pago)" % (i + 1)
 		columna.add_child(UIReino.etiqueta(texto, 19, Color("#a5d6a7") if dias[i] else Color("#ef9a9a")))
 	await get_tree().create_timer(PAUSA_DIA).timeout
 	var resumen := "Ganaste %d de oro" % resultado["oro"]
 	if int(resultado["bono"]) > 0:
 		resumen += " (incluye %d por la semana perfecta)" % resultado["bono"]
-	columna.add_child(UIReino.parrafo("%s. Estrés +%s." % [resumen, String.num(resultado["estres"])], 530, 19, Estilo.TEXTO))
+	columna.add_child(UIReino.parrafo("%s. Estrés +%s." % [resumen, String.num(snappedf(resultado["estres"], 0.1))], 530, 19, Estilo.TEXTO))
 	columna.add_child(UIReino.boton("Listo", _al_terminar_trabajo, Vector2(530, 64), 22))
 	_actualizar_franja()
 	_avisar("Terminó la semana %d. Empieza la semana %d." % [semana, Juego.semana])

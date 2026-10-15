@@ -73,6 +73,11 @@ const PROB_BOTIN_ENEMIGO := 0.4
 ## Estrés al ganar o perder un combate (como en My Pet Protector).
 const ESTRES_VICTORIA := 3.0
 const ESTRES_DERROTA := 50.0
+## Experiencia por vencer a un enemigo y por abrir un cofre, por nivel del lugar.
+const XP_POR_VICTORIA := 10
+const XP_POR_COFRE := 4
+## Sucesos buenos de las zonas: el Amuleto los hace más probables (y la trampa menos).
+const SUCESOS_BUENOS := ["oro", "objeto", "descanso"]
 
 
 static func lugar(lugar_id: String) -> Dictionary:
@@ -85,14 +90,28 @@ static func es_mazmorra(lugar_id: String) -> bool:
 	return MAZMORRAS.has(lugar_id)
 
 
+## Peso de cada suceso con los puntos de Amuleto del rey.
+static func pesos_sucesos(puntos_amuleto := 0.0) -> Dictionary:
+	var pesos := {}
+	for suceso in SUCESOS:
+		var peso: float = SUCESOS[suceso]
+		if SUCESOS_BUENOS.has(suceso):
+			peso *= DatosEstadisticas.aumento(puntos_amuleto, DatosEstadisticas.SUCESOS_POR_AMULETO)
+		elif suceso == "trampa":
+			peso *= DatosEstadisticas.reduccion(puntos_amuleto, DatosEstadisticas.SUCESOS_POR_AMULETO)
+		pesos[suceso] = peso
+	return pesos
+
+
 ## Sortea el suceso de un día en una zona.
-static func sortear_suceso(rng: RandomNumberGenerator) -> String:
+static func sortear_suceso(rng: RandomNumberGenerator, puntos_amuleto := 0.0) -> String:
+	var pesos := pesos_sucesos(puntos_amuleto)
 	var total := 0.0
-	for suceso in SUCESOS:
-		total += SUCESOS[suceso]
+	for suceso in pesos:
+		total += pesos[suceso]
 	var tirada := rng.randf() * total
-	for suceso in SUCESOS:
-		tirada -= SUCESOS[suceso]
+	for suceso in pesos:
+		tirada -= pesos[suceso]
 		if tirada < 0.0:
 			return suceso
 	return "nada"

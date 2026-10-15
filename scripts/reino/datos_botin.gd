@@ -71,9 +71,28 @@ const PROB_ARMA := 0.35
 const MEJORA_POR_NIVEL := 0.25
 
 
-## Sortea la calidad según el nivel del lugar.
-static func sortear_calidad(nivel: int, rng: RandomNumberGenerator) -> String:
+## Probabilidad (%) de cada calidad según el nivel del lugar. "bonus" (Buen ojo)
+## multiplica las calidades raras o mejores; lo normal queda con el resto.
+static func probabilidades(nivel: int, bonus := 1.0) -> Array[float]:
 	var tabla: Array = PROB_CALIDAD[clampi(nivel, 1, 4)]
+	var resultado: Array[float] = [0.0]
+	var mejores := 0.0
+	for i in range(1, CALIDADES.size()):
+		var prob: float = float(tabla[i]) * bonus
+		resultado.append(prob)
+		mejores += prob
+	# Si el bonus fuera enorme, se reparte todo entre las mejores.
+	if mejores > 100.0:
+		for i in range(1, resultado.size()):
+			resultado[i] *= 100.0 / mejores
+		mejores = 100.0
+	resultado[0] = 100.0 - mejores
+	return resultado
+
+
+## Sortea la calidad según el nivel del lugar (y el bonus de Buen ojo).
+static func sortear_calidad(nivel: int, rng: RandomNumberGenerator, bonus := 1.0) -> String:
+	var tabla := probabilidades(nivel, bonus)
 	var tirada := rng.randf() * 100.0
 	for i in CALIDADES.size():
 		tirada -= tabla[i]
@@ -83,11 +102,12 @@ static func sortear_calidad(nivel: int, rng: RandomNumberGenerator) -> String:
 
 
 ## Crea un objeto de botín. "ranura" vacía = arma o pieza al azar; "calidad"
-## vacía = se sortea. No tiene "id": lo pone el inventario al guardarlo.
-static func generar(nivel: int, rng: RandomNumberGenerator, ranura := "", calidad := "") -> Dictionary:
+## vacía = se sortea (con "bonus_calidad", ver probabilidades). No tiene "id":
+## lo pone el inventario al guardarlo.
+static func generar(nivel: int, rng: RandomNumberGenerator, ranura := "", calidad := "", bonus_calidad := 1.0) -> Dictionary:
 	nivel = clampi(nivel, 1, 4)
 	if calidad == "":
-		calidad = sortear_calidad(nivel, rng)
+		calidad = sortear_calidad(nivel, rng, bonus_calidad)
 	if ranura == "":
 		ranura = "arma" if rng.randf() < PROB_ARMA else PIEZAS[rng.randi() % PIEZAS.size()]
 	var objeto := {"ranura": ranura, "calidad": calidad, "nivel": nivel}
@@ -151,8 +171,9 @@ static func porcentaje_reduccion(valor: float) -> int:
 	return roundi((1.0 - MotorCombate.multiplicador_armadura(valor)) * 100.0)
 
 
-## Líneas de texto con los datos del objeto, para mostrarlo.
-static func describir(objeto: Dictionary) -> PackedStringArray:
+## Líneas de texto con los datos del objeto, para mostrarlo. "precio": lo que
+## pagan por él (con Negociación); -1 = su precio base.
+static func describir(objeto: Dictionary, precio := -1) -> PackedStringArray:
 	var lineas: PackedStringArray = []
 	lineas.append("%s · nivel %d" % [nombre_calidad(objeto["calidad"]), objeto["nivel"]])
 	if objeto["ranura"] == "arma":
@@ -170,5 +191,5 @@ static func describir(objeto: Dictionary) -> PackedStringArray:
 		lineas.append("Armadura %d (−%d%% daño físico)" % [objeto["armadura"], porcentaje_reduccion(objeto["armadura"])])
 		lineas.append("Resist. mágica %d (−%d%% daño mágico)" % [
 			objeto["resistencia_magica"], porcentaje_reduccion(objeto["resistencia_magica"])])
-	lineas.append("Se vende por %d de oro" % objeto["precio"])
+	lineas.append("Se vende por %d de oro" % (objeto["precio"] if precio < 0 else precio))
 	return lineas

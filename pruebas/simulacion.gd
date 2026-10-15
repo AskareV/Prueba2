@@ -24,16 +24,8 @@ static func combatir(arma_id: String, rival_id: String, estrategia: String, dies
 		rng: RandomNumberGenerator) -> Dictionary:
 	var rey := DatosRivales.crear_rey(diestro, arma_id)
 	var rival := DatosRivales.crear_rival(rival_id)
-	var turno := 0
 	var racha := {"rey": [0, 0], "rival": [0, 0]}
-	while turno < MAX_TURNOS:
-		turno += 1
-		_actuar_contando(rey, rival, rng, turno, estrategia, racha["rey"])
-		if rival.fuera_de_combate():
-			break
-		_actuar_contando(rival, rey, rng, turno, "ia", racha["rival"])
-		if rey.fuera_de_combate():
-			break
+	var turno := pelear(rey, rival, estrategia, rng, racha)
 	return {
 		"rachas_rey": 1 if racha["rey"][1] >= RACHA_LARGA else 0,
 		"rachas_rival": 1 if racha["rival"][1] >= RACHA_LARGA else 0,
@@ -46,12 +38,34 @@ static func combatir(arma_id: String, rival_id: String, estrategia: String, dies
 	}
 
 
+## Pelea hasta que uno cae, con la barra de turnos por velocidad como en la
+## escena. Devuelve cuántos turnos jugó el rey (como mucho MAX_TURNOS).
+static func pelear(rey: Luchador, rival: Luchador, estrategia: String, rng: RandomNumberGenerator,
+		racha := {"rey": [0, 0], "rival": [0, 0]}) -> int:
+	var orden := OrdenTurnos.new(rey, rival)
+	if MotorCombate.puede_atemorizar(rey, rival):
+		rival.atemorizado = true
+	var turno := 0
+	var acciones := 0
+	while turno < MAX_TURNOS and acciones < MAX_TURNOS * 4:
+		acciones += 1
+		if orden.siguiente() == rey:
+			turno += 1
+			rey.regenerar_mana()
+			_actuar_contando(rey, rival, rng, turno, estrategia, racha["rey"], orden)
+		else:
+			_actuar_contando(rival, rey, rng, turno, "ia", racha["rival"], orden)
+		if rey.fuera_de_combate() or rival.fuera_de_combate():
+			break
+	return turno
+
+
 ## Actúa y lleva la cuenta de fallos seguidos: racha = [actual, máxima].
 static func _actuar_contando(yo: Luchador, otro: Luchador, rng: RandomNumberGenerator, turno: int,
-		estrategia: String, racha: Array) -> void:
+		estrategia: String, racha: Array, orden: OrdenTurnos) -> void:
 	var ataques := yo.ataques
 	var aciertos := yo.aciertos
-	actuar(yo, otro, rng, turno, estrategia)
+	actuar(yo, otro, rng, turno, estrategia, orden)
 	if yo.ataques == ataques:
 		return
 	if yo.aciertos > aciertos:
@@ -61,8 +75,10 @@ static func _actuar_contando(yo: Luchador, otro: Luchador, rng: RandomNumberGene
 		racha[1] = maxi(racha[1], racha[0])
 
 
-## Hace actuar a un luchador como en la escena de combate.
-static func actuar(yo: Luchador, otro: Luchador, rng: RandomNumberGenerator, turno: int, estrategia: String) -> void:
+## Hace actuar a un luchador como en la escena de combate. Con "orden", un
+## empujón retrasa al otro en la barra de turnos.
+static func actuar(yo: Luchador, otro: Luchador, rng: RandomNumberGenerator, turno: int, estrategia: String,
+		orden: OrdenTurnos = null) -> void:
 	yo.defendiendo = false
 	if yo.aturdido:
 		yo.aturdido = false
@@ -76,7 +92,9 @@ static func actuar(yo: Luchador, otro: Luchador, rng: RandomNumberGenerator, tur
 		"defender":
 			yo.defendiendo = true
 		"atacar":
-			MotorCombate.resolver_ataque(yo, otro, decision["parte"], rng, turno)
+			var resultado := MotorCombate.resolver_ataque(yo, otro, decision["parte"], rng, turno)
+			if orden != null and resultado["empujon"]:
+				orden.retrasar(otro, DatosHechizos.RETRASO_EMPUJON)
 
 
 static func elegir_parte(estrategia: String, yo: Luchador, otro: Luchador, rng: RandomNumberGenerator) -> String:

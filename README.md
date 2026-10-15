@@ -18,7 +18,10 @@ Cada APK nuevo se instala encima del anterior, sin desinstalar.
 Desde el menú principal: *Nueva partida* (eliges si el rey es diestro o zurdo)
 o *Continuar*. Arriba están las pestañas:
 
-- **Rey:** la ficha del rey (sus características están por definir).
+- **Rey:** nivel, experiencia y las **7 características** del rey (Fuerza,
+  Destreza, Aguante, Resiliencia, Suerte, Inteligencia y Carisma), con 3 partes
+  cada una. Al empezar repartes 15 puntos; al subir de nivel, 1 punto principal
+  y 7 sueltos.
 - **Inventario:** el botín. Tocas un objeto para equiparlo o venderlo (calidad
   normal, rara, épica o legendaria; vale más cuanto mejor es).
 - **Ciudad:** en construcción.
@@ -42,12 +45,15 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
      probabilidad de acierto y el daño posible; en brazos y piernas, también
      cuántos golpes faltan para inutilizarlos.
    - **Defender:** te defiendes mejor y recibes la mitad de daño hasta tu próximo turno.
+   - **Magia:** Llamarada, Curación o Ralentizar, gastando maná.
    - **Cambiar o recoger el arma**, y **Huir**.
    - **Estado:** funciones de supervivencia, cobertura y partes heridas de ambos.
-3. **Táctica:** los brazos son fáciles de acertar pero quitan poca vida; la
+3. **Turnos por velocidad:** arriba se ven los próximos turnos; el más rápido
+   puede actuar dos veces seguidas.
+4. **Táctica:** los brazos son fáciles de acertar pero quitan poca vida; la
    cabeza y el torso quitan más, pero los cubren los brazos y las piernas. Cada
    brazo o pierna que inutilizas deja más expuestos la cabeza y el torso.
-4. Las heridas cambian el color de cada parte (sin gore) y afectan sus funciones:
+5. Las heridas cambian el color de cada parte (sin gore) y afectan sus funciones:
    sin ojos se apunta peor, con la mano del arma herida se puede soltar, un golpe
    en el cráneo puede aturdir o desmayar, etc. Las reglas son **provisionales**.
 
@@ -75,6 +81,9 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | `datos_cuerpo.gd` | Las 21 partes, las 6 zonas y las funciones de supervivencia |
 | `datos_armas.gd` | Las armas (espada, maza, lanza y bastón mágico) y sus números provisionales |
 | `datos_rivales.gd` | Rivales de la demo, enemigos del reino y aspecto del rey |
+| `datos_estadisticas.gd` | Las 7 características del rey, sus partes y cuánto vale cada punto |
+| `orden_turnos.gd` | Barra de turnos por velocidad |
+| `datos_hechizos.gd` | Maná, bastón y hechizos |
 | `luchador.gd` | Estado de un combatiente: vida, integridad de cada parte, lateralidad |
 | `motor_combate.gd` | Reglas: acierto, daño, armadura, fracturas, desarme, aturdimiento, desmayo |
 | `ia_enemigo.gd` | Cómo deciden los rivales: el plan de su personalidad, y a veces improvisan |

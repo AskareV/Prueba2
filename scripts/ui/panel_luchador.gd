@@ -8,7 +8,9 @@ const COLORES_ESTADO := {
 	"Desarmado": Color("#e64a19"),
 	"Mano torpe": Color("#8e24aa"),
 	"En guardia": Color("#1e88e5"),
+	"Atemorizado": Color("#6d4c41"),
 }
+const COLOR_MANA := Color("#26a69a")
 
 var _luchador: Luchador
 var _titulo: String
@@ -16,6 +18,7 @@ var _nombre: Label
 var _estados: HBoxContainer
 var _subtitulo: Label
 var _vida: Barra
+var _mana: Barra
 var _alertas: Label
 
 
@@ -48,6 +51,13 @@ func configurar(luchador: Luchador, titulo: String) -> void:
 	_vida = Barra.new()
 	_vida.custom_minimum_size = Vector2(0, 28)
 	columna.add_child(_vida)
+	# Maná: solo quien lo usa (el rey).
+	_mana = Barra.new()
+	_mana.custom_minimum_size = Vector2(0, 18)
+	_mana.color_fijo = COLOR_MANA
+	_mana.tamano_fuente = 13
+	_mana.visible = luchador.usa_mana
+	columna.add_child(_mana)
 
 	_alertas = Label.new()
 	_alertas.add_theme_font_size_override("font_size", 15)
@@ -65,6 +75,9 @@ func actualizar() -> void:
 	_subtitulo.text = "%s · %s" % [_luchador.lateralidad(), DatosArmas.descripcion_corta(_luchador.arma_actual())]
 	_vida.valor = float(_luchador.vida) / _luchador.vida_max
 	_vida.texto = "%d / %d" % [_luchador.vida, _luchador.vida_max]
+	if _luchador.usa_mana:
+		_mana.valor = _luchador.mana / maxf(_luchador.mana_max, 1.0)
+		_mana.texto = "Maná %d / %d" % [floori(_luchador.mana), roundi(_luchador.mana_max)]
 	for hijo in _estados.get_children():
 		hijo.queue_free()
 	for estado in _estados_activos():
@@ -84,6 +97,8 @@ func _estados_activos() -> Array[String]:
 		lista.append("Mano torpe")
 	if _luchador.defendiendo:
 		lista.append("En guardia")
+	if _luchador.atemorizado:
+		lista.append("Atemorizado")
 	return lista
 
 

@@ -12,6 +12,9 @@ extends RefCounted
 ##   [física, mágica]. Ver MotorCombate.multiplicador_armadura.
 ## - danio: [mínimo, máximo] de su arma, si no usa el daño básico.
 ## - precision: precisión de su arma, si no usa la básica.
+## - rapidez: velocidad en la barra de turnos (el rey empieza con 13). Los
+##   rivales de la demo tienen la del rey, para que se alternen como antes.
+## - coraje: si la Presencia del rey lo supera por 3 o más, queda atemorizado.
 
 ## Rivales de la demo de combate.
 const ORDEN := ["bandido", "orco", "lancero"]
@@ -26,7 +29,7 @@ const PERSONALIDADES := {
 const RIVALES := {
 	"bandido": {
 		"nombre": "Bandido", "articulo": "el", "vida": 80, "diestro": true, "arma": "espada",
-		"personalidad": "astuto",
+		"rapidez": 13, "coraje": 4, "personalidad": "astuto",
 		"aspecto": {
 			"piel": Color("#d9a066"), "torso": Color("#5d6b3a"), "hombros": Color("#4a3b2a"),
 			"brazos": Color("#5d6b3a"), "antebrazos": Color("#d9a066"), "manos": Color("#d9a066"),
@@ -37,7 +40,7 @@ const RIVALES := {
 	},
 	"orco": {
 		"nombre": "Orco", "articulo": "el", "vida": 105, "diestro": false, "arma": "maza",
-		"personalidad": "bruto",
+		"rapidez": 13, "coraje": 6, "personalidad": "bruto",
 		"aspecto": {
 			"piel": Color("#6aa84f"), "torso": Color("#6b4423"), "hombros": Color("#8a8f99"),
 			"brazos": Color("#6aa84f"), "antebrazos": Color("#6aa84f"), "manos": Color("#6aa84f"),
@@ -48,7 +51,7 @@ const RIVALES := {
 	},
 	"lancero": {
 		"nombre": "Lancero", "articulo": "el", "vida": 95, "diestro": true, "arma": "lanza",
-		"personalidad": "preciso",
+		"rapidez": 13, "coraje": 5, "personalidad": "preciso",
 		"aspecto": {
 			"piel": Color("#c68642"), "torso": Color("#2c6e6a"), "hombros": Color("#b0b7c3"),
 			"brazos": Color("#7d8696"), "antebrazos": Color("#b0b7c3"), "manos": Color("#5b4636"),
@@ -79,25 +82,25 @@ const _ORCO := {
 static var ENEMIGOS := {
 	"goblin": {
 		"nombre": "Goblin", "articulo": "el", "vida": 45, "diestro": true, "arma": "espada",
-		"personalidad": "normal", "nivel": 1, "oro": [3, 8], "danio": [7, 10], "precision": 0.8,
+		"rapidez": 16, "coraje": 2, "personalidad": "normal", "nivel": 1, "oro": [3, 8], "danio": [7, 10], "precision": 0.8,
 		"armadura": {},
 		"aspecto": _GOBLIN,
 	},
 	"goblin_lancero": {
 		"nombre": "Goblin lancero", "articulo": "el", "vida": 48, "diestro": true, "arma": "lanza",
-		"personalidad": "preciso", "nivel": 1, "oro": [4, 9], "danio": [7, 10], "precision": 0.85,
+		"rapidez": 15, "coraje": 2, "personalidad": "preciso", "nivel": 1, "oro": [4, 9], "danio": [7, 10], "precision": 0.85,
 		"armadura": {"torso": [4, 0]},
 		"aspecto": _GOBLIN.merged({"torso": Color("#6d4c41"), "hombros": Color("#8d6e63")}, true),
 	},
 	"chaman_goblin": {
 		"nombre": "Chamán goblin", "articulo": "el", "vida": 40, "diestro": false, "arma": "baston",
-		"personalidad": "normal", "nivel": 1, "oro": [5, 10], "danio": [7, 10], "precision": 0.85,
+		"rapidez": 14, "coraje": 3, "personalidad": "normal", "nivel": 1, "oro": [5, 10], "danio": [7, 10], "precision": 0.85,
 		"armadura": {"torso": [0, 10], "cabeza": [0, 10]},
 		"aspecto": _GOBLIN.merged({"torso": Color("#5e35b1"), "muslos": Color("#5e35b1"), "escala": 0.72}, true),
 	},
 	"ladron": {
 		"nombre": "Ladrón", "articulo": "el", "vida": 60, "diestro": true, "arma": "espada",
-		"personalidad": "astuto", "nivel": 2, "oro": [8, 14], "danio": [11, 14], "precision": 0.9,
+		"rapidez": 16, "coraje": 3, "personalidad": "astuto", "nivel": 2, "oro": [8, 14], "danio": [11, 14], "precision": 0.9,
 		"armadura": {"torso": [6, 2]},
 		"aspecto": {
 			"piel": Color("#d9a066"), "torso": Color("#455a64"), "hombros": Color("#37474f"),
@@ -109,7 +112,7 @@ static var ENEMIGOS := {
 	},
 	"maton": {
 		"nombre": "Matón", "articulo": "el", "vida": 90, "diestro": true, "arma": "maza",
-		"personalidad": "bruto", "nivel": 2, "oro": [9, 16], "danio": [13, 17],
+		"rapidez": 11, "coraje": 5, "personalidad": "bruto", "nivel": 2, "oro": [9, 16], "danio": [13, 17],
 		"armadura": {"torso": [10, 2], "cabeza": [6, 0]},
 		"aspecto": {
 			"piel": Color("#c68642"), "torso": Color("#795548"), "hombros": Color("#5d4037"),
@@ -121,28 +124,28 @@ static var ENEMIGOS := {
 	},
 	"orco_guerrero": {
 		"nombre": "Orco guerrero", "articulo": "el", "vida": 115, "diestro": false, "arma": "maza",
-		"personalidad": "bruto", "nivel": 3, "oro": [14, 24], "danio": [18, 23],
+		"rapidez": 11, "coraje": 6, "personalidad": "bruto", "nivel": 3, "oro": [14, 24], "danio": [18, 23],
 		"armadura": {"cabeza": [15, 4], "torso": [22, 6], "brazos": [10, 3], "piernas": [10, 3]},
 		"aspecto": _ORCO.merged({"accesorio": "casco", "accesorio_color": Color("#78909c"),
 			"ancho": 1.25, "escala": 1.12}, true),
 	},
 	"orco_cazador": {
 		"nombre": "Orco cazador", "articulo": "el", "vida": 95, "diestro": true, "arma": "lanza",
-		"personalidad": "preciso", "nivel": 3, "oro": [12, 22], "danio": [15, 20],
+		"rapidez": 14, "coraje": 5, "personalidad": "preciso", "nivel": 3, "oro": [12, 22], "danio": [15, 20],
 		"armadura": {"torso": [12, 3]},
 		"aspecto": _ORCO.merged({"torso": Color("#5d4037"), "hombros": Color("#6d4c41"), "ancho": 1.15,
 			"escala": 1.08}, true),
 	},
 	"chaman_orco": {
 		"nombre": "Chamán orco", "articulo": "el", "vida": 85, "diestro": true, "arma": "baston",
-		"personalidad": "normal", "nivel": 3, "oro": [15, 25], "danio": [14, 18],
+		"rapidez": 12, "coraje": 6, "personalidad": "normal", "nivel": 3, "oro": [15, 25], "danio": [14, 18],
 		"armadura": {"cabeza": [4, 18], "torso": [6, 18]},
 		"aspecto": _ORCO.merged({"torso": Color("#4a148c"), "muslos": Color("#4a148c"),
 			"pelo": Color("#e0e0e0")}, true),
 	},
 	"caballero_negro": {
 		"nombre": "Caballero negro", "articulo": "el", "vida": 140, "diestro": true, "arma": "espada",
-		"personalidad": "astuto", "nivel": 4, "oro": [25, 40], "danio": [19, 24], "precision": 0.88,
+		"rapidez": 12, "coraje": 9, "personalidad": "astuto", "nivel": 4, "oro": [25, 40], "danio": [19, 24], "precision": 0.88,
 		"armadura": {"cabeza": [35, 10], "torso": [45, 12], "brazos": [25, 8], "piernas": [25, 8]},
 		"aspecto": {
 			"piel": Color("#d7ccc8"), "torso": Color("#263238"), "hombros": Color("#37474f"),
@@ -154,7 +157,7 @@ static var ENEMIGOS := {
 	},
 	"cultista": {
 		"nombre": "Cultista", "articulo": "el", "vida": 90, "diestro": true, "arma": "baston",
-		"personalidad": "preciso", "nivel": 4, "oro": [22, 36], "danio": [18, 23],
+		"rapidez": 13, "coraje": 8, "personalidad": "preciso", "nivel": 4, "oro": [22, 36], "danio": [18, 23],
 		"armadura": {"cabeza": [5, 35], "torso": [8, 40], "brazos": [4, 25], "piernas": [4, 25]},
 		"aspecto": {
 			"piel": Color("#e0c3a0"), "torso": Color("#4a148c"), "hombros": Color("#311b92"),
@@ -166,7 +169,7 @@ static var ENEMIGOS := {
 	},
 	"verdugo": {
 		"nombre": "Verdugo", "articulo": "el", "vida": 135, "diestro": true, "arma": "maza",
-		"personalidad": "bruto", "nivel": 4, "oro": [28, 42], "danio": [20, 26],
+		"rapidez": 10, "coraje": 9, "personalidad": "bruto", "nivel": 4, "oro": [28, 42], "danio": [20, 26],
 		"armadura": {"cabeza": [10, 5], "torso": [30, 8], "brazos": [12, 4], "piernas": [12, 4]},
 		"aspecto": {
 			"piel": Color("#d9a066"), "torso": Color("#d9a066"), "hombros": Color("#212121"),
@@ -203,6 +206,8 @@ static func crear_rival(rival_id: String) -> Luchador:
 	var luchador := Luchador.new(datos["nombre"], datos["vida"], datos["diestro"], datos["arma"])
 	luchador.articulo = datos["articulo"]
 	luchador.personalidad = datos["personalidad"]
+	luchador.rapidez = float(datos.get("rapidez", luchador.rapidez))
+	luchador.coraje = float(datos.get("coraje", 0.0))
 	if datos.has("danio") or datos.has("precision"):
 		var base: Dictionary = DatosArmas.arma(datos["arma"])
 		var danio: Array = datos.get("danio", [base["danio_min"], base["danio_max"]])
@@ -223,5 +228,8 @@ const ZONAS_DE_GRUPO := {
 }
 
 
-static func crear_rey(diestro: bool, arma_id: String) -> Luchador:
-	return Luchador.new("Rey", 100, diestro, arma_id, true)
+## El rey con sus características (vacío = todas en la base, como en la demo).
+static func crear_rey(diestro: bool, arma_id: String, estadisticas := {}) -> Luchador:
+	var rey := Luchador.new("Rey", 100, diestro, arma_id, true)
+	rey.aplicar_estadisticas(estadisticas)
+	return rey

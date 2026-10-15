@@ -1,6 +1,6 @@
 extends SceneTree
 ## Juega combates completos sin ventana, pulsando los mismos botones que el
-## jugador (atacar por zona y parte, tocar el cuerpo, defender, cambiar o
+## jugador (atacar por zona y parte, tocar el cuerpo, defender, magia, cambiar o
 ## recoger el arma, huir, abrir el estado), para detectar errores en el flujo:
 ##   godot --headless --script res://pruebas/partida_automatica.gd
 
@@ -13,6 +13,7 @@ const ZONA := 2
 const PARTE := 3
 const ARMA := 4
 const FIN := 5
+const MAGIA := 6
 
 var _rng := RandomNumberGenerator.new()
 ## Parte que el bot planea atacar (elegida como la IA de los rivales).
@@ -64,6 +65,8 @@ func _jugar_un_combate() -> String:
 				_elegir_parte(escena)
 			ARMA:
 				_elegir_arma(escena)
+			MAGIA:
+				_elegir_hechizo(escena)
 	# Esperar a que aparezca la ventana del resultado.
 	for espera in 120:
 		if escena.get("_ventana") != null:
@@ -92,8 +95,20 @@ func _elegir_accion(escena: Control) -> void:
 		escena.call("_al_pulsar_arma")
 	elif tirada < 0.17:
 		escena.call("_al_pulsar_huir")
+	elif tirada < 0.25 and jugador.usa_mana:
+		escena.call("_al_pulsar_magia")
 	else:
 		escena.call("_al_pulsar_atacar")
+
+
+## En el menú de magia: lanza un hechizo que alcance, o vuelve atrás.
+func _elegir_hechizo(escena: Control) -> void:
+	var jugador: Luchador = escena.get("_jugador")
+	var posibles := DatosHechizos.ORDEN.filter(func(h: String) -> bool: return DatosHechizos.puede_lanzar(jugador, h))
+	if posibles.is_empty() or _rng.randf() < 0.15:
+		escena.call("_volver_atras")
+		return
+	escena.call("_al_elegir_hechizo", posibles[_rng.randi() % posibles.size()])
 
 
 ## En el menú de armas: casi siempre cambia de arma; a veces vuelve atrás.
