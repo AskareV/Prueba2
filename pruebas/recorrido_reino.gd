@@ -87,32 +87,52 @@ func _repartir_puntos(reino: Node) -> void:
 	reino.call("_mostrar_pestana", "rey")
 	await process_frame
 	var principales: int = _juego.puntos_principales
+	var por_principal := DatosEstadisticas.PUNTOS_SUB_POR_PRINCIPAL
 	var fuerza_antes: float = _juego.valor_sub("fuerza_maxima")
 	reino.call("_al_sumar_principal", "fuerza")
 	_verificar(int(reino.call("_puntos_principales_libres")) == principales - 1, "El + deja el punto pendiente")
+	_verificar(int(reino.call("_puntos_sub_libres", "fuerza")) == por_principal
+		and int(reino.call("_puntos_sub_libres", "destreza")) == 0, "El punto en Fuerza da puntos solo para sus partes")
+	reino.call("_al_sumar_sub", "velocidad")
+	_verificar(not Dictionary(reino.get("_pend_sub")).has("velocidad"), "Sin puntos de Destreza, Velocidad no sube")
+	reino.call("_al_sumar_sub", "fuerza_maxima")
+	_verificar(int(reino.call("_puntos_sub_libres", "fuerza")) == por_principal - 1, "Fuerza máxima gasta un punto de Fuerza")
 	reino.call("_al_deshacer_puntos")
-	_verificar(not reino.call("_hay_pendientes") and int(reino.call("_puntos_principales_libres")) == principales,
-		"Deshacer devuelve el punto")
+	_verificar(not reino.call("_hay_pendientes") and int(reino.call("_puntos_principales_libres")) == principales
+		and int(reino.call("_puntos_sub_libres", "fuerza")) == 0, "Deshacer devuelve los puntos")
 	_verificar(_juego.valor_sub("fuerza_maxima") == fuerza_antes, "Deshacer no aplica los puntos")
 	for i in principales:
 		reino.call("_al_sumar_principal", DatosEstadisticas.ORDEN[i % DatosEstadisticas.ORDEN.size()])
 		await process_frame
+	# Todos los puntos de las partes de Fuerza, a Fuerza máxima.
+	var de_fuerza: int = reino.call("_puntos_sub_libres", "fuerza")
+	for i in de_fuerza:
+		reino.call("_al_sumar_sub", "fuerza_maxima")
+	await process_frame
 	reino.call("_al_elegir_estadistica", "amuleto")
 	await process_frame
 	reino.call("_al_confirmar_puntos")
 	await process_frame
 	_verificar(_juego.puntos_principales == 0, "Se reparten todos los puntos principales")
 	_verificar(_juego.valor_sub("fuerza_maxima") > fuerza_antes, "Un punto en Fuerza sube sus partes")
-	# Subir un nivel da puntos sueltos: uno a Velocidad.
+	_verificar(is_equal_approx(_juego.valor_sub("fuerza_maxima"), _juego.valor_sub("fuerza_explosiva") + de_fuerza),
+		"Los puntos de Fuerza fueron a Fuerza máxima")
+	_verificar(_juego.puntos_sub_de("fuerza") == 0 and _juego.total_puntos_sub() == principales * por_principal - de_fuerza,
+		"Quedan los puntos de las otras características")
+	# Subir un nivel da un punto principal: a Destreza, y uno de sus puntos a Velocidad.
+	var de_partes := _juego.total_puntos_sub()
 	_juego.ganar_xp(_juego.xp_para_subir())
-	_verificar(_juego.puntos_sub == DatosEstadisticas.PUNTOS_SUB_POR_NIVEL, "Subir de nivel da puntos sueltos")
+	_verificar(_juego.puntos_principales == 1 and _juego.total_puntos_sub() == de_partes, "Subir de nivel da un punto principal")
 	reino.call("_mostrar_pestana", "rey")
 	await process_frame
 	var velocidad_antes: float = _juego.valor_sub("velocidad")
+	var de_destreza := _juego.puntos_sub_de("destreza")
+	reino.call("_al_sumar_principal", "destreza")
 	reino.call("_al_sumar_sub", "velocidad")
 	reino.call("_al_confirmar_puntos")
 	await process_frame
-	_verificar(_juego.valor_sub("velocidad") == velocidad_antes + 1.0, "Un punto suelto sube esa parte")
+	_verificar(is_equal_approx(_juego.valor_sub("velocidad"), velocidad_antes + 2.0), "Destreza y un punto propio suben Velocidad")
+	_verificar(_juego.puntos_sub_de("destreza") == de_destreza + por_principal - 1, "Al confirmar quedan los demás puntos de Destreza")
 
 
 ## Entra a la madriguera, pelea con dos enemigos (el primero de verdad), abre

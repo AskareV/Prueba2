@@ -104,7 +104,7 @@ func _crear_franja() -> void:
 func _actualizar_franja() -> void:
 	_etiqueta_semana.text = "Semana %d" % Juego.semana
 	# Aviso en la pestaña Rey cuando hay puntos por repartir.
-	var por_repartir := Juego.puntos_principales + Juego.puntos_sub > 0
+	var por_repartir := Juego.puntos_principales + Juego.total_puntos_sub() > 0
 	_botones_pestana["rey"].text = "Rey (+)" if por_repartir else String(NOMBRES_PESTANA["rey"])
 	_etiqueta_oro.text = "Oro: %d" % Juego.oro
 	UIReino.actualizar_estres(_barra_estres, Juego.estres)
@@ -212,13 +212,16 @@ func _crear_resumen_rey() -> void:
 	columna.add_child(UIReino.etiqueta("Vida %d · Maná %d" % [rey.vida_max, roundi(rey.mana_max)], 17, Estilo.TEXTO_SUAVE))
 	columna.add_child(UIReino.etiqueta("Rapidez %s" % _formato(rey.rapidez), 17, Estilo.TEXTO_SUAVE))
 	var principales := _puntos_principales_libres()
-	var sueltos := _puntos_sub_libres()
+	var de_partes := 0
+	for car_id in DatosEstadisticas.ORDEN:
+		de_partes += _puntos_sub_libres(car_id)
 	columna.add_child(UIReino.etiqueta("Puntos principales: %d" % principales, 19,
 		UIReino.COLOR_TITULO if principales > 0 else Estilo.TEXTO_SUAVE))
-	columna.add_child(UIReino.etiqueta("Puntos sueltos: %d" % sueltos, 19,
-		UIReino.COLOR_TITULO if sueltos > 0 else Estilo.TEXTO_SUAVE))
-	if principales > 0 or sueltos > 0:
-		columna.add_child(UIReino.parrafo("Toca + en una característica (sube sus 3 partes) o en una de sus partes.", 228, 15))
+	columna.add_child(UIReino.etiqueta("Puntos de partes: %d" % de_partes, 19,
+		UIReino.COLOR_TITULO if de_partes > 0 else Estilo.TEXTO_SUAVE))
+	if principales > 0 or de_partes > 0:
+		columna.add_child(UIReino.parrafo("+ en una característica: sube sus 3 partes y da %d puntos solo para ellas."
+			% DatosEstadisticas.PUNTOS_SUB_POR_PRINCIPAL, 228, 15))
 	if _hay_pendientes():
 		var confirmar := UIReino.boton("Confirmar", _al_confirmar_puntos, Vector2(228, 54), 21)
 		Estilo.con_franja(confirmar, COLOR_PENDIENTE)
@@ -249,6 +252,7 @@ func _tarjeta_caracteristica(car_id: String) -> PanelContainer:
 	cabecera.add_child(_etiqueta_valor(Juego.valor_principal(car_id, _pend_principal), cambiado, 21))
 	if _puntos_principales_libres() > 0:
 		cabecera.add_child(_compactar(UIReino.boton("+", _al_sumar_principal.bind(car_id), Vector2(44, 44), 24)))
+	var libres := _puntos_sub_libres(car_id)
 	for sub_id in datos["subs"]:
 		var fila := HBoxContainer.new()
 		columna.add_child(fila)
@@ -271,8 +275,11 @@ func _tarjeta_caracteristica(car_id: String) -> PanelContainer:
 		var valor := Juego.valor_sub(sub_id, _pend_principal, _pend_sub)
 		var sub_cambiada := not is_equal_approx(valor, Juego.valor_sub(sub_id))
 		fila.add_child(_etiqueta_valor(valor, sub_cambiada, 17))
-		if _puntos_sub_libres() > 0:
+		if libres > 0:
 			fila.add_child(_compactar(UIReino.boton("+", _al_sumar_sub.bind(sub_id), Vector2(44, 46), 22)))
+	if libres > 0:
+		columna.add_child(UIReino.etiqueta("%d %s para sus partes" % [libres, "punto" if libres == 1 else "puntos"],
+			16, COLOR_PENDIENTE))
 	return tarjeta
 
 
@@ -292,7 +299,8 @@ func _tarjeta_descripcion() -> PanelContainer:
 	elif DatosEstadisticas.CARACTERISTICAS.has(_elegida):
 		var car: Dictionary = DatosEstadisticas.CARACTERISTICAS[_elegida]
 		columna.add_child(UIReino.etiqueta(car["nombre"], 21, UIReino.COLOR_TITULO))
-		columna.add_child(UIReino.parrafo("Un punto aquí sube +1 sus tres partes:", 208, 16, Estilo.TEXTO))
+		columna.add_child(UIReino.parrafo("Un punto aquí sube +1 sus tres partes y da %d puntos para repartir solo entre ellas:"
+			% DatosEstadisticas.PUNTOS_SUB_POR_PRINCIPAL, 208, 16, Estilo.TEXTO))
 		for sub_id in car["subs"]:
 			columna.add_child(UIReino.etiqueta("· " + String(DatosEstadisticas.SUBS[sub_id]["nombre"]), 16))
 	else:
@@ -337,8 +345,12 @@ func _puntos_principales_libres() -> int:
 	return Juego.puntos_principales - _suma(_pend_principal)
 
 
-func _puntos_sub_libres() -> int:
-	return Juego.puntos_sub - _suma(_pend_sub)
+## Puntos que quedan para las partes de una principal (los pendientes cuentan).
+func _puntos_sub_libres(car_id: String) -> int:
+	var libres := Juego.puntos_sub_de(car_id, _pend_principal)
+	for sub_id in DatosEstadisticas.CARACTERISTICAS[car_id]["subs"]:
+		libres -= int(_pend_sub.get(sub_id, 0))
+	return libres
 
 
 func _hay_pendientes() -> bool:
@@ -363,7 +375,7 @@ func _al_sumar_principal(car_id: String) -> void:
 
 
 func _al_sumar_sub(sub_id: String) -> void:
-	if _puntos_sub_libres() <= 0:
+	if _puntos_sub_libres(DatosEstadisticas.caracteristica_de(sub_id)) <= 0:
 		return
 	_pend_sub[sub_id] = int(_pend_sub.get(sub_id, 0)) + 1
 	_elegida = sub_id

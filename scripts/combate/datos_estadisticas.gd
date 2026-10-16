@@ -1,17 +1,20 @@
 class_name DatosEstadisticas
 extends RefCounted
 ## Características del rey: 7 principales con 3 subcaracterísticas cada una.
-## Todas empiezan en BASE (3). Un punto en una principal sube +1 sus tres subs;
-## los puntos sueltos suben una sub. Los efectos dependen de cuánto supera cada
-## sub a la BASE, así que un luchador sin características (los enemigos y el rey
-## de la demo) pelea como antes. Todos los números son provisionales.
+## Todas empiezan en BASE (3). Un punto en una principal sube +1 sus tres subs
+## y da PUNTOS_SUB_POR_PRINCIPAL para repartir solo entre esas tres. Los
+## efectos dependen de cuánto supera cada sub a la BASE, así que un luchador
+## sin características (los enemigos y el rey de la demo) pelea como antes.
+## Todos los números son provisionales.
 
 const BASE := 3.0
 ## Puntos para las principales al empezar una partida.
 const PUNTOS_INICIALES := 15
-## Al subir de nivel: puntos para las principales y para las subs.
+## Al subir de nivel: puntos para las principales.
 const PUNTOS_PRINCIPAL_POR_NIVEL := 1
-const PUNTOS_SUB_POR_NIVEL := 7
+## Cada punto puesto en una principal da estos puntos para sus 3 subs (solo
+## para esas, no para las de otra principal).
+const PUNTOS_SUB_POR_PRINCIPAL := 7
 ## Cada punto de Amuleto por encima de la base suma esto a todas las demás subs.
 const AMULETO_POR_PUNTO := 0.1
 

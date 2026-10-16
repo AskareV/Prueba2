@@ -36,10 +36,12 @@ var _siguiente_id := 1
 ## Nivel y experiencia (ver DatosEstadisticas.xp_para_subir).
 var nivel := 1
 var xp := 0
-## Puntos sin repartir: para las principales y para las subs.
+## Puntos sin repartir para las principales.
 var puntos_principales := 0
-var puntos_sub := 0
-## Puntos puestos en cada principal (sube sus 3 subs) y en cada sub suelta.
+## Puntos sin repartir para las subs, por principal: {principal: n}. Solo se
+## gastan en las 3 subs de esa principal.
+var puntos_sub: Dictionary = {}
+## Puntos puestos en cada principal (sube sus 3 subs) y en cada sub.
 var veces: Dictionary = {}
 var extra: Dictionary = {}
 
@@ -64,7 +66,7 @@ func nueva_partida(p_diestro: bool) -> void:
 	nivel = 1
 	xp = 0
 	puntos_principales = DatosEstadisticas.PUNTOS_INICIALES
-	puntos_sub = 0
+	puntos_sub = {}
 	veces = {}
 	extra = {}
 	aviso = "Reparte tus %d puntos iniciales en la pestaña Rey." % DatosEstadisticas.PUNTOS_INICIALES
@@ -178,8 +180,8 @@ func valor_principal(car_id: String, pendientes := {}) -> float:
 	return DatosEstadisticas.BASE + int(veces.get(car_id, 0)) + int(pendientes.get(car_id, 0))
 
 
-## Valor de una sub: la base, +1 por cada punto en su principal, sus puntos
-## sueltos y lo que suma el Amuleto. "pendientes_*" permite ver cómo quedaría
+## Valor de una sub: la base, +1 por cada punto en su principal, sus propios
+## puntos y lo que suma el Amuleto. "pendientes_*" permite ver cómo quedaría
 ## antes de confirmar (puntos aún no aplicados).
 func valor_sub(sub_id: String, pendientes_principal := {}, pendientes_sub := {}) -> float:
 	var car_id := DatosEstadisticas.caracteristica_de(sub_id)
@@ -204,27 +206,53 @@ func estadisticas() -> Dictionary:
 	return todas
 
 
-## Aplica puntos repartidos: {principal: n} y {sub: n}. Devuelve false (sin
-## aplicar nada) si no alcanzan los puntos o hay alguna clave inválida.
+## Puntos para las subs de una principal, contando los que darían los puntos
+## principales "pendientes" (aún sin confirmar).
+func puntos_sub_de(car_id: String, pendientes_principal := {}) -> int:
+	return int(puntos_sub.get(car_id, 0)) \
+		+ DatosEstadisticas.PUNTOS_SUB_POR_PRINCIPAL * int(pendientes_principal.get(car_id, 0))
+
+
+## Todos los puntos para subs sin repartir (de todas las principales).
+func total_puntos_sub() -> int:
+	var total := 0
+	for car_id in puntos_sub:
+		total += int(puntos_sub[car_id])
+	return total
+
+
+## Aplica puntos repartidos: {principal: n} y {sub: n}. Los puntos de una sub
+## salen de su principal, incluidos los que dan los puntos principales de esta
+## misma vez. Devuelve false (sin aplicar nada) si no alcanzan los puntos o hay
+## alguna clave inválida.
 func aplicar_puntos(principales: Dictionary, subs: Dictionary) -> bool:
 	var total_principales := 0
 	for car_id in principales:
 		if not DatosEstadisticas.CARACTERISTICAS.has(car_id) or int(principales[car_id]) < 0:
 			return false
 		total_principales += int(principales[car_id])
-	var total_subs := 0
+	if total_principales > puntos_principales:
+		return false
+	var gastados := {}
 	for sub_id in subs:
 		if not DatosEstadisticas.SUBS.has(sub_id) or int(subs[sub_id]) < 0:
 			return false
-		total_subs += int(subs[sub_id])
-	if total_principales > puntos_principales or total_subs > puntos_sub:
-		return false
+		var car_id := DatosEstadisticas.caracteristica_de(sub_id)
+		gastados[car_id] = int(gastados.get(car_id, 0)) + int(subs[sub_id])
+	for car_id in gastados:
+		if gastados[car_id] > puntos_sub_de(car_id, principales):
+			return false
+	for car_id in DatosEstadisticas.ORDEN:
+		var restantes := puntos_sub_de(car_id, principales) - int(gastados.get(car_id, 0))
+		if restantes > 0:
+			puntos_sub[car_id] = restantes
+		else:
+			puntos_sub.erase(car_id)
 	for car_id in principales:
 		veces[car_id] = int(veces.get(car_id, 0)) + int(principales[car_id])
 	for sub_id in subs:
 		extra[sub_id] = int(extra.get(sub_id, 0)) + int(subs[sub_id])
 	puntos_principales -= total_principales
-	puntos_sub -= total_subs
 	return true
 
 
@@ -243,7 +271,6 @@ func ganar_xp(cantidad: int) -> Dictionary:
 		nivel += 1
 		niveles += 1
 		puntos_principales += DatosEstadisticas.PUNTOS_PRINCIPAL_POR_NIVEL
-		puntos_sub += DatosEstadisticas.PUNTOS_SUB_POR_NIVEL
 	return {"xp": ganada, "niveles": niveles}
 
 

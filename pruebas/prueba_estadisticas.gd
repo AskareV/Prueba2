@@ -15,7 +15,7 @@ func prueba_partida_nueva_empieza_en_3_con_15_puntos() -> void:
 	for sub_id in DatosEstadisticas.todas_las_subs():
 		verificar_cerca(juego.valor_sub(sub_id), 3.0, "%s empieza en 3" % sub_id)
 	verificar_igual(juego.puntos_principales, 15, "15 puntos para las principales")
-	verificar_igual(juego.puntos_sub, 0, "Sin puntos sueltos al empezar")
+	verificar_igual(juego.total_puntos_sub(), 0, "Sin puntos de partes al empezar")
 	verificar_igual(DatosEstadisticas.todas_las_subs().size(), 21, "7 principales x 3 subs")
 	juego.free()
 
@@ -28,16 +28,38 @@ func prueba_un_punto_principal_sube_sus_tres_subs() -> void:
 		verificar_cerca(juego.valor_sub(sub_id), 5.0, "%s sube con Fuerza" % sub_id)
 	verificar_cerca(juego.valor_sub("precision"), 3.0, "Las demás no cambian")
 	verificar_igual(juego.puntos_principales, 13, "Quedan 13")
-	verificar(not juego.aplicar_puntos({}, {"velocidad": 1}), "Sin puntos sueltos no se puede")
 	verificar(not juego.aplicar_puntos({"fuerza": 20}, {}), "No se gastan más puntos de los que hay")
 	verificar(not juego.aplicar_puntos({"inventada": 1}, {}), "Una característica inexistente no vale")
 	verificar_igual(juego.puntos_principales, 13, "Lo rechazado no gasta nada")
 	juego.free()
 
 
+func prueba_cada_punto_principal_da_7_solo_para_sus_partes() -> void:
+	var juego := _juego_nuevo()
+	verificar(juego.aplicar_puntos({"fuerza": 3}, {}), "3 puntos en Fuerza")
+	verificar_igual(juego.puntos_sub_de("fuerza"), 21, "3 puntos en Fuerza dan 21 para sus partes")
+	verificar_igual(juego.puntos_sub_de("destreza"), 0, "Las demás no reciben puntos")
+	verificar(not juego.aplicar_puntos({}, {"velocidad": 1}), "Los puntos de Fuerza no sirven para Destreza")
+	verificar(not juego.aplicar_puntos({}, {"fuerza_maxima": 22}), "No más de los 21")
+	verificar(juego.aplicar_puntos({}, {"fuerza_maxima": 15, "fuerza_agarre": 6}), "Los 21 en las partes de Fuerza")
+	verificar_cerca(juego.valor_sub("fuerza_maxima"), 21.0, "3 + 3 por Fuerza + 15")
+	verificar_cerca(juego.valor_sub("fuerza_explosiva"), 6.0, "Sin puntos propios, solo los de Fuerza")
+	verificar_igual(juego.puntos_sub_de("fuerza"), 0, "Ya no quedan")
+	verificar(not juego.aplicar_puntos({}, {"fuerza_maxima": 1}), "Sin puntos no se puede")
+	# El punto principal y sus partes se pueden repartir de una vez.
+	verificar(juego.aplicar_puntos({"destreza": 1, "inteligencia": 1}, {"velocidad": 5, "arcano": 7}), "Principal y partes juntos")
+	verificar_cerca(juego.valor_sub("velocidad"), 9.0, "3 + 1 por Destreza + 5")
+	verificar_igual(juego.puntos_sub_de("destreza"), 2, "Sobran 2 para Destreza")
+	verificar_igual(juego.total_puntos_sub(), 2, "En total quedan 2")
+	verificar(not juego.aplicar_puntos({"carisma": 1}, {"presencia": 8}), "Un punto da 7, no 8")
+	verificar_igual(juego.puntos_principales, 10, "Lo rechazado no gasta el punto principal")
+	verificar_igual(juego.puntos_sub_de("carisma"), 0, "Ni da sus puntos")
+	juego.free()
+
+
 func prueba_amuleto_suma_a_las_demas() -> void:
 	var juego := _juego_nuevo()
-	juego.puntos_sub = 10
+	juego.puntos_sub = {"suerte": 10}
 	verificar(juego.aplicar_puntos({}, {"amuleto": 10}), "10 puntos en Amuleto")
 	verificar_cerca(juego.valor_sub("amuleto"), 13.0, "Amuleto en 13")
 	verificar_cerca(juego.valor_sub("velocidad"), 4.0, "10 puntos de Amuleto suman 1 a las demás")
@@ -54,12 +76,12 @@ func prueba_experiencia_y_niveles() -> void:
 	verificar_igual(resultado["niveles"], 1, "Un nivel")
 	verificar_igual(juego.xp, 5, "Sobra experiencia para el siguiente")
 	verificar_igual(juego.puntos_principales, 16, "+1 punto principal")
-	verificar_igual(juego.puntos_sub, 7, "+7 puntos sueltos")
+	verificar_igual(juego.total_puntos_sub(), 0, "Los puntos de partes llegan al poner el principal")
 	juego.ganar_xp(10000)
 	verificar(juego.nivel > 5, "Muchos niveles de una vez")
 	verificar(DatosEstadisticas.xp_para_subir(5) > DatosEstadisticas.xp_para_subir(1), "Cada nivel pide más")
 	var estudioso := _juego_nuevo()
-	estudioso.puntos_sub = 10
+	estudioso.puntos_sub = {"inteligencia": 10}
 	estudioso.aplicar_puntos({}, {"estudio": 10})
 	verificar(estudioso.ganar_xp(100)["xp"] > 100, "Estudio da más experiencia")
 	juego.free()
@@ -73,8 +95,8 @@ func prueba_el_rey_toma_sus_caracteristicas() -> void:
 	verificar_cerca(base.rapidez, 13.0, "Rapidez base 13")
 	verificar_cerca(base.mana_max, float(DatosEstadisticas.MANA_BASE), "Maná base")
 	verificar_cerca(base.prob_critico(), 0.0, "Sin puntos de suerte no hay críticos")
-	juego.puntos_sub = 12
-	juego.aplicar_puntos({}, {"vitalidad": 4, "velocidad": 3, "mago": 2, "golpe_suerte": 3})
+	juego.puntos_sub = {"aguante": 4, "destreza": 3, "inteligencia": 2, "suerte": 3}
+	verificar(juego.aplicar_puntos({}, {"vitalidad": 4, "velocidad": 3, "mago": 2, "golpe_suerte": 3}), "Puntos aplicados")
 	var rey := juego.crear_rey()
 	verificar_igual(rey.vida_max, 120, "Vitalidad sube la vida")
 	verificar_cerca(rey.rapidez, 14.5, "Velocidad sube la rapidez (0,5 por punto)")
@@ -88,14 +110,15 @@ func prueba_efectos_fuera_del_combate() -> void:
 	var objeto := DatosBotin.crear_arma("espada", 2, "raro")
 	verificar_igual(juego.precio_venta(objeto), int(objeto["precio"]), "Sin Negociación, precio base")
 	verificar_cerca(juego.estres_de_paso(1.0), 1.0, "Sin Cardio, el paso cuesta lo mismo")
-	juego.puntos_sub = 40
-	juego.aplicar_puntos({}, {"negociacion": 5, "cardio": 5, "compostura": 5, "presencia": 5, "buen_ojo": 5})
+	juego.puntos_sub = {"carisma": 10, "aguante": 5, "resiliencia": 5, "suerte": 5}
+	verificar(juego.aplicar_puntos({}, {"negociacion": 5, "cardio": 5, "compostura": 5, "presencia": 5, "buen_ojo": 5}),
+		"Puntos aplicados")
 	verificar(juego.precio_venta(objeto) > int(objeto["precio"]), "Negociación: vendes más caro")
 	verificar(juego.estres_de_paso(1.0) < 1.0, "Cardio: cada paso cuesta menos")
 	verificar(juego.estres_mental(10.0) < 10.0, "Compostura: menos estrés")
 	verificar(juego.multiplicador_pago() > 1.0, "Presencia: los trabajos pagan más")
 	verificar(juego.oro_hallado(100) > 100, "Buen ojo: más oro")
-	juego.puntos_sub = 1000
+	juego.puntos_sub = {"aguante": 1000}
 	juego.aplicar_puntos({}, {"cardio": 1000})
 	verificar(juego.estres_de_paso(1.0) >= DatosEstadisticas.MINIMO_REDUCCION - 0.001, "El paso nunca deja de costar")
 	juego.free()

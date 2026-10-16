@@ -20,8 +20,8 @@ o *Continuar*. Arriba están las pestañas:
 
 - **Rey:** nivel, experiencia y las **7 características** del rey (Fuerza,
   Destreza, Aguante, Resiliencia, Suerte, Inteligencia y Carisma), con 3 partes
-  cada una. Al empezar repartes 15 puntos; al subir de nivel, 1 punto principal
-  y 7 sueltos.
+  cada una. Al empezar repartes 15 puntos y cada nivel da 1 más. Cada punto en
+  una característica sube sus 3 partes y da 7 puntos solo para esas partes.
 - **Inventario:** el botín. Tocas un objeto para equiparlo o venderlo (calidad
   normal, rara, épica o legendaria; vale más cuanto mejor es).
 - **Ciudad:** en construcción.

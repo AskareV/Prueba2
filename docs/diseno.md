@@ -411,9 +411,12 @@ números son **provisionales**.
 ### 8.1 Cómo se suben
 
 - **Partida nueva:** las 7 principales en 3 y **15 puntos** para repartir entre
-  ellas. Un punto en una principal sube **+1 sus tres partes**.
-- **Al subir de nivel:** **1 punto** para una principal (sube sus tres partes) y
-  **7 puntos sueltos** para cualquier parte.
+  ellas.
+- **Al subir de nivel:** **1 punto** más para una principal.
+- **Cada punto en una principal** sube **+1 sus tres partes** y da **7 puntos
+  para repartir solo entre esas tres** (no sirven para las partes de otra
+  principal). Ej.: 3 puntos en Fuerza dan 21 puntos para Fuerza máxima, Fuerza
+  explosiva y Fuerza de agarre. Se pueden guardar para después.
 - En la pestaña **Rey** se toca **+**, y los puntos quedan en verde hasta tocar
   **Confirmar** (o **Deshacer**). La pestaña muestra "Rey (+)" si hay puntos.
 - **Experiencia:** 10 × nivel del lugar por vencer a un enemigo y 4 × nivel por
@@ -477,19 +480,21 @@ Por ahora el rey sabe los tres desde el principio.
 ### 8.5 Equilibrio con características (simulado)
 
 Victorias del rey con espada y la barra de turnos, según cómo repartió sus 15
-puntos iniciales. "Parejo": 3 en Fuerza y 2 en cada una de las demás.
-"Guerrero": 5 en Fuerza, Destreza y Aguante.
+puntos iniciales (los 7 puntos de partes de cada uno, por igual entre sus 3
+partes). "Parejo": 3 en Fuerza y 2 en cada una de las demás. "Guerrero": 5 en
+Fuerza, Destreza y Aguante.
 
-| Reparto | Ladrón (equipo inicial) | Orco cazador (nivel 2) | Caballero negro (nivel 3 épico) | Verdugo (nivel 3 épico) |
-|---|---|---|---|---|
-| Sin puntos | 80% | 21% | 19% (72% con táctica) | 57% |
-| Parejo | 96% | 71% | 68% (99% con táctica) | 93% |
-| Guerrero | 100% | 93% | 94% (99% con táctica) | 99% |
+| Reparto | Ladrón (equipo inicial) | Orco cazador (nivel 2) | Caballero negro (nivel 3 épico) | Verdugo (nivel 3 épico) | Verdugo (equipo inicial) |
+|---|---|---|---|---|---|
+| Sin puntos | 80% | 22% | 22% (69% con táctica) | 57% | 0% (9% con táctica) |
+| Parejo | 100% | 100% | 99% (100% con táctica) | 100% | 97% |
+| Guerrero | 100% | 100% | 100% | 100% | 100% |
 
-Sin táctica, salvo donde se indica. **Ojo:** con los 15 puntos el rey ya es
-bastante más fuerte que antes, cada nivel suma 10 puntos más y los enemigos no
-suben. Hay que decidir si los enemigos crecen (con las semanas o con el nivel
-del rey) o si cada punto vale menos.
+Sin táctica, salvo donde se indica. **Ojo:** con los 15 puntos y sus 105
+puntos de partes el rey gana casi todo, incluso al verdugo con el equipo
+inicial. Cada nivel suma otro punto (+1 en 3 partes y 7 puntos más) y los
+enemigos no suben. Hay que decidir si los enemigos crecen (con las semanas o
+con el nivel del rey) o si cada punto vale menos.
 
 ## 9. Pendientes
 
