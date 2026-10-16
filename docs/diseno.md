@@ -223,24 +223,27 @@ Cada rival sigue un plan según su personalidad y a veces improvisa (25%):
 
 ### 6.5 Equilibrio (simulado)
 
-Victorias del rey en miles de combates simulados, promedio de las tres armas,
-según cómo elige a qué atacar:
+Victorias del rey (sin características) en miles de combates simulados con la
+barra de turnos, promedio de las tres armas, según cómo elige a qué atacar:
 
 | Cómo ataca el rey | Bandido | Lancero | Orco |
 |---|---|---|---|
-| Inutiliza el brazo del arma y luego va al cuerpo | 97% | 91% | 75% |
-| Inutiliza los dos brazos y luego va al cuerpo | 94% | 86% | 79% |
-| La parte del torso que más daña | 79% | 56% | 36% |
-| Como la IA de los rivales | 75% | 48% | 29% |
-| Siempre al abdomen | 65% | 40% | 21% |
-| Siempre al cráneo | 36% | 22% | 20% |
-| Primero las piernas | 33% | 12% | 7% |
-| Siempre al cuello | 28% | 14% | 6% |
-| Partes al azar | 17% | 4% | 1% |
+| Inutiliza el brazo del arma y luego va al cuerpo | 96% | 90% | 72% |
+| Inutiliza los dos brazos y luego va al cuerpo | 93% | 83% | 73% |
+| La parte del torso que más daña | 78% | 50% | 34% |
+| Primero las piernas | 68% | 47% | 35% |
+| Como la IA de los rivales | 72% | 46% | 27% |
+| Siempre al abdomen | 62% | 34% | 21% |
+| Siempre al cuello | 41% | 25% | 14% |
+| Siempre al cráneo | 35% | 21% | 20% |
+| Partes al azar | 18% | 6% | 2% |
 
 - Inutilizar primero el brazo del arma rinde mucho más que ir directo al
   abdomen, y contra cada rival atacar siempre la misma parte rinde menos que
   abrir la guardia.
+- Con la barra de turnos, empezar por las piernas rinde mucho más que antes
+  (era 33%, 12% y 7%): las piernas heridas frenan al rival y el rey actúa dos
+  veces seguidas más a menudo.
 - Dificultad de los rivales: bandido fácil, lancero medio, orco difícil.
 
 ## 7. Reino (versión preliminar)
