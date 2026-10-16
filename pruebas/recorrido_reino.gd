@@ -93,6 +93,8 @@ func _repartir_puntos(reino: Node) -> void:
 	_verificar(int(reino.call("_puntos_principales_libres")) == principales - 1, "El + deja el punto pendiente")
 	_verificar(int(reino.call("_puntos_sub_libres", "fuerza")) == por_principal
 		and int(reino.call("_puntos_sub_libres", "destreza")) == 0, "El punto en Fuerza da puntos solo para sus partes")
+	_verificar(_mas_de_partes(reino, "fuerza") == 3 and _mas_de_partes(reino, "destreza") == 0,
+		"Solo la tarjeta con puntos muestra los + de sus partes")
 	reino.call("_al_sumar_sub", "velocidad")
 	_verificar(not Dictionary(reino.get("_pend_sub")).has("velocidad"), "Sin puntos de Destreza, Velocidad no sube")
 	reino.call("_al_sumar_sub", "fuerza_maxima")
@@ -133,6 +135,28 @@ func _repartir_puntos(reino: Node) -> void:
 	await process_frame
 	_verificar(is_equal_approx(_juego.valor_sub("velocidad"), velocidad_antes + 2.0), "Destreza y un punto propio suben Velocidad")
 	_verificar(_juego.puntos_sub_de("destreza") == de_destreza + por_principal - 1, "Al confirmar quedan los demás puntos de Destreza")
+
+
+## Cuántos botones + de partes tiene la tarjeta de una característica (-1 si no está).
+func _mas_de_partes(reino: Node, car_id: String) -> int:
+	var nombre: String = DatosEstadisticas.CARACTERISTICAS[car_id]["nombre"]
+	for tarjeta in (reino.get("_contenido") as Node).get_children():
+		if tarjeta.is_queued_for_deletion() or tarjeta.get_child_count() == 0:
+			continue
+		var columna := tarjeta.get_child(0)
+		if not columna is VBoxContainer or columna.get_child_count() == 0:
+			continue
+		var cabecera := columna.get_child(0)
+		if not cabecera is HBoxContainer or not cabecera.get_child(0) is Button \
+				or (cabecera.get_child(0) as Button).text != nombre:
+			continue
+		var total := 0
+		for fila in columna.get_children().slice(1):
+			for hijo in fila.get_children():
+				if hijo is Button and (hijo as Button).text == "+":
+					total += 1
+		return total
+	return -1
 
 
 ## Entra a la madriguera, pelea con dos enemigos (el primero de verdad), abre

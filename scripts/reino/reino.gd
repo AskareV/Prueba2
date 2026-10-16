@@ -278,8 +278,12 @@ func _tarjeta_caracteristica(car_id: String) -> PanelContainer:
 		if libres > 0:
 			fila.add_child(_compactar(UIReino.boton("+", _al_sumar_sub.bind(sub_id), Vector2(44, 46), 22)))
 	if libres > 0:
-		columna.add_child(UIReino.etiqueta("%d %s para sus partes" % [libres, "punto" if libres == 1 else "puntos"],
-			16, COLOR_PENDIENTE))
+		var quedan := UIReino.etiqueta("%d %s para sus partes" % [libres, "punto" if libres == 1 else "puntos"],
+			15, COLOR_PENDIENTE)
+		# Recortado: con 3 cifras no debe ensanchar la tarjeta.
+		quedan.clip_text = true
+		quedan.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		columna.add_child(quedan)
 	return tarjeta
 
 
