@@ -112,7 +112,8 @@ func aplicar_estadisticas(p_estadisticas: Dictionary) -> void:
 	vida_max = _vida_base + roundi(DatosEstadisticas.VIDA_POR_VITALIDAD * puntos("vitalidad"))
 	vida = vida_max
 	usa_mana = true
-	mana_max = DatosEstadisticas.MANA_BASE + DatosEstadisticas.MANA_POR_MAGO * puntos("mago")
+	# Entero, aunque el Amuleto deje puntos con decimales.
+	mana_max = floorf(DatosEstadisticas.MANA_BASE + DatosEstadisticas.MANA_POR_MAGO * puntos("mago") + 0.001)
 	mana = mana_max
 	rapidez = DatosEstadisticas.RAPIDEZ_BASE + DatosEstadisticas.RAPIDEZ_POR_VELOCIDAD * puntos("velocidad")
 

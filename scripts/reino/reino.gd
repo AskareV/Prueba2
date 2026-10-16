@@ -200,10 +200,12 @@ func _crear_resumen_rey() -> void:
 	columna.add_child(UIReino.etiqueta("El Rey · %s" % ("Diestro" if Juego.diestro else "Zurdo"), 24, UIReino.COLOR_TITULO))
 	columna.add_child(UIReino.etiqueta("Nivel %d" % Juego.nivel, 22))
 	var barra := Barra.new()
-	barra.custom_minimum_size = Vector2(230, 22)
+	barra.custom_minimum_size = Vector2(228, 22)
 	barra.tamano_fuente = 14
 	barra.color_fijo = Color("#7e57c2")
 	barra.valor = float(Juego.xp) / Juego.xp_para_subir()
+	# Sin animación: al rehacer la pestaña la barra no debe vaciarse y volver a llenarse.
+	barra._mostrado = barra.valor
 	barra.texto = "Experiencia %d / %d" % [Juego.xp, Juego.xp_para_subir()]
 	columna.add_child(barra)
 	var rey := Juego.crear_rey()
@@ -216,12 +218,12 @@ func _crear_resumen_rey() -> void:
 	columna.add_child(UIReino.etiqueta("Puntos sueltos: %d" % sueltos, 19,
 		UIReino.COLOR_TITULO if sueltos > 0 else Estilo.TEXTO_SUAVE))
 	if principales > 0 or sueltos > 0:
-		columna.add_child(UIReino.parrafo("Toca + en una característica (sube sus 3 partes) o en una de sus partes.", 240, 15))
+		columna.add_child(UIReino.parrafo("Toca + en una característica (sube sus 3 partes) o en una de sus partes.", 228, 15))
 	if _hay_pendientes():
-		var confirmar := UIReino.boton("Confirmar", _al_confirmar_puntos, Vector2(240, 54), 21)
+		var confirmar := UIReino.boton("Confirmar", _al_confirmar_puntos, Vector2(228, 54), 21)
 		Estilo.con_franja(confirmar, COLOR_PENDIENTE)
 		columna.add_child(confirmar)
-		columna.add_child(UIReino.boton("Deshacer", _al_deshacer_puntos, Vector2(240, 48), 19))
+		columna.add_child(UIReino.boton("Deshacer", _al_deshacer_puntos, Vector2(228, 48), 19))
 
 
 func _tarjeta_caracteristica(car_id: String) -> PanelContainer:
@@ -251,7 +253,7 @@ func _tarjeta_caracteristica(car_id: String) -> PanelContainer:
 		var fila := HBoxContainer.new()
 		columna.add_child(fila)
 		var sub_nombre := UIReino.boton(DatosEstadisticas.SUBS[sub_id]["nombre"], _al_elegir_estadistica.bind(sub_id),
-			Vector2(0, 46), 15)
+			Vector2(0, 46), 13)
 		sub_nombre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		sub_nombre.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		sub_nombre.clip_text = true
@@ -259,6 +261,12 @@ func _tarjeta_caracteristica(car_id: String) -> PanelContainer:
 		_compactar(sub_nombre)
 		if _elegida == sub_id:
 			Estilo.con_franja(sub_nombre, datos["color"])
+			# La franja de la elegida, angosta, para que el nombre siga cabiendo.
+			for estado in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+				var caja := sub_nombre.get_theme_stylebox(estado) as StyleBoxFlat
+				caja.border_width_left = 4
+				caja.content_margin_left = 8
+				caja.content_margin_right = 4
 		fila.add_child(sub_nombre)
 		var valor := Juego.valor_sub(sub_id, _pend_principal, _pend_sub)
 		var sub_cambiada := not is_equal_approx(valor, Juego.valor_sub(sub_id))
@@ -278,18 +286,18 @@ func _tarjeta_descripcion() -> PanelContainer:
 	if DatosEstadisticas.SUBS.has(_elegida):
 		var sub: Dictionary = DatosEstadisticas.SUBS[_elegida]
 		columna.add_child(UIReino.etiqueta(sub["nombre"], 21, UIReino.COLOR_TITULO))
-		columna.add_child(UIReino.parrafo(sub["descripcion"], 220, 16, Estilo.TEXTO))
+		columna.add_child(UIReino.parrafo(sub["descripcion"], 208, 16, Estilo.TEXTO))
 		if sub.get("sin_efecto", false):
-			columna.add_child(UIReino.parrafo("Todavía sin efecto: falta el sistema del que depende.", 220, 15, Color("#ef9a9a")))
+			columna.add_child(UIReino.parrafo("Todavía sin efecto: falta el sistema del que depende.", 208, 15, Color("#ef9a9a")))
 	elif DatosEstadisticas.CARACTERISTICAS.has(_elegida):
 		var car: Dictionary = DatosEstadisticas.CARACTERISTICAS[_elegida]
 		columna.add_child(UIReino.etiqueta(car["nombre"], 21, UIReino.COLOR_TITULO))
-		columna.add_child(UIReino.parrafo("Un punto aquí sube +1 sus tres partes:", 220, 16, Estilo.TEXTO))
+		columna.add_child(UIReino.parrafo("Un punto aquí sube +1 sus tres partes:", 208, 16, Estilo.TEXTO))
 		for sub_id in car["subs"]:
 			columna.add_child(UIReino.etiqueta("· " + String(DatosEstadisticas.SUBS[sub_id]["nombre"]), 16))
 	else:
 		columna.add_child(UIReino.etiqueta("Características", 21, UIReino.COLOR_TITULO))
-		columna.add_child(UIReino.parrafo("Toca un nombre para ver qué hace. Todo empieza en 3; cada punto por encima mejora un poco.", 220, 16))
+		columna.add_child(UIReino.parrafo("Toca un nombre para ver qué hace. Todo empieza en 3; cada punto por encima mejora un poco.", 208, 16))
 	return tarjeta
 
 
@@ -298,8 +306,8 @@ func _compactar(boton: Button) -> Button:
 	for estado in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
 		# Del tema del juego (el botón todavía no está en el árbol).
 		var copia := Estilo.tema().get_stylebox(estado, "Button").duplicate() as StyleBox
-		copia.content_margin_left = 8
-		copia.content_margin_right = 8
+		copia.content_margin_left = 4
+		copia.content_margin_right = 4
 		boton.add_theme_stylebox_override(estado, copia)
 	return boton
 

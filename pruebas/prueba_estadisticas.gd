@@ -177,8 +177,9 @@ func prueba_barra_retrasar_y_piernas() -> void:
 	for parte_id in ["muslo_der", "muslo_izq"]:
 		rival.integridad[parte_id] = 0.0
 	verificar(rival.rapidez_efectiva() < rapidez_sana, "Con las piernas inutilizadas es más lento")
+	var lenta := rival.rapidez_efectiva()
 	rival.atemorizado = true
-	verificar(rival.rapidez_efectiva() < rapidez_sana * 0.6 + 0.01, "Atemorizado, todavía más lento")
+	verificar_cerca(rival.rapidez_efectiva(), lenta * MotorCombate.ATEMORIZADO_RAPIDEZ, "Atemorizado, todavía más lento")
 
 
 func prueba_precision_reflejos_y_fuerza() -> void:

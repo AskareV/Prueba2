@@ -99,6 +99,7 @@ func _ready() -> void:
 	if MotorCombate.puede_atemorizar(_jugador, _enemigo):
 		_enemigo.atemorizado = true
 		_agregar_mensaje("Tu presencia lo intimida: %s queda atemorizado." % _enemigo.con_articulo())
+		_actualizar_paneles()
 	_siguiente_turno()
 	# Un doble toque en "¡Combatir!" no debe pulsar lo que quede debajo al entrar.
 	_bloqueo = 0.5
@@ -489,7 +490,13 @@ func _texto_tactico(parte_id: String) -> String:
 		return ""
 	if not _enemigo.extremidad_util(zona_id):
 		return "Pierna ya inutilizada" if zona_id.begins_with("pierna_") else "Brazo ya inutilizado"
-	var golpes := MotorCombate.golpes_para_inutilizar(_jugador, _enemigo, parte_id)
+	# Si el rival está en guardia y te tocan dos turnos seguidos, cubre los dos golpes.
+	var en_guardia := 1
+	for luchador in _orden.vista_previa(OrdenTurnos.MAX_SEGUIDOS - 1):
+		if luchador != _jugador:
+			break
+		en_guardia += 1
+	var golpes := MotorCombate.golpes_para_inutilizar(_jugador, _enemigo, parte_id, en_guardia)
 	if golpes.x == golpes.y:
 		return "Inutilizar: %d %s" % [golpes.x, "golpe" if golpes.x == 1 else "golpes"]
 	return "Inutilizar: %d–%d golpes" % [golpes.x, golpes.y]
@@ -637,7 +644,7 @@ func _mostrar_hechizos() -> void:
 		var texto := "%s · %d de maná\n%s" % [datos["nombre"], roundi(float(datos["coste"])), detalle]
 		var boton := _boton(texto, _al_elegir_hechizo.bind(hechizo_id), Vector2(300, 96), 18)
 		boton.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		boton.disabled = not DatosHechizos.puede_lanzar(_jugador, hechizo_id)
+		boton.disabled = not _hechizo_disponible(hechizo_id)
 		Estilo.con_franja(boton, DatosArmas.COLORES_TIPO["arcano"])
 		_opciones.add_child(boton)
 	_boton_volver.text = "Volver"
@@ -645,8 +652,15 @@ func _mostrar_hechizos() -> void:
 	_bloquear_entrada()
 
 
+## Alcanza el maná y sirve de algo (curarse con la vida llena, no).
+func _hechizo_disponible(hechizo_id: String) -> bool:
+	if not DatosHechizos.puede_lanzar(_jugador, hechizo_id):
+		return false
+	return DatosHechizos.hechizo(hechizo_id)["objetivo"] != "propio" or _jugador.vida < _jugador.vida_max
+
+
 func _al_elegir_hechizo(hechizo_id: String) -> void:
-	if _estado != Estado.MAGIA or not _entrada_libre() or not DatosHechizos.puede_lanzar(_jugador, hechizo_id):
+	if _estado != Estado.MAGIA or not _entrada_libre() or not _hechizo_disponible(hechizo_id):
 		return
 	var datos := DatosHechizos.hechizo(hechizo_id)
 	if datos["objetivo"] == "parte":

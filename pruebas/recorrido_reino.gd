@@ -89,7 +89,10 @@ func _repartir_puntos(reino: Node) -> void:
 	var principales: int = _juego.puntos_principales
 	var fuerza_antes: float = _juego.valor_sub("fuerza_maxima")
 	reino.call("_al_sumar_principal", "fuerza")
+	_verificar(int(reino.call("_puntos_principales_libres")) == principales - 1, "El + deja el punto pendiente")
 	reino.call("_al_deshacer_puntos")
+	_verificar(not reino.call("_hay_pendientes") and int(reino.call("_puntos_principales_libres")) == principales,
+		"Deshacer devuelve el punto")
 	_verificar(_juego.valor_sub("fuerza_maxima") == fuerza_antes, "Deshacer no aplica los puntos")
 	for i in principales:
 		reino.call("_al_sumar_principal", DatosEstadisticas.ORDEN[i % DatosEstadisticas.ORDEN.size()])
@@ -100,10 +103,16 @@ func _repartir_puntos(reino: Node) -> void:
 	await process_frame
 	_verificar(_juego.puntos_principales == 0, "Se reparten todos los puntos principales")
 	_verificar(_juego.valor_sub("fuerza_maxima") > fuerza_antes, "Un punto en Fuerza sube sus partes")
-	if _juego.puntos_sub > 0:
-		reino.call("_al_sumar_sub", "velocidad")
-		reino.call("_al_confirmar_puntos")
-		await process_frame
+	# Subir un nivel da puntos sueltos: uno a Velocidad.
+	_juego.ganar_xp(_juego.xp_para_subir())
+	_verificar(_juego.puntos_sub == DatosEstadisticas.PUNTOS_SUB_POR_NIVEL, "Subir de nivel da puntos sueltos")
+	reino.call("_mostrar_pestana", "rey")
+	await process_frame
+	var velocidad_antes: float = _juego.valor_sub("velocidad")
+	reino.call("_al_sumar_sub", "velocidad")
+	reino.call("_al_confirmar_puntos")
+	await process_frame
+	_verificar(_juego.valor_sub("velocidad") == velocidad_antes + 1.0, "Un punto suelto sube esa parte")
 
 
 ## Entra a la madriguera, pelea con dos enemigos (el primero de verdad), abre

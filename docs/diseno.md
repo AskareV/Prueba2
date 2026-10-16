@@ -154,7 +154,8 @@ definamos armas y daño.
   misma rapidez se alternan; el bastante más rápido actúa **dos veces seguidas**
   (nunca más de 2). Arriba, al centro, se ven los próximos 6 turnos. Las piernas
   heridas frenan (hasta un 40% menos con las dos inutilizadas). Los rivales de
-  la demo tienen la rapidez del rey, así que se alternan como antes.
+  la demo tienen la rapidez del rey: sanos se alternan, pero las piernas heridas,
+  Ralentizar y los empujones cambian el orden.
 - **Al apuntar:** cada botón muestra la probabilidad de acierto y, en las partes,
   el daño posible. En brazos y piernas también muestra cuántos golpes faltan para
   inutilizarlos. Al elegir una zona, una **lupa** la muestra ampliada para tocar
@@ -252,7 +253,7 @@ combate* (la demo anterior). La pantalla del reino tiene pestañas arriba:
 
 | Pestaña | Contenido |
 |---|---|
-| **Rey** | Ficha del rey ("Char info"). Sus características están por definir. |
+| **Rey** | Nivel, experiencia y las 7 características del rey (ver sección 8); los puntos se reparten con +, Confirmar y Deshacer. |
 | **Inventario** | Equipo puesto, mochila con el botín, equipar y vender. |
 | **Ciudad** | En construcción. Aquí irán el descanso y la escuela. |
 | **Aventura** | Mapa con 4 mazmorras y 3 zonas. |
@@ -388,20 +389,9 @@ diario de más.
 
 ### 7.9 Equilibrio de los enemigos (simulado)
 
-Victorias del rey en combates simulados con espada. "Con táctica" = inutiliza
-primero el brazo del arma y luego va al cuerpo; "sin plan" = como la IA de los
-rivales.
-
-| Equipo del rey | Goblins | Matón | Orco guerrero | Caballero negro | Verdugo |
-|---|---|---|---|---|---|
-| Inicial (espada de bronce) | ~100% | 47% sin plan | 0% sin plan | 0% | 1% con táctica |
-| Nivel 2 normal | ~100% | 80% sin plan | 6% sin plan | 4% con táctica | 7% con táctica |
-| Nivel 3 épico | ~100% | — | 98% con táctica | 69% con táctica | 82% con táctica |
-| Nivel 4 épico | ~100% | — | 100% con táctica | 90% con táctica | 92% con táctica |
-
-La idea: empezar por los goblins, equiparse y subir de mazmorra. En la difícil
-la táctica pesa mucho: con equipo de nivel 3 épico, sin plan se gana menos de
-una de cada cuatro peleas contra el caballero negro o el verdugo.
+Se simuló de nuevo con la barra de turnos por velocidad y las características
+del rey: ver la tabla de la sección 8.5 (la fila "Sin puntos" es el rey sin
+características).
 
 ### 7.10 Todavía no
 
@@ -453,7 +443,8 @@ números son **provisionales**.
 | | Liderazgo | **Todavía sin efecto**: espera a los soldados de la ciudad |
 | | Presencia | +3% de pago en los trabajos. Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −10% de acierto, −15% de daño y −10% de rapidez |
 
-Ningún efecto que reduce algo baja de un 30% de lo normal. Coraje de los
+Ningún multiplicador que reduce estrés, estados o trampas baja de un 30% de lo
+normal, y el acierto nunca baja de 5% ni pasa de 95%. Coraje de los
 enemigos: goblins 2–3, ladrón 3, bandido 4, matón y lancero 5, orcos 5–6,
 cultista 8, caballero negro y verdugo 9.
 

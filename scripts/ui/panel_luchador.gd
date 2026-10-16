@@ -15,7 +15,7 @@ const COLOR_MANA := Color("#26a69a")
 var _luchador: Luchador
 var _titulo: String
 var _nombre: Label
-var _estados: HBoxContainer
+var _estados: HFlowContainer
 var _subtitulo: Label
 var _vida: Barra
 var _mana: Barra
@@ -37,10 +37,12 @@ func configurar(luchador: Luchador, titulo: String) -> void:
 	_nombre = Label.new()
 	_nombre.add_theme_font_size_override("font_size", 26)
 	fila.add_child(_nombre)
-	_estados = HBoxContainer.new()
-	_estados.add_theme_constant_override("separation", 6)
+	# Si no caben en una fila, bajan a la siguiente (el panel no se ensancha).
+	_estados = HFlowContainer.new()
+	_estados.add_theme_constant_override("h_separation", 6)
+	_estados.add_theme_constant_override("v_separation", 4)
 	_estados.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_estados.alignment = BoxContainer.ALIGNMENT_END
+	_estados.alignment = FlowContainer.ALIGNMENT_END
 	fila.add_child(_estados)
 
 	_subtitulo = Label.new()

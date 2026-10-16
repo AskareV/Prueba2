@@ -95,8 +95,12 @@ static func multiplicador_golpe(atacante: Luchador, defensor: Luchador, parte_id
 ## Parte del daño que recibe quien se defiende.
 static func factor_guardia(atacante: Luchador, defensor: Luchador) -> float:
 	var factor := REDUCCION_DANIO_EN_GUARDIA
-	factor -= DatosEstadisticas.GUARDIA_POR_AGARRE * defensor.puntos("fuerza_agarre")
-	factor += DatosEstadisticas.GUARDIA_POR_EXPLOSIVA * atacante.puntos("fuerza_explosiva")
+	# El agarre bloquea con el arma (sin arma no cuenta) y la fuerza explosiva
+	# rompe la guardia con un golpe de arma (no con un hechizo).
+	if not defensor.desarmado:
+		factor -= DatosEstadisticas.GUARDIA_POR_AGARRE * defensor.puntos("fuerza_agarre")
+	if atacante.hechizo.is_empty():
+		factor += DatosEstadisticas.GUARDIA_POR_EXPLOSIVA * atacante.puntos("fuerza_explosiva")
 	return clampf(factor, GUARDIA_MINIMA, GUARDIA_MAXIMA)
 
 
@@ -115,8 +119,11 @@ static func multiplicador_desgaste(atacante: Luchador, defensor: Luchador, parte
 ## Golpes acertados que faltan para inutilizar esa parte o, en brazos y piernas,
 ## para que la extremidad deje de servir (con el cuello inutilizado basta menos).
 ## Devuelve (golpes si todos pegan fuerte, golpes si todos pegan flojo); (0, 0)
-## si ya está inutilizada.
-static func golpes_para_inutilizar(atacante: Luchador, defensor: Luchador, parte_id: String) -> Vector2i:
+## si ya está inutilizada. "golpes_en_guardia": cuántos golpes seguidos recibe
+## el defensor en guardia antes de su próximo turno (2 si el atacante actúa dos
+## veces seguidas).
+static func golpes_para_inutilizar(atacante: Luchador, defensor: Luchador, parte_id: String,
+		golpes_en_guardia := 1) -> Vector2i:
 	var zona_id := DatosCuerpo.zona_de(parte_id)
 	var umbral := Luchador.INUTILIZADA
 	if DatosCuerpo.ZONAS[zona_id]["defensa"] != "cubierta":
@@ -128,18 +135,24 @@ static func golpes_para_inutilizar(atacante: Luchador, defensor: Luchador, parte
 		return Vector2i.ZERO
 	var arma: Dictionary = atacante.datos_arma()
 	var primero := multiplicador_desgaste(atacante, defensor, parte_id)
-	# La guardia solo protege del próximo golpe.
+	# La guardia protege hasta el próximo turno del defensor.
 	var siguientes := primero / factor_guardia(atacante, defensor) if defensor.defendiendo else primero
 	return Vector2i(
-		_golpes_hasta(restante, arma["danio_max"] * primero, arma["danio_max"] * siguientes),
-		_golpes_hasta(restante, arma["danio_min"] * primero, arma["danio_min"] * siguientes))
+		_golpes_hasta(restante, arma["danio_max"] * primero, arma["danio_max"] * siguientes, golpes_en_guardia),
+		_golpes_hasta(restante, arma["danio_min"] * primero, arma["danio_min"] * siguientes, golpes_en_guardia))
 
 
-## Golpes hasta que el desgaste acumulado supere "restante".
-static func _golpes_hasta(restante: float, primero: float, siguientes: float) -> int:
-	if primero > restante:
-		return 1
-	return floori((restante - primero) / maxf(siguientes, 0.01)) + 2
+## Golpes hasta que el desgaste acumulado supere "restante": los primeros
+## "en_guardia" con el desgaste "primero" y los demás con "siguientes".
+static func _golpes_hasta(restante: float, primero: float, siguientes: float, en_guardia := 1) -> int:
+	var total := 0.0
+	var golpes := 0
+	while golpes < 1000:
+		golpes += 1
+		total += maxf(primero if golpes <= en_guardia else siguientes, 0.01)
+		if total > restante:
+			break
+	return golpes
 
 
 ## Daño mínimo y máximo de un golpe acertado en esa parte.
@@ -225,7 +238,8 @@ static func _resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: S
 	if parte_id == "craneo" and not defensor.aturdido:
 		var prob_base: float = tipo["prob_aturdir"] * efectos
 		var prob_aturdir := prob_base * (1.6 - defensor.conciencia())
-		prob_aturdir *= DatosEstadisticas.aumento(atacante.puntos("fuerza_explosiva"), DatosEstadisticas.ATURDIR_POR_EXPLOSIVA)
+		if atacante.hechizo.is_empty():
+			prob_aturdir *= DatosEstadisticas.aumento(atacante.puntos("fuerza_explosiva"), DatosEstadisticas.ATURDIR_POR_EXPLOSIVA)
 		prob_aturdir *= DatosEstadisticas.reduccion(defensor.puntos("firmeza"), DatosEstadisticas.ATURDIR_POR_FIRMEZA)
 		prob_aturdir *= _resistencia_a_estados(defensor)
 		if rng.randf() < prob_aturdir:
@@ -274,8 +288,9 @@ static func _intentar_desarme(atacante: Luchador, defensor: Luchador, parte_id: 
 		prob = prob_base + (1.0 - integridad_despues / 100.0) * DESARME_POR_HERIDA
 	elif parte_id == "antebrazo_" + lado:
 		prob = prob_base * 0.4
-	# Fuerza de agarre: desarma mejor y lo desarman menos.
-	prob *= DatosEstadisticas.aumento(atacante.puntos("fuerza_agarre"), DatosEstadisticas.DESARME_POR_AGARRE)
+	# Fuerza de agarre: desarma mejor (con un golpe de arma) y lo desarman menos.
+	if atacante.hechizo.is_empty():
+		prob *= DatosEstadisticas.aumento(atacante.puntos("fuerza_agarre"), DatosEstadisticas.DESARME_POR_AGARRE)
 	prob *= DatosEstadisticas.reduccion(defensor.puntos("fuerza_agarre"), DatosEstadisticas.DESARME_POR_AGARRE)
 	prob *= _resistencia_a_estados(defensor)
 	# Si el brazo del arma ya no puede sostenerla (por un golpe en ese brazo o en el

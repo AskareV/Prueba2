@@ -103,8 +103,7 @@ func _elegir_accion(escena: Control) -> void:
 
 ## En el menú de magia: lanza un hechizo que alcance, o vuelve atrás.
 func _elegir_hechizo(escena: Control) -> void:
-	var jugador: Luchador = escena.get("_jugador")
-	var posibles := DatosHechizos.ORDEN.filter(func(h: String) -> bool: return DatosHechizos.puede_lanzar(jugador, h))
+	var posibles := DatosHechizos.ORDEN.filter(func(h: String) -> bool: return escena.call("_hechizo_disponible", h))
 	if posibles.is_empty() or _rng.randf() < 0.15:
 		escena.call("_volver_atras")
 		return
