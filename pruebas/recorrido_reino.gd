@@ -4,7 +4,7 @@ extends SceneTree
 ##   godot --headless --script res://pruebas/recorrido_reino.gd
 ## Menú -> reino (todas las pestañas; repartir los puntos del rey) -> mazmorra
 ## (pelear, abrir cofres y salir por la H) -> zona de siete días -> inventario
-## (equipar y vender) -> trabajo.
+## (equipar y vender) -> trabajo -> ciudad (edificios, descanso y un ataque).
 
 const MENU := "res://escenas/menu_principal.tscn"
 const REINO := "res://escenas/reino.tscn"
@@ -32,7 +32,7 @@ func _initialize() -> void:
 	_juego.nueva_partida(true)
 	_juego.rng.seed = 5
 	for paso in [_recorrer_menu_y_pestanas, _recorrer_mazmorra, _recorrer_estres_maximo, _recorrer_zona,
-			_recorrer_inventario, _recorrer_trabajo]:
+			_recorrer_inventario, _recorrer_trabajo, _recorrer_ciudad]:
 		await paso.call()
 		# Tras un fallo se corta: los pasos siguientes dependen de la pantalla.
 		if not _fallos.is_empty():
@@ -401,4 +401,83 @@ func _recorrer_trabajo() -> void:
 	reino.call("_al_terminar_trabajo")
 	await process_frame
 	reino.call("_al_elegir_oficio", "audiencias")
+	await process_frame
+
+
+## Ciudad: abre cada edificio, reconstruye, recluta, compra (con doble toque),
+## mejora en la herrería y descansa en el castillo. Después fuerza un ataque que
+## la ciudad pierde, para ver las noticias.
+func _recorrer_ciudad() -> void:
+	var reino := current_scene
+	_juego.oro = 5000
+	_juego.estres = 30.0
+	reino.call("_mostrar_pestana", "ciudad")
+	await process_frame
+	for edificio_id in DatosCiudad.ORDEN:
+		reino.call("_abrir_edificio", edificio_id)
+		await process_frame
+		_verificar(reino.get("_ventana_lugar") != null, "Se abre la ventana de %s" % edificio_id)
+		reino.call("_cerrar_lugar")
+		await process_frame
+	for edificio_id in ["barracas", "granja", "mercado", "herreria"]:
+		reino.call("_abrir_edificio", edificio_id)
+		await process_frame
+		reino.call("_al_mejorar_edificio")
+		await process_frame
+		_verificar(_juego.nivel_edificio(edificio_id) == 1, "Reconstruir %s desde su ventana" % edificio_id)
+		_verificar(reino.get("_ventana_lugar") != null, "La ventana de %s sigue abierta" % edificio_id)
+		match edificio_id:
+			"barracas":
+				var soldados: int = _juego.soldados
+				reino.call("_al_reclutar")
+				await process_frame
+				_verificar(_juego.soldados == soldados + 1, "Reclutar un soldado")
+			"mercado":
+				var en_venta: int = _juego.mercado.size()
+				var oro: int = _juego.oro
+				reino.call("_al_comprar", 0)
+				await process_frame
+				_verificar(_juego.mercado.size() == en_venta and _juego.oro == oro, "Comprar pide un segundo toque")
+				reino.call("_al_comprar", 0)
+				await process_frame
+				_verificar(_juego.mercado.size() == en_venta - 1 and _juego.oro < oro, "Comprar con el segundo toque")
+			"herreria":
+				var arma: Dictionary = _juego.equipo["arma"]
+				var siguiente: String = _juego.calidad_siguiente(arma)
+				reino.call("_al_mejorar_objeto", "arma")
+				await process_frame
+				if siguiente != "":
+					_verificar(_juego.equipo["arma"]["calidad"] == siguiente, "Mejorar el arma en la herrería")
+		reino.call("_cerrar_lugar")
+		await process_frame
+	# Descansar en el castillo pasa la semana.
+	var semana: int = _juego.semana
+	reino.call("_abrir_edificio", "castillo")
+	await process_frame
+	reino.call("_al_descansar")
+	await process_frame
+	_verificar(_juego.semana == semana + 1, "Descansar en el castillo pasa la semana")
+	_verificar(_juego.estres < 30.0, "Descansar baja el estrés")
+	if reino.get("_ventana_lugar") != null:
+		reino.call("_cerrar_lugar")
+		await process_frame
+	# Un ataque perdido: sin soldados, con todo el peligro y muy avanzada la partida.
+	_juego.soldados = 0
+	_juego.peligro = 100.0
+	_juego.semana = 60
+	reino.call("_abrir_edificio", "castillo")
+	await process_frame
+	reino.call("_al_descansar")
+	await process_frame
+	var informe: Dictionary = _juego.informe_ciudad
+	_verificar(informe.has("ataque") and not informe["ataque"]["ganado"], "Sin defensa, la ciudad pierde el ataque")
+	_verificar(reino.get("_ventana_lugar") != null, "Se muestran las noticias del ataque")
+	reino.call("_cerrar_lugar")
+	await process_frame
+	reino.call("_mostrar_pestana", "ciudad")
+	await process_frame
+	reino.call("_abrir_edificio", "castillo")
+	await process_frame
+	_verificar(reino.get("_ventana_lugar") != null, "El castillo muestra el informe de la semana")
+	reino.call("_cerrar_lugar")
 	await process_frame

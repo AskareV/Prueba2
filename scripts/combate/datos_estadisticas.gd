@@ -63,8 +63,9 @@ const SUBS := {
 	"arcano": {"nombre": "Arcano", "descripcion": "Más daño mágico (bastón y hechizos) y curas más fuertes."},
 	"estudio": {"nombre": "Estudio", "descripcion": "Más experiencia ganada."},
 	"mago": {"nombre": "Mago", "descripcion": "Más maná máximo y más maná recuperado por turno."},
-	"negociacion": {"nombre": "Negociación", "descripcion": "Vendes más caro (y más adelante, precios de la ciudad)."},
-	"liderazgo": {"nombre": "Liderazgo", "descripcion": "Moral de los soldados de la ciudad.", "sin_efecto": true},
+	"negociacion": {"nombre": "Negociación", "descripcion": "Vendes más caro y compras más barato en el mercado."},
+	"liderazgo": {"nombre": "Liderazgo",
+		"descripcion": "Moral de los soldados de la ciudad: defienden mejor y bajan más el peligro."},
 	"presencia": {"nombre": "Presencia",
 		"descripcion": "Más pago en los trabajos. Si supera de lejos al enemigo, este queda atemorizado todo el combate."},
 }
@@ -106,6 +107,8 @@ const MANA_POR_MAGO := 5
 const REGENERACION_BASE := 2.0
 const REGENERACION_POR_MAGO := 0.5
 const VENTA_POR_NEGOCIACION := 0.03
+const COMPRA_POR_NEGOCIACION := 0.02
+const MORAL_POR_LIDERAZGO := 0.03
 const PAGO_POR_PRESENCIA := 0.03
 ## Presencia que debe superar al "valor" del enemigo para atemorizarlo.
 const VENTAJA_PARA_ATEMORIZAR := 3.0

@@ -258,7 +258,7 @@ combate* (la demo anterior). La pantalla del reino tiene pestañas arriba:
 |---|---|
 | **Rey** | Nivel, experiencia y las 7 características del rey (ver sección 8); los puntos se reparten con +, Confirmar y Deshacer. |
 | **Inventario** | Equipo puesto, mochila con el botín, equipar y vender. |
-| **Ciudad** | En construcción. Aquí irán el descanso y la escuela. |
+| **Ciudad** | Cinco edificios fijos que se reconstruyen y mejoran, y el peligro de la ciudad (ver 7.11). En el castillo se descansa. |
 | **Aventura** | Mapa con 4 mazmorras y 3 zonas. |
 | **Trabajo** | Trabajos dignos de un rey. |
 | **Salir** | Vuelve al menú principal (la partida sigue en *Continuar*). |
@@ -273,8 +273,9 @@ combate* (la demo anterior). La pantalla del reino tiene pestañas arriba:
 - **El juego no tiene fin por ahora:** las semanas siguen sin límite.
 - Estrés de 0 a 100. Con **70** o más el rey vuelve a casa y no puede salir de
   aventura; con **60** o más no puede trabajar.
-- **Provisional:** en la Ciudad hay un botón *Descansar una semana* (−40 de
-  estrés) para no quedar bloqueado hasta que exista el descanso de verdad.
+- **Provisional:** en el **castillo** de la Ciudad se puede *Descansar una
+  semana* (−40 de estrés) para no quedar bloqueado.
+- Al pasar la semana, la **ciudad vive su semana sola** (ver 7.11).
 
 ### 7.2 Mapa de aventura
 
@@ -400,7 +401,48 @@ características).
 
 - La partida **no se guarda** al cerrar la aplicación.
 - Las heridas no pasan de un combate a otro: cada combate empieza con el rey sano.
-- La ciudad, el descanso y la escuela.
+- La escuela y los demás edificios de la ciudad.
+
+### 7.11 Ciudad
+
+La ciudad es **autosuficiente**: produce su comida, cobra impuestos y sus
+soldados la defienden sin el rey. El rey solo invierte oro. Si está mal
+protegida, el **peligro** sube y pueden atacarla; las batallas de la ciudad se
+resuelven solas y se pueden perder. Todos los números son **provisionales**.
+
+**Edificios fijos.** Se tocan para abrir su ventana. La partida empieza con el
+castillo en pie y los demás **en ruinas** (nivel 0): hay que reconstruirlos con
+oro y después se mejoran hasta nivel 3. Ningún edificio puede tener más nivel
+que el castillo.
+
+| Edificio | Oro para nivel 1 / 2 / 3 | Qué hace (nivel 1 / 2 / 3) |
+|---|---|---|
+| Castillo | (empieza en 1) / 400 / 1000 | Murallas: +4 / +8 / +12 de defensa. Aquí descansa el rey y se ve el estado de la ciudad. |
+| Herrería | 150 / 400 / 900 | Sube una calidad tu arma o armadura puesta, hasta rara / épica / legendaria (cuesta 3 veces el precio de venta de la calidad nueva). Los soldados defienden ×1,25 / ×1,5 / ×1,75. |
+| Granja | 100 / 300 / 700 | 10 / 18 / 28 de comida por semana. |
+| Mercado | 120 / 350 / 800 | 15 / 30 / 50 de oro de impuestos por semana; vende 3 / 4 / 5 objetos de nivel 1 / 2 / 3 que cambian cada semana. Precio: 4 veces el de venta (Negociación lo baja, pero nunca por debajo de lo que te pagarían al venderlo). |
+| Barracas | 150 / 400 / 900 | Caben 5 / 10 / 15 soldados (40 de oro cada uno). Cada soldado come 2 de comida por semana. |
+
+**La semana de la ciudad** (al pasar la semana):
+1. La granja produce y los soldados comen. Sin comida suficiente, se van
+   soldados (uno por cada 2 de comida que falte). Empieza con 20 de comida.
+2. El mercado cobra impuestos.
+3. **Peligro** (0 a 100%): sube 10 por semana y cada punto de **defensa** lo
+   baja 0,8. Defensa = soldados × equipo de la herrería × moral (Liderazgo,
+   +3% por punto) + murallas del castillo.
+4. Con ese peligro como probabilidad, hay un **ataque**. Su fuerza es
+   8 + 0,8 × semana (con azar de ×0,8 a ×1,25) contra la defensa (con azar de
+   ×0,85 a ×1,15):
+   - **Se gana:** el peligro baja 30 y muere hasta el 15% de los soldados.
+   - **Se pierde:** se llevan el 20% del oro y el 50% de la comida, muere la
+     mitad de los soldados, un edificio (no el castillo) baja un nivel y el
+     peligro baja 20.
+5. Si atacaron o se fueron soldados, al volver al reino aparece una ventana
+   con las noticias. El castillo muestra el informe de la última semana.
+
+Simulado en 40 semanas: sin invertir en la ciudad hay unos 13 ataques y se
+pierden todos; con barracas, granja y 5 soldados, unos 6; con todo mejorado y
+unos 250 de oro por semana, menos de 1.
 
 ## 8. Características del rey
 
@@ -445,8 +487,8 @@ números son **provisionales**.
 | Inteligencia | Arcano | +5% de daño mágico (bastón y hechizos) y +2 de vida por cada Curación |
 | | Estudio | +5% de experiencia |
 | | Mago | +5 de maná máximo (20 en la base) y +0,5 de maná por turno (2 en la base) |
-| Carisma | Negociación | +3% al vender (más adelante, precios de la ciudad) |
-| | Liderazgo | **Todavía sin efecto**: espera a los soldados de la ciudad |
+| Carisma | Negociación | +3% al vender y −2% al comprar en el mercado (nunca por debajo de lo que te pagarían al venderlo) |
+| | Liderazgo | Provisional: +3% de moral de los soldados de la ciudad, que defienden mejor y bajan más el peligro |
 | | Presencia | +3% de pago en los trabajos. Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −10% de acierto, −15% de daño y −10% de rapidez |
 
 Ningún multiplicador que reduce estrés, estados o trampas baja de un 30% de lo
@@ -502,7 +544,7 @@ con el nivel del rey) o si cada punto vale menos.
 - Integración del sangrado con la vida; recuperación después del combate.
 - Ambidiestros.
 - ¿Quién baja a la mazmorra: solo el rey, el rey con compañeros o héroes enviados?
-- ¿Hay límite de tiempo o amenazas periódicas sobre la ciudad?
+- ¿Hay límite de tiempo? Las amenazas sobre la ciudad ya existen (peligro y ataques, 7.11).
 - ¿Qué devastó la ciudad?
 - Estilo visual (propuesta: pixel art retro).
 - Nombre del juego.

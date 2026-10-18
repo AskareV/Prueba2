@@ -128,6 +128,19 @@ static func crear_arma(base: String, nivel: int, calidad: String) -> Dictionary:
 	return objeto
 
 
+## El mismo objeto con otra calidad: conserva su base, estilo, nivel e id
+## (para la herrería).
+static func con_calidad(objeto: Dictionary, calidad: String) -> Dictionary:
+	var nuevo := objeto.duplicate()
+	nuevo["calidad"] = calidad
+	if nuevo["ranura"] == "arma":
+		_completar_arma(nuevo, nuevo["base"])
+	else:
+		_completar_pieza(nuevo, nuevo["estilo"])
+	nuevo["precio"] = precio_venta(nuevo)
+	return nuevo
+
+
 static func _completar_arma(objeto: Dictionary, base: String) -> void:
 	var arma: Dictionary = DatosArmas.arma(base)
 	var calidad: Dictionary = DATOS_CALIDAD[objeto["calidad"]]

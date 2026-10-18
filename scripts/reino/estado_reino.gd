@@ -1,12 +1,11 @@
 class_name EstadoReino
 extends Node
 ## Estado de la partida del reino (autoload "Juego"): semana, oro, estrés,
-## inventario, equipo y lo que está en curso (mazmorra, zona o combate).
+## inventario, equipo, la ciudad y lo que está en curso (mazmorra, zona o combate).
 ## Por ahora el juego no tiene fin: las semanas siguen sin límite.
 ## Todavía no se guarda en disco: al cerrar la aplicación se pierde.
 
-## Estrés que baja al descansar una semana (provisional, hasta que exista el
-## descanso de la ciudad).
+## Estrés que baja al descansar una semana en el castillo (provisional).
 const ESTRES_DESCANSO := 40.0
 
 var en_curso := false
@@ -45,6 +44,16 @@ var puntos_sub: Dictionary = {}
 var veces: Dictionary = {}
 var extra: Dictionary = {}
 
+## Ciudad (ver DatosCiudad): nivel de cada edificio (0 = en ruinas), comida,
+## soldados, peligro (0 a 100), lo que vende el mercado esta semana y el informe
+## de la última semana.
+var edificios: Dictionary = {}
+var comida := 0
+var soldados := 0
+var peligro := 0.0
+var mercado: Array[Dictionary] = []
+var informe_ciudad: Dictionary = {}
+
 
 func nueva_partida(p_diestro: bool) -> void:
 	en_curso = true
@@ -69,13 +78,21 @@ func nueva_partida(p_diestro: bool) -> void:
 	puntos_sub = {}
 	veces = {}
 	extra = {}
+	edificios = DatosCiudad.NIVEL_INICIAL.duplicate()
+	comida = DatosCiudad.COMIDA_INICIAL
+	soldados = 0
+	peligro = 0.0
+	mercado = []
+	informe_ciudad = {}
 	aviso = "Reparte tus %d puntos iniciales en la pestaña Rey." % DatosEstadisticas.PUNTOS_INICIALES
 
 
 # --- Semanas y estrés ---
 
-## Termina la semana: las mazmorras se reinician y empieza la siguiente.
+## Termina la semana: la ciudad vive su semana (ver semana_ciudad), las
+## mazmorras se reinician y empieza la siguiente.
 func pasar_semana() -> void:
+	semana_ciudad()
 	semana += 1
 	mazmorra = {}
 	expedicion = {}
@@ -360,3 +377,224 @@ func trabajar(oficio_id: String) -> Dictionary:
 	dominio[oficio_id] = resultado["dominio"]
 	pasar_semana()
 	return resultado
+
+
+# --- Ciudad ---
+
+func nivel_edificio(edificio_id: String) -> int:
+	return int(edificios.get(edificio_id, 0))
+
+
+## Por qué no se puede mejorar ese edificio ahora ("" si se puede).
+func motivo_sin_mejora(edificio_id: String) -> String:
+	var nivel_actual := nivel_edificio(edificio_id)
+	if nivel_actual >= DatosCiudad.NIVEL_MAXIMO:
+		return "Ya está al nivel máximo."
+	if edificio_id != "castillo" and nivel_actual >= nivel_edificio("castillo"):
+		return "Primero mejora el castillo."
+	if oro < DatosCiudad.costo_mejora(edificio_id, nivel_actual):
+		return "No te alcanza el oro."
+	return ""
+
+
+## Reconstruye (desde las ruinas) o sube un nivel un edificio, pagando el oro.
+func mejorar_edificio(edificio_id: String) -> bool:
+	if not DatosCiudad.EDIFICIOS.has(edificio_id) or motivo_sin_mejora(edificio_id) != "":
+		return false
+	var nivel_actual := nivel_edificio(edificio_id)
+	oro -= DatosCiudad.costo_mejora(edificio_id, nivel_actual)
+	edificios[edificio_id] = nivel_actual + 1
+	# Con más nivel el mercado vende más y mejores objetos desde ya.
+	if edificio_id == "mercado":
+		_renovar_mercado()
+	return true
+
+
+func soldados_maximos() -> int:
+	return DatosCiudad.SOLDADOS_MAXIMOS[nivel_edificio("barracas")]
+
+
+func puede_reclutar() -> bool:
+	return soldados < soldados_maximos() and oro >= DatosCiudad.COSTO_SOLDADO
+
+
+func reclutar() -> bool:
+	if not puede_reclutar():
+		return false
+	oro -= DatosCiudad.COSTO_SOLDADO
+	soldados += 1
+	return true
+
+
+## Moral de los soldados: Liderazgo la sube.
+func moral() -> float:
+	return DatosEstadisticas.aumento(puntos_de("liderazgo"), DatosEstadisticas.MORAL_POR_LIDERAZGO)
+
+
+## Defensa de la ciudad: los soldados (con el equipo de la herrería y su moral)
+## más las murallas del castillo.
+func defensa_ciudad() -> float:
+	var por_soldado: float = DatosCiudad.EQUIPO_SOLDADOS[nivel_edificio("herreria")] * moral()
+	return soldados * por_soldado + DatosCiudad.MURALLAS[nivel_edificio("castillo")]
+
+
+## Cuánto cambia el peligro en una semana (negativo = baja).
+func cambio_peligro() -> float:
+	return DatosCiudad.PELIGRO_POR_SEMANA - DatosCiudad.PELIGRO_POR_DEFENSA * defensa_ciudad()
+
+
+func produccion_comida() -> int:
+	return DatosCiudad.COMIDA_GRANJA[nivel_edificio("granja")]
+
+
+func consumo_comida() -> int:
+	return soldados * DatosCiudad.COMIDA_POR_SOLDADO
+
+
+func impuestos() -> int:
+	return DatosCiudad.IMPUESTOS[nivel_edificio("mercado")]
+
+
+## La ciudad vive sola la semana que termina: la granja produce y los soldados
+## comen (sin comida, algunos se van), el mercado cobra impuestos y cambia lo que
+## vende, y el peligro sube o baja según la defensa. Con ese peligro (en %) hay
+## probabilidad de un ataque, que defienden los soldados y las murallas sin el
+## rey. Devuelve el informe y lo guarda en informe_ciudad.
+func semana_ciudad() -> Dictionary:
+	var informe := {"semana": semana, "nuevo": true}
+	var producida := produccion_comida()
+	var consumida := consumo_comida()
+	comida += producida - consumida
+	var desertores := 0
+	if comida < 0:
+		desertores = mini(ceili(-comida / float(DatosCiudad.COMIDA_POR_SOLDADO)), soldados)
+		soldados -= desertores
+		comida = 0
+	informe["comida_producida"] = producida
+	informe["comida_consumida"] = consumida
+	informe["desertores"] = desertores
+	var cobrado := impuestos()
+	oro += cobrado
+	informe["impuestos"] = cobrado
+	var antes := peligro
+	peligro = clampf(peligro + cambio_peligro(), 0.0, 100.0)
+	informe["peligro_antes"] = antes
+	informe["peligro_despues"] = peligro
+	if rng.randf() * 100.0 < peligro:
+		informe["ataque"] = _ataque_ciudad()
+	informe["peligro_final"] = peligro
+	_renovar_mercado()
+	informe_ciudad = informe
+	return informe
+
+
+## Un ataque a la ciudad: fuerza del enemigo (crece con las semanas) contra la
+## defensa, las dos con algo de azar.
+func _ataque_ciudad() -> Dictionary:
+	var fuerza := (DatosCiudad.FUERZA_BASE + DatosCiudad.FUERZA_POR_SEMANA * semana) \
+		* rng.randf_range(DatosCiudad.AZAR_ATAQUE.x, DatosCiudad.AZAR_ATAQUE.y)
+	var defensa := defensa_ciudad() * rng.randf_range(DatosCiudad.AZAR_DEFENSA.x, DatosCiudad.AZAR_DEFENSA.y)
+	var ataque := {"fuerza": fuerza, "defensa": defensa, "ganado": defensa >= fuerza}
+	if ataque["ganado"]:
+		var bajas := rng.randi_range(0, ceili(soldados * DatosCiudad.BAJAS_VICTORIA))
+		soldados -= bajas
+		ataque["bajas"] = bajas
+		peligro = maxf(peligro - DatosCiudad.PELIGRO_VICTORIA, 0.0)
+		return ataque
+	var oro_perdido := roundi(oro * DatosCiudad.SAQUEO_ORO)
+	var comida_perdida := roundi(comida * DatosCiudad.SAQUEO_COMIDA)
+	var bajas := ceili(soldados * DatosCiudad.BAJAS_DERROTA)
+	oro -= oro_perdido
+	comida -= comida_perdida
+	soldados -= bajas
+	# Un edificio en pie (no el castillo) queda dañado: baja un nivel.
+	var en_pie: Array[String] = []
+	for edificio_id in DatosCiudad.ORDEN:
+		if edificio_id != "castillo" and nivel_edificio(edificio_id) > 0:
+			en_pie.append(edificio_id)
+	var danado := ""
+	if not en_pie.is_empty():
+		danado = en_pie[rng.randi() % en_pie.size()]
+		edificios[danado] = nivel_edificio(danado) - 1
+		soldados = mini(soldados, soldados_maximos())
+	peligro = maxf(peligro - DatosCiudad.PELIGRO_DERROTA, 0.0)
+	ataque.merge({"oro": oro_perdido, "comida": comida_perdida, "bajas": bajas, "danado": danado})
+	return ataque
+
+
+## Una línea con lo importante de una semana de la ciudad ("" si no pasó nada
+## grave): ataques y soldados que se fueron por falta de comida.
+func texto_informe(informe: Dictionary) -> String:
+	var partes: PackedStringArray = []
+	if informe.has("ataque"):
+		var ataque: Dictionary = informe["ataque"]
+		if ataque["ganado"]:
+			partes.append("Atacaron la ciudad y los soldados la defendieron (%d %s)." % [
+				ataque["bajas"], "baja" if int(ataque["bajas"]) == 1 else "bajas"])
+		else:
+			var texto := "Atacaron la ciudad y la saquearon: −%d de oro, −%d de comida, −%d soldados" % [
+				ataque["oro"], ataque["comida"], ataque["bajas"]]
+			if ataque["danado"] != "":
+				texto += " y dañaron %s" % DatosCiudad.edificio(ataque["danado"])["articulo"]
+			partes.append(texto + ".")
+	if int(informe.get("desertores", 0)) > 0:
+		partes.append("Faltó comida: se fueron %d soldados." % informe["desertores"])
+	return " ".join(partes)
+
+
+func _renovar_mercado() -> void:
+	mercado = []
+	var nivel_mercado := nivel_edificio("mercado")
+	for i in DatosCiudad.OBJETOS_MERCADO[nivel_mercado]:
+		mercado.append(DatosBotin.generar(nivel_mercado, rng))
+
+
+## Lo que cuesta comprar un objeto en el mercado (Negociación lo baja, pero
+## nunca por debajo de lo que te pagarían al venderlo).
+func precio_compra(objeto: Dictionary) -> int:
+	var rebaja := maxf(1.0 - DatosEstadisticas.COMPRA_POR_NEGOCIACION * puntos_de("negociacion"), DatosCiudad.PRECIO_MINIMO)
+	return maxi(roundi(int(objeto["precio"]) * DatosCiudad.MARGEN_MERCADO * rebaja), precio_venta(objeto) + 1)
+
+
+## Compra el objeto "indice" del mercado y lo guarda en el inventario.
+func comprar(indice: int) -> bool:
+	if indice < 0 or indice >= mercado.size():
+		return false
+	var precio := precio_compra(mercado[indice])
+	if oro < precio:
+		return false
+	oro -= precio
+	agregar(mercado[indice])
+	mercado.remove_at(indice)
+	return true
+
+
+## Calidad a la que la herrería puede subir ese objeto ("" si no puede: la
+## herrería está en ruinas, el objeto ya tiene la calidad máxima que ella da).
+func calidad_siguiente(objeto: Dictionary) -> String:
+	var maxima: String = DatosCiudad.CALIDAD_MAXIMA_HERRERIA[nivel_edificio("herreria")]
+	var actual := DatosBotin.CALIDADES.find(objeto["calidad"])
+	if maxima == "" or actual < 0 or actual + 1 > DatosBotin.CALIDADES.find(maxima):
+		return ""
+	return DatosBotin.CALIDADES[actual + 1]
+
+
+## Oro que cuesta mejorar ese objeto en la herrería (-1 si no se puede).
+func costo_herreria(objeto: Dictionary) -> int:
+	var siguiente := calidad_siguiente(objeto)
+	if siguiente == "":
+		return -1
+	return roundi(DatosBotin.precio_venta({"calidad": siguiente, "nivel": objeto["nivel"]}) * DatosCiudad.COSTO_HERRERIA)
+
+
+## Sube una calidad el objeto equipado en esa ranura.
+func mejorar_en_herreria(ranura: String) -> bool:
+	if not equipo.has(ranura):
+		return false
+	var objeto: Dictionary = equipo[ranura]
+	var costo := costo_herreria(objeto)
+	if costo < 0 or oro < costo:
+		return false
+	oro -= costo
+	equipo[ranura] = DatosBotin.con_calidad(objeto, calidad_siguiente(objeto))
+	return true

@@ -24,7 +24,10 @@ o *Continuar*. Arriba están las pestañas:
   una característica sube sus 3 partes y da 7 puntos solo para esas partes.
 - **Inventario:** el botín. Tocas un objeto para equiparlo o venderlo (calidad
   normal, rara, épica o legendaria; vale más cuanto mejor es).
-- **Ciudad:** en construcción.
+- **Ciudad:** castillo, herrería, granja, mercado y barracas, que se tocan para
+  reconstruirlos y mejorarlos. La ciudad se cuida sola: produce comida, cobra
+  impuestos y sus soldados la defienden. Si está mal protegida sube el
+  **peligro** y pueden atacarla y saquearla. En el castillo se descansa.
 - **Aventura:** mapa con 4 mazmorras (banderín oscuro) y 3 zonas de siete días
   (banderín rojo). En la mazmorra te mueves con la cruceta o tocando una casilla
   vecina; cada paso suma estrés, las espadas son enemigos, los cofres dan botín
@@ -94,7 +97,9 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 
 | Archivo | Qué hace |
 |---|---|
-| `estado_reino.gd` | La partida (global `Juego`): semana, oro, estrés, inventario, equipo |
+| `estado_reino.gd` | La partida (global `Juego`): semana, oro, estrés, inventario, equipo y la ciudad |
+| `datos_ciudad.gd` | Edificios de la ciudad, sus costos y efectos, peligro y ataques |
+| `vista_ciudad.gd` | Dibujo de la ciudad con los edificios que se tocan |
 | `datos_botin.gd` | Calidades, armas y armaduras de botín, precios de venta |
 | `datos_aventura.gd` | Mazmorras, zonas, sucesos de los siete días |
 | `generador_mazmorra.gd` | Crea el plano de cada mazmorra según la semana |
@@ -107,7 +112,7 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 godot --headless --import
 godot --headless --script res://pruebas/ejecutar.gd            # pruebas de las reglas y del equilibrio
 godot --headless --script res://pruebas/partida_automatica.gd  # combates completos pulsando botones
-godot --headless --script res://pruebas/recorrido_reino.gd     # recorre el reino: mazmorra, zona, inventario y trabajo
+godot --headless --script res://pruebas/recorrido_reino.gd     # recorre el reino: mazmorra, zona, inventario, trabajo y ciudad
 godot --headless --script res://pruebas/simular.gd             # equilibrio: miles de combates por estrategia
 ```
 
