@@ -63,7 +63,8 @@ const SUBS := {
 	"arcano": {"nombre": "Arcano", "descripcion": "Más daño mágico (bastón y hechizos) y curas más fuertes."},
 	"estudio": {"nombre": "Estudio", "descripcion": "Más experiencia ganada."},
 	"mago": {"nombre": "Mago", "descripcion": "Más maná máximo y más maná recuperado por turno."},
-	"negociacion": {"nombre": "Negociación", "descripcion": "Vendes más caro y compras más barato en el mercado."},
+	"negociacion": {"nombre": "Negociación",
+		"descripcion": "Vendes más caro (hasta ×1,9) y compras más barato en el mercado (hasta la mitad)."},
 	"liderazgo": {"nombre": "Liderazgo",
 		"descripcion": "Moral de los soldados de la ciudad: defienden mejor y bajan más el peligro."},
 	"presencia": {"nombre": "Presencia",
@@ -107,6 +108,10 @@ const MANA_POR_MAGO := 5
 const REGENERACION_BASE := 2.0
 const REGENERACION_POR_MAGO := 0.5
 const VENTA_POR_NEGOCIACION := 0.03
+## Lo más que sube el precio de venta (desde 30 puntos). Queda por debajo de lo
+## más barato que vende el mercado (la mitad de su precio: ×2 del de venta), así
+## que comprar y revender, o mejorar en la herrería y vender, nunca da ganancia.
+const VENTA_MAXIMA_NEGOCIACION := 1.9
 const COMPRA_POR_NEGOCIACION := 0.02
 const MORAL_POR_LIDERAZGO := 0.03
 const PAGO_POR_PRESENCIA := 0.03

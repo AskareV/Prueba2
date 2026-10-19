@@ -321,9 +321,11 @@ func bonus_calidad() -> float:
 	return DatosEstadisticas.aumento(puntos_de("buen_ojo"), DatosEstadisticas.CALIDAD_POR_BUEN_OJO)
 
 
-## Lo que pagan por un objeto (Negociación lo sube).
+## Lo que pagan por un objeto (Negociación lo sube, hasta VENTA_MAXIMA_NEGOCIACION).
 func precio_venta(objeto: Dictionary) -> int:
-	return roundi(int(objeto["precio"]) * DatosEstadisticas.aumento(puntos_de("negociacion"), DatosEstadisticas.VENTA_POR_NEGOCIACION))
+	var aumento := minf(DatosEstadisticas.aumento(puntos_de("negociacion"), DatosEstadisticas.VENTA_POR_NEGOCIACION),
+		DatosEstadisticas.VENTA_MAXIMA_NEGOCIACION)
+	return roundi(int(objeto["precio"]) * aumento)
 
 
 ## Multiplicador del pago de los trabajos (Presencia).
@@ -438,9 +440,32 @@ func defensa_ciudad() -> float:
 	return soldados * por_soldado + DatosCiudad.MURALLAS[nivel_edificio("castillo")]
 
 
-## Cuánto cambia el peligro en una semana (negativo = baja).
+## Cuánto cambia el peligro en una semana con la defensa de ahora (negativo = baja).
 func cambio_peligro() -> float:
 	return DatosCiudad.PELIGRO_POR_SEMANA - DatosCiudad.PELIGRO_POR_DEFENSA * defensa_ciudad()
+
+
+## Soldados que se irán al terminar esta semana por falta de comida.
+func desertores_previstos() -> int:
+	var resto := comida + produccion_comida() - consumo_comida()
+	if resto >= 0:
+		return 0
+	return mini(ceili(-resto / float(DatosCiudad.COMIDA_POR_SOLDADO)), soldados)
+
+
+## Cuánto cambiará el peligro al terminar esta semana: como cambio_peligro, pero
+## sin los soldados que se irán por falta de comida (semana_ciudad los quita antes).
+func cambio_peligro_previsto() -> float:
+	var antes := soldados
+	soldados -= desertores_previstos()
+	var cambio := cambio_peligro()
+	soldados = antes
+	return cambio
+
+
+## Peligro al terminar esta semana, que es también la probabilidad (%) de ataque.
+func peligro_previsto() -> float:
+	return clampf(peligro + cambio_peligro_previsto(), 0.0, 100.0)
 
 
 func produccion_comida() -> int:
@@ -494,19 +519,18 @@ func _ataque_ciudad() -> Dictionary:
 	var fuerza := (DatosCiudad.FUERZA_BASE + DatosCiudad.FUERZA_POR_SEMANA * semana) \
 		* rng.randf_range(DatosCiudad.AZAR_ATAQUE.x, DatosCiudad.AZAR_ATAQUE.y)
 	var defensa := defensa_ciudad() * rng.randf_range(DatosCiudad.AZAR_DEFENSA.x, DatosCiudad.AZAR_DEFENSA.y)
-	var ataque := {"fuerza": fuerza, "defensa": defensa, "ganado": defensa >= fuerza}
+	var ataque := {"fuerza": fuerza, "defensa": defensa, "ganado": defensa >= fuerza, "soldados": soldados}
+	var soldados_antes := soldados
 	if ataque["ganado"]:
-		var bajas := rng.randi_range(0, ceili(soldados * DatosCiudad.BAJAS_VICTORIA))
-		soldados -= bajas
-		ataque["bajas"] = bajas
+		soldados -= rng.randi_range(0, floori(soldados * DatosCiudad.BAJAS_VICTORIA))
+		ataque["bajas"] = soldados_antes - soldados
 		peligro = maxf(peligro - DatosCiudad.PELIGRO_VICTORIA, 0.0)
 		return ataque
 	var oro_perdido := roundi(oro * DatosCiudad.SAQUEO_ORO)
 	var comida_perdida := roundi(comida * DatosCiudad.SAQUEO_COMIDA)
-	var bajas := ceili(soldados * DatosCiudad.BAJAS_DERROTA)
 	oro -= oro_perdido
 	comida -= comida_perdida
-	soldados -= bajas
+	soldados -= ceili(soldados * DatosCiudad.BAJAS_DERROTA)
 	# Un edificio en pie (no el castillo) queda dañado: baja un nivel.
 	var en_pie: Array[String] = []
 	for edificio_id in DatosCiudad.ORDEN:
@@ -518,7 +542,8 @@ func _ataque_ciudad() -> Dictionary:
 		edificios[danado] = nivel_edificio(danado) - 1
 		soldados = mini(soldados, soldados_maximos())
 	peligro = maxf(peligro - DatosCiudad.PELIGRO_DERROTA, 0.0)
-	ataque.merge({"oro": oro_perdido, "comida": comida_perdida, "bajas": bajas, "danado": danado})
+	# Las bajas incluyen a los que se van porque las barracas dañadas ya no tienen sitio.
+	ataque.merge({"oro": oro_perdido, "comida": comida_perdida, "bajas": soldados_antes - soldados, "danado": danado})
 	return ataque
 
 
@@ -528,18 +553,40 @@ func texto_informe(informe: Dictionary) -> String:
 	var partes: PackedStringArray = []
 	if informe.has("ataque"):
 		var ataque: Dictionary = informe["ataque"]
+		var bajas := int(ataque["bajas"])
 		if ataque["ganado"]:
-			partes.append("Atacaron la ciudad y los soldados la defendieron (%d %s)." % [
-				ataque["bajas"], "baja" if int(ataque["bajas"]) == 1 else "bajas"])
+			if int(ataque["soldados"]) == 0:
+				partes.append("Atacaron la ciudad y las murallas la defendieron.")
+			elif bajas == 0:
+				partes.append("Atacaron la ciudad y los soldados la defendieron sin bajas.")
+			else:
+				partes.append("Atacaron la ciudad y los soldados la defendieron (%s)." % _cantidad(bajas, "baja", "bajas"))
 		else:
-			var texto := "Atacaron la ciudad y la saquearon: −%d de oro, −%d de comida, −%d soldados" % [
-				ataque["oro"], ataque["comida"], ataque["bajas"]]
+			# Solo lo que de verdad se perdió.
+			var perdidas: PackedStringArray = []
+			if int(ataque["oro"]) > 0:
+				perdidas.append("−%d de oro" % ataque["oro"])
+			if int(ataque["comida"]) > 0:
+				perdidas.append("−%d de comida" % ataque["comida"])
+			if bajas > 0:
+				perdidas.append("−" + _cantidad(bajas, "soldado", "soldados"))
 			if ataque["danado"] != "":
-				texto += " y dañaron %s" % DatosCiudad.edificio(ataque["danado"])["articulo"]
+				perdidas.append("dañaron %s" % DatosCiudad.edificio(ataque["danado"])["articulo"])
+			var texto := "Atacaron la ciudad y la saquearon"
+			if not perdidas.is_empty():
+				var ultima := perdidas[perdidas.size() - 1]
+				perdidas.remove_at(perdidas.size() - 1)
+				texto += ": " + (", ".join(perdidas) + " y " + ultima if not perdidas.is_empty() else ultima)
 			partes.append(texto + ".")
-	if int(informe.get("desertores", 0)) > 0:
-		partes.append("Faltó comida: se fueron %d soldados." % informe["desertores"])
+	var desertores := int(informe.get("desertores", 0))
+	if desertores > 0:
+		partes.append("Faltó comida: %s %s." % ["se fue" if desertores == 1 else "se fueron", _cantidad(desertores, "soldado", "soldados")])
 	return " ".join(partes)
+
+
+## "1 soldado" o "3 soldados".
+static func _cantidad(n: int, singular: String, plural: String) -> String:
+	return "%d %s" % [n, singular if n == 1 else plural]
 
 
 func _renovar_mercado() -> void:
@@ -549,8 +596,8 @@ func _renovar_mercado() -> void:
 		mercado.append(DatosBotin.generar(nivel_mercado, rng))
 
 
-## Lo que cuesta comprar un objeto en el mercado (Negociación lo baja, pero
-## nunca por debajo de lo que te pagarían al venderlo).
+## Lo que cuesta comprar un objeto en el mercado (Negociación lo baja hasta la
+## mitad; por seguridad, nunca queda por debajo de lo que te pagarían al venderlo).
 func precio_compra(objeto: Dictionary) -> int:
 	var rebaja := maxf(1.0 - DatosEstadisticas.COMPRA_POR_NEGOCIACION * puntos_de("negociacion"), DatosCiudad.PRECIO_MINIMO)
 	return maxi(roundi(int(objeto["precio"]) * DatosCiudad.MARGEN_MERCADO * rebaja), precio_venta(objeto) + 1)

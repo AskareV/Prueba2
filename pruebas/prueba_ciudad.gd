@@ -9,6 +9,17 @@ func _juego_nuevo() -> EstadoReino:
 	return juego
 
 
+## Ciudad con defensa de sobra para que el peligro quede en 0 y nunca ataquen
+## (para probar lo demás sin azar): castillo 3, barracas 1 y 5 soldados.
+func _ciudad_segura(juego: EstadoReino) -> void:
+	juego.oro += 100000
+	juego.mejorar_edificio("castillo")
+	juego.mejorar_edificio("castillo")
+	juego.mejorar_edificio("barracas")
+	for i in 5:
+		juego.reclutar()
+
+
 func prueba_la_ciudad_empieza_en_ruinas() -> void:
 	var juego := _juego_nuevo()
 	verificar_igual(juego.nivel_edificio("castillo"), 1, "El castillo empieza en pie")
@@ -109,14 +120,14 @@ func prueba_bien_defendida_el_peligro_baja_y_no_atacan() -> void:
 
 func prueba_la_granja_alimenta_y_sin_comida_se_van_soldados() -> void:
 	var juego := _juego_nuevo()
-	juego.oro = 1000
-	juego.mejorar_edificio("barracas")
-	for i in 5:
-		juego.reclutar()
+	_ciudad_segura(juego)
 	juego.comida = 4
+	verificar_igual(juego.desertores_previstos(), 3, "Se puede prever cuántos se irán")
 	var informe := juego.semana_ciudad()
+	verificar(not informe.has("ataque"), "Con defensa de sobra no atacan")
 	verificar_igual(informe["comida_consumida"], 10, "5 soldados comen 10")
 	verificar_igual(informe["desertores"], 3, "Faltan 6 de comida: se van 3")
+	verificar_igual(juego.soldados, 2, "Quedan 2")
 	verificar_igual(juego.comida, 0, "La comida no queda negativa")
 	verificar(juego.texto_informe(informe).contains("se fueron 3 soldados"), "Lo avisa")
 	juego.mejorar_edificio("granja")
@@ -124,19 +135,28 @@ func prueba_la_granja_alimenta_y_sin_comida_se_van_soldados() -> void:
 	informe = juego.semana_ciudad()
 	verificar_igual(informe["desertores"], 0, "Con granja alcanza para los que quedan")
 	verificar_igual(juego.comida, DatosCiudad.COMIDA_GRANJA[1] - 2 * DatosCiudad.COMIDA_POR_SOLDADO, "Sobra comida")
+	juego.comida = 1
+	juego.soldados = 3
+	juego.edificios["granja"] = 0
+	informe = juego.semana_ciudad()
+	verificar(juego.texto_informe(informe).contains("se fueron 3 soldados") or juego.texto_informe(informe).contains("se fue 1 soldado"),
+		"Singular o plural según cuántos se van")
 	juego.free()
 
 
 func prueba_el_mercado_cobra_impuestos_y_vende() -> void:
 	var juego := _juego_nuevo()
-	juego.oro = 1000
+	_ciudad_segura(juego)
 	juego.mejorar_edificio("mercado")
 	verificar_igual(juego.mercado.size(), DatosCiudad.OBJETOS_MERCADO[1], "Al reconstruirlo ya vende")
+	var antes: Array[Dictionary] = juego.mercado.duplicate(true)
 	var oro := juego.oro
-	juego.semana_ciudad()
-	verificar(juego.oro >= oro + DatosCiudad.IMPUESTOS[1] - roundi((oro + DatosCiudad.IMPUESTOS[1]) * DatosCiudad.SAQUEO_ORO),
-		"Cobra impuestos (salvo un saqueo)")
-	verificar_igual(juego.mercado.size(), DatosCiudad.OBJETOS_MERCADO[1], "Cada semana cambia lo que vende")
+	var informe := juego.semana_ciudad()
+	verificar(not informe.has("ataque"), "Con defensa de sobra no atacan")
+	verificar_igual(informe["impuestos"], DatosCiudad.IMPUESTOS[1], "Cobra los impuestos de su nivel")
+	verificar_igual(juego.oro, oro + DatosCiudad.IMPUESTOS[1], "Suma el oro")
+	verificar_igual(juego.mercado.size(), DatosCiudad.OBJETOS_MERCADO[1], "Siempre vende los de su nivel")
+	verificar(juego.mercado != antes, "Cada semana cambia lo que vende")
 	juego.oro = 10000
 	var objeto: Dictionary = juego.mercado[0]
 	var precio := juego.precio_compra(objeto)
@@ -156,11 +176,38 @@ func prueba_negociacion_baja_el_precio_pero_nunca_por_debajo_de_la_venta() -> vo
 	var objeto := DatosBotin.crear_arma("espada", 2, "raro")
 	var normal := juego.precio_compra(objeto)
 	verificar_igual(normal, roundi(objeto["precio"] * DatosCiudad.MARGEN_MERCADO), "Precio normal")
-	juego.extra["negociacion"] = 10
-	verificar(juego.precio_compra(objeto) < normal, "Negociación lo baja")
-	for puntos in [40, 120, 500]:
+	juego.extra["negociacion"] = 27
+	verificar_igual(juego.precio_compra(objeto), roundi(objeto["precio"] * DatosCiudad.MARGEN_MERCADO * DatosCiudad.PRECIO_MINIMO),
+		"La rebaja llega como mucho a la mitad")
+	var anterior := normal
+	for puntos in [5, 10, 25, 30, 40, 120, 500]:
 		juego.extra["negociacion"] = puntos
-		verificar(juego.precio_compra(objeto) > juego.precio_venta(objeto), "Comprar sigue costando más que vender (Negociación %d)" % puntos)
+		var compra := juego.precio_compra(objeto)
+		verificar(compra <= anterior, "Más Negociación nunca encarece la compra (%d)" % puntos)
+		verificar(compra > juego.precio_venta(objeto), "Comprar sigue costando más que vender (%d)" % puntos)
+		anterior = compra
+	verificar_igual(juego.precio_venta(objeto), roundi(objeto["precio"] * DatosEstadisticas.VENTA_MAXIMA_NEGOCIACION),
+		"La venta tiene tope")
+	juego.free()
+
+
+func prueba_ni_el_mercado_ni_la_herreria_dan_oro_gratis() -> void:
+	var juego := _juego_nuevo()
+	juego.oro = 1000000
+	for edificio_id in ["castillo", "castillo", "herreria", "herreria", "herreria", "mercado", "mercado", "mercado"]:
+		juego.mejorar_edificio(edificio_id)
+	for puntos in [0, 30, 120, 500]:
+		juego.extra["negociacion"] = puntos
+		for calidad in DatosBotin.CALIDADES:
+			for nivel in [1, 3]:
+				var objeto := DatosBotin.generar(nivel, juego.rng, "peto", calidad)
+				var gasto := juego.precio_compra(objeto)
+				var mejorado := objeto
+				while juego.calidad_siguiente(mejorado) != "":
+					gasto += juego.costo_herreria(mejorado)
+					mejorado = DatosBotin.con_calidad(mejorado, juego.calidad_siguiente(mejorado))
+				verificar(juego.precio_venta(mejorado) < gasto,
+					"Comprar, mejorar y vender pierde oro (%s nivel %d, Negociación %d)" % [calidad, nivel, puntos])
 	juego.free()
 
 
@@ -200,25 +247,52 @@ func prueba_perder_un_ataque_saquea_y_dania_un_edificio() -> void:
 	juego.oro = 1000
 	juego.mejorar_edificio("granja")
 	juego.mejorar_edificio("barracas")
-	juego.reclutar()
+	for i in 5:
+		juego.reclutar()
 	juego.semana = 30
 	juego.peligro = 100.0
 	var oro := juego.oro
-	var comida := juego.comida
-	var informe := {}
-	for i in 20:
-		informe = juego.semana_ciudad()
-		if informe.has("ataque") and not informe["ataque"]["ganado"]:
-			break
+	var comida_tras_comer := juego.comida + juego.produccion_comida() - juego.consumo_comida()
+	var niveles := juego.edificios.duplicate()
+	# Con peligro 100 el ataque es seguro, y la fuerza de la semana 30 (más de 25)
+	# supera de lejos la defensa (5 soldados + 4 de murallas).
+	var informe := juego.semana_ciudad()
 	verificar(informe.has("ataque") and not informe["ataque"]["ganado"], "Con poca defensa pierde")
 	var ataque: Dictionary = informe["ataque"]
-	verificar(int(ataque["oro"]) > 0 and juego.oro < oro + 100, "Se llevan oro")
+	verificar_igual(ataque["oro"], roundi(oro * DatosCiudad.SAQUEO_ORO), "Se llevan el 20% del oro")
+	verificar_igual(juego.oro, oro - int(ataque["oro"]), "Y lo restan")
+	verificar_igual(ataque["comida"], roundi(comida_tras_comer * DatosCiudad.SAQUEO_COMIDA), "Se llevan la mitad de la comida")
+	verificar_igual(juego.comida, comida_tras_comer - int(ataque["comida"]), "Y la restan")
 	verificar(ataque["danado"] in ["granja", "barracas"], "Daña un edificio en pie (no el castillo)")
-	verificar(juego.texto_informe(informe).contains("saquearon"), "Lo avisa")
-	verificar(juego.soldados <= juego.soldados_maximos(), "No quedan más soldados de los que caben")
+	verificar_igual(juego.nivel_edificio(ataque["danado"]), int(niveles[ataque["danado"]]) - 1, "Ese edificio baja un nivel")
 	verificar_igual(juego.nivel_edificio("castillo"), 1, "El castillo no se daña")
-	verificar(comida >= 0 and juego.comida >= 0, "La comida no queda negativa")
+	verificar_igual(juego.soldados, 5 - int(ataque["bajas"]), "Las bajas son todos los que faltan")
+	if ataque["danado"] == "barracas":
+		verificar_igual(juego.soldados, 0, "Sin barracas no queda ninguno")
+	else:
+		verificar_igual(juego.soldados, 2, "Muere la mitad (redondeado hacia arriba)")
+	verificar_cerca(juego.peligro, 100.0 - DatosCiudad.PELIGRO_DERROTA, "Después el peligro baja un poco")
+	verificar_cerca(informe["peligro_final"], juego.peligro, "El informe guarda el peligro final")
+	verificar(juego.texto_informe(informe).contains("saquearon"), "Lo avisa")
 	juego.free()
+
+
+func prueba_si_danan_las_barracas_se_cuentan_los_que_ya_no_caben() -> void:
+	for semilla in 40:
+		var juego := _juego_nuevo()
+		juego.rng.seed = semilla
+		juego.oro = 1000
+		juego.mejorar_edificio("barracas")
+		for i in 5:
+			juego.reclutar()
+		juego.semana = 30
+		juego.peligro = 100.0
+		var informe := juego.semana_ciudad()
+		var ataque: Dictionary = informe["ataque"]
+		juego.free()
+		# Las barracas son el único edificio en pie: siempre se dañan.
+		verificar_igual(ataque["danado"], "barracas", "Dañan las barracas")
+		verificar_igual(ataque["bajas"], 5, "Se pierden los 5 (3 mueren y 2 ya no caben)")
 
 
 func prueba_ganar_un_ataque_baja_el_peligro() -> void:
@@ -229,18 +303,53 @@ func prueba_ganar_un_ataque_baja_el_peligro() -> void:
 	while juego.reclutar():
 		pass
 	juego.semana = 2
-	juego.peligro = 100.0
-	# Con defensa de sobra el peligro baja, pero puede atacar en esa semana.
+	# Con defensa de sobra el peligro baja, pero con 100 puede atacar esa semana.
 	var informe := {}
+	var antes := 0
 	for i in 50:
 		juego.peligro = 100.0
+		juego.comida = 1000
+		antes = juego.soldados
 		informe = juego.semana_ciudad()
 		if informe.has("ataque"):
 			break
 	verificar(informe.has("ataque") and informe["ataque"]["ganado"], "Con mucha defensa gana")
-	verificar(juego.peligro < 100.0, "El peligro baja")
+	verificar_cerca(informe["peligro_final"], maxf(informe["peligro_despues"] - DatosCiudad.PELIGRO_VICTORIA, 0.0), "Ganar baja el peligro 30")
+	verificar_igual(juego.soldados, antes - int(informe["ataque"]["bajas"]), "Las bajas se restan")
+	verificar(int(informe["ataque"]["bajas"]) <= floori(antes * DatosCiudad.BAJAS_VICTORIA), "Muere como mucho el 15%")
 	verificar(juego.texto_informe(informe).contains("defendieron"), "Lo avisa")
 	juego.free()
+
+
+func prueba_con_pocos_soldados_una_victoria_no_mata_a_ninguno() -> void:
+	for semilla in 30:
+		var juego := _juego_nuevo()
+		juego.rng.seed = semilla
+		juego.oro = 100000
+		juego.mejorar_edificio("castillo")
+		juego.mejorar_edificio("castillo")
+		juego.mejorar_edificio("barracas")
+		juego.reclutar()
+		juego.semana = 1
+		juego.peligro = 100.0
+		var informe := juego.semana_ciudad()
+		if informe.has("ataque") and informe["ataque"]["ganado"]:
+			verificar_igual(juego.soldados, 1, "El único soldado sobrevive")
+		juego.free()
+	var solo_murallas := _juego_nuevo()
+	solo_murallas.oro = 100000
+	solo_murallas.mejorar_edificio("castillo")
+	solo_murallas.mejorar_edificio("castillo")
+	var texto := ""
+	for i in 50:
+		solo_murallas.semana = 1
+		solo_murallas.peligro = 100.0
+		var informe := solo_murallas.semana_ciudad()
+		if informe.has("ataque") and informe["ataque"]["ganado"]:
+			texto = solo_murallas.texto_informe(informe)
+			break
+	verificar(texto.contains("murallas") and not texto.contains("soldados"), "Sin soldados, la defendieron las murallas")
+	solo_murallas.free()
 
 
 func prueba_pasar_la_semana_hace_vivir_la_ciudad() -> void:
@@ -248,5 +357,6 @@ func prueba_pasar_la_semana_hace_vivir_la_ciudad() -> void:
 	juego.pasar_semana()
 	verificar_igual(juego.informe_ciudad["semana"], 1, "El informe es de la semana que terminó")
 	verificar_igual(juego.semana, 2, "Empieza la siguiente")
-	verificar(juego.peligro > 0.0, "Sin defensa, el peligro subió")
+	verificar(float(juego.informe_ciudad["peligro_despues"]) > 0.0, "Sin defensa, el peligro subió")
+	verificar_cerca(juego.peligro_previsto(), clampf(juego.peligro + juego.cambio_peligro(), 0.0, 100.0), "Se puede prever el peligro")
 	juego.free()

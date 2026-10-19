@@ -418,9 +418,9 @@ que el castillo.
 | Edificio | Oro para nivel 1 / 2 / 3 | Qué hace (nivel 1 / 2 / 3) |
 |---|---|---|
 | Castillo | (empieza en 1) / 400 / 1000 | Murallas: +4 / +8 / +12 de defensa. Aquí descansa el rey y se ve el estado de la ciudad. |
-| Herrería | 150 / 400 / 900 | Sube una calidad tu arma o armadura puesta, hasta rara / épica / legendaria (cuesta 3 veces el precio de venta de la calidad nueva). Los soldados defienden ×1,25 / ×1,5 / ×1,75. |
+| Herrería | 150 / 400 / 900 | Sube una calidad tu arma o armadura puesta, hasta rara / épica / legendaria (cuesta 3 veces el precio de venta base del objeto con la calidad nueva). Los soldados defienden ×1,25 / ×1,5 / ×1,75. |
 | Granja | 100 / 300 / 700 | 10 / 18 / 28 de comida por semana. |
-| Mercado | 120 / 350 / 800 | 15 / 30 / 50 de oro de impuestos por semana; vende 3 / 4 / 5 objetos de nivel 1 / 2 / 3 que cambian cada semana. Precio: 4 veces el de venta (Negociación lo baja, pero nunca por debajo de lo que te pagarían al venderlo). |
+| Mercado | 120 / 350 / 800 | 15 / 30 / 50 de oro de impuestos por semana; vende 3 / 4 / 5 objetos de nivel 1 / 2 / 3 que cambian cada semana. Precio: 4 veces el de venta base; Negociación lo baja hasta la mitad, y nunca por debajo de lo que te pagarían al venderlo. |
 | Barracas | 150 / 400 / 900 | Caben 5 / 10 / 15 soldados (40 de oro cada uno). Cada soldado come 2 de comida por semana. |
 
 **La semana de la ciudad** (al pasar la semana):
@@ -433,10 +433,12 @@ que el castillo.
 4. Con ese peligro como probabilidad, hay un **ataque**. Su fuerza es
    8 + 0,8 × semana (con azar de ×0,8 a ×1,25) contra la defensa (con azar de
    ×0,85 a ×1,15):
-   - **Se gana:** el peligro baja 30 y muere hasta el 15% de los soldados.
+   - **Se gana:** el peligro baja 30 y muere hasta el 15% de los soldados
+     (redondeado hacia abajo: con menos de 7 soldados no muere ninguno).
    - **Se pierde:** se llevan el 20% del oro y el 50% de la comida, muere la
-     mitad de los soldados, un edificio (no el castillo) baja un nivel y el
-     peligro baja 20.
+     mitad de los soldados (redondeado hacia arriba), un edificio (no el
+     castillo) baja un nivel y el peligro baja 20. Si dañan las barracas, se
+     van los soldados que ya no caben.
 5. Si atacaron o se fueron soldados, al volver al reino aparece una ventana
    con las noticias. El castillo muestra el informe de la última semana.
 
@@ -487,7 +489,7 @@ números son **provisionales**.
 | Inteligencia | Arcano | +5% de daño mágico (bastón y hechizos) y +2 de vida por cada Curación |
 | | Estudio | +5% de experiencia |
 | | Mago | +5 de maná máximo (20 en la base) y +0,5 de maná por turno (2 en la base) |
-| Carisma | Negociación | +3% al vender y −2% al comprar en el mercado (nunca por debajo de lo que te pagarían al venderlo) |
+| Carisma | Negociación | +3% al vender (como mucho ×1,9, desde 30 puntos) y −2% al comprar en el mercado (como mucho la mitad, y nunca por debajo de lo que te pagarían al venderlo) |
 | | Liderazgo | Provisional: +3% de moral de los soldados de la ciudad, que defienden mejor y bajan más el peligro |
 | | Presencia | +3% de pago en los trabajos. Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −10% de acierto, −15% de daño y −10% de rapidez |
 

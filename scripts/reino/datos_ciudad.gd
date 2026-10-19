@@ -49,6 +49,8 @@ const NIVEL_INICIAL := {"castillo": 1, "herreria": 0, "granja": 0, "mercado": 0,
 const MURALLAS := [0, 4, 8, 12]
 ## Calidad máxima a la que la herrería sube un objeto.
 const CALIDAD_MAXIMA_HERRERIA := ["", "raro", "epico", "legendario"]
+## Nombre de la calidad en femenino, para frases con "calidad" ("calidad rara").
+const CALIDAD_FEMENINA := {"normal": "normal", "raro": "rara", "epico": "épica", "legendario": "legendaria"}
 ## Cuánto defiende cada soldado según el equipo que da la herrería.
 const EQUIPO_SOLDADOS := [1.0, 1.25, 1.5, 1.75]
 ## Comida que produce la granja por semana.
@@ -77,23 +79,24 @@ const FUERZA_BASE := 8.0
 const FUERZA_POR_SEMANA := 0.8
 const AZAR_ATAQUE := Vector2(0.8, 1.25)
 const AZAR_DEFENSA := Vector2(0.85, 1.15)
-## Al ganar: el peligro baja esto y muere hasta esta fracción de los soldados.
+## Al ganar: el peligro baja esto y muere hasta esta fracción de los soldados
+## (redondeado hacia abajo: con menos de 7 soldados no muere ninguno).
 const PELIGRO_VICTORIA := 30.0
 const BAJAS_VICTORIA := 0.15
 ## Al perder: se llevan esta parte del oro y de la comida, mueren esta parte de
-## los soldados, un edificio baja un nivel y el peligro baja un poco (se van).
+## los soldados, un edificio baja un nivel (si son las barracas, se van los que
+## ya no caben) y el peligro baja un poco (se van).
 const SAQUEO_ORO := 0.2
 const SAQUEO_COMIDA := 0.5
 const BAJAS_DERROTA := 0.5
 const PELIGRO_DERROTA := 20.0
 
 ## Precio en el mercado: el precio de venta por esto, rebajado por Negociación
-## (nunca menos de PRECIO_MINIMO del precio normal ni menos de lo que te pagan
-## al venderlo).
+## (como mucho hasta PRECIO_MINIMO del precio normal).
 const MARGEN_MERCADO := 4.0
 const PRECIO_MINIMO := 0.5
-## Mejorar la calidad en la herrería: el precio de venta del objeto ya mejorado
-## por esto.
+## Mejorar la calidad en la herrería: el precio de venta base del objeto ya
+## mejorado por esto.
 const COSTO_HERRERIA := 3.0
 
 
@@ -117,8 +120,7 @@ static func efecto(edificio_id: String, nivel: int) -> String:
 			return "Murallas: +%d de defensa. Los demás edificios llegan hasta nivel %d." % [MURALLAS[nivel], nivel]
 		"herreria":
 			return "Mejora objetos hasta calidad %s. Soldados ×%s de defensa." % [
-				DatosBotin.nombre_calidad(CALIDAD_MAXIMA_HERRERIA[nivel]).to_lower(),
-				String.num(EQUIPO_SOLDADOS[nivel]).replace(".", ",")]
+				CALIDAD_FEMENINA[CALIDAD_MAXIMA_HERRERIA[nivel]], String.num(EQUIPO_SOLDADOS[nivel]).replace(".", ",")]
 		"granja":
 			return "Produce %d de comida por semana." % COMIDA_GRANJA[nivel]
 		"mercado":
