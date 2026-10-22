@@ -1,6 +1,6 @@
 class_name VistaCiudad
 extends Control
-## La ciudad dibujada con código (provisional): suelo, caminos y los cinco
+## La ciudad dibujada con código (provisional): suelo, caminos y los seis
 ## edificios fijos de DatosCiudad. Tocar un edificio emite edificio_elegido. Los
 ## que están en ruinas se dibujan derrumbados.
 
@@ -90,6 +90,8 @@ class EdificioCiudad:
 					_mercado(base)
 				"barracas":
 					_barracas(base)
+				"enfermeria":
+					_enfermeria(base)
 		var datos := DatosCiudad.edificio(edificio_id)
 		var fuente := get_theme_default_font()
 		var nombre: String = datos["nombre"]
@@ -186,6 +188,16 @@ class EdificioCiudad:
 			draw_line(Vector2(x, base.y), Vector2(x + 6, base.y - 72), Color("#6d4c41"), 3.0)
 			draw_colored_polygon(PackedVector2Array([
 				Vector2(x + 3, base.y - 72), Vector2(x + 9, base.y - 72), Vector2(x + 7, base.y - 84)]), Color("#cfd8dc"))
+
+	func _enfermeria(base: Vector2) -> void:
+		_caja(Rect2(base.x - 64, base.y - 62, 128, 62), Color("#eceff1"))
+		_tejado(Vector2(base.x - 74, base.y - 62), Vector2(base.x + 74, base.y - 62), 32, Color("#90a4ae"))
+		# Cruz roja sobre la puerta y dos ventanas.
+		draw_rect(Rect2(base.x - 7, base.y - 58, 14, 34), Color("#e53935"))
+		draw_rect(Rect2(base.x - 17, base.y - 48, 34, 14), Color("#e53935"))
+		draw_rect(Rect2(base.x - 12, base.y - 20, 24, 20), Color("#5d4037"))
+		for x: float in [-48.0, 32.0]:
+			_caja(Rect2(base.x + x, base.y - 48, 16, 16), Color("#81d4fa"))
 
 	func _ruinas(base: Vector2) -> void:
 		var piedra := Color("#6e6a72")

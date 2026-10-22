@@ -233,6 +233,7 @@ func _actualizar_rey() -> void:
 
 
 func _al_combatir() -> void:
+	Partida.en_demo = true
 	get_tree().change_scene_to_file.call_deferred(ESCENA_COMBATE)
 
 

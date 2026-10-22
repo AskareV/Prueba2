@@ -81,6 +81,21 @@ static func barra_estres() -> Barra:
 	return nueva
 
 
+## Barra con la vida del rey fuera del combate (las heridas duran).
+static func barra_vida() -> Barra:
+	var nueva := Barra.new()
+	nueva.custom_minimum_size = Vector2(200, 26)
+	nueva.tamano_fuente = 16
+	return nueva
+
+
+static func actualizar_vida(barra: Barra) -> void:
+	var vida := Juego.vida_actual()
+	var maxima := Juego.vida_maxima()
+	barra.valor = float(vida) / maxima
+	barra.texto = "%d / %d" % [vida, maxima]
+
+
 ## Muestra el estrés en la barra: llena al llegar al límite de 70.
 static func actualizar_estres(barra: Barra, estres: float) -> void:
 	barra.valor = estres / DatosAventura.ESTRES_MAXIMO
@@ -102,7 +117,9 @@ static func bloquear_toques(padre: Control, segundos := 0.45) -> void:
 ## Botón de un objeto: franja del color de su calidad, nombre y dato principal.
 static func boton_objeto(objeto: Dictionary, al_pulsar: Callable, tamano: Vector2) -> Button:
 	var texto: String = objeto["nombre"]
-	if objeto["ranura"] == "arma":
+	if DatosBotin.es_pocion(objeto):
+		texto += " ×%d\nCura %d de vida" % [int(objeto.get("cantidad", 1)), DatosBotin.POCION_VIDA]
+	elif objeto["ranura"] == "arma":
 		texto += "\nDaño %d–%d" % [objeto["danio_min"], objeto["danio_max"]]
 	else:
 		texto += "\nArm. %d · Res. mág. %d" % [objeto["armadura"], objeto["resistencia_magica"]]

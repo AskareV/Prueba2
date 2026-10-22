@@ -1,7 +1,7 @@
 class_name DatosBotin
 extends RefCounted
 ## Botín del rey: armas y piezas de armadura con calidad normal, rara, épica o
-## legendaria. Todos los números son provisionales.
+## legendaria, y pociones de curación. Todos los números son provisionales.
 
 const CALIDADES := ["normal", "raro", "epico", "legendario"]
 
@@ -69,6 +69,40 @@ const ARMAS_BOTIN := ["espada", "maza", "lanza", "baston"]
 const PROB_ARMA := 0.35
 ## Cuánto más fuerte es un arma por cada nivel del lugar.
 const MEJORA_POR_NIVEL := 0.25
+
+## Poción de curación: cura vida y un poco cada parte herida. Se usa en combate
+## (gasta el turno) o entre combates. Las pociones se apilan en el inventario.
+const POCION_VIDA := 40
+const POCION_PARTES := 25.0
+const PRECIO_POCION := 10
+## Parte del botín de cofres, enemigos y zonas que sale como poción.
+const PROB_POCION := 0.25
+
+
+static func crear_pocion(cantidad := 1) -> Dictionary:
+	return {"ranura": "pocion", "nombre": "Poción de curación", "calidad": "normal", "nivel": 1,
+		"precio": PRECIO_POCION, "cantidad": cantidad}
+
+
+static func es_pocion(objeto: Dictionary) -> bool:
+	return objeto.get("ranura", "") == "pocion"
+
+
+## Botín de cofres, enemigos y zonas: a veces una poción y si no, un arma o una
+## pieza de armadura (ver generar).
+static func generar_botin(nivel: int, rng: RandomNumberGenerator, bonus_calidad := 1.0) -> Dictionary:
+	if rng.randf() < PROB_POCION:
+		var pocion := crear_pocion()
+		pocion["nivel"] = clampi(nivel, 1, 4)
+		return pocion
+	return generar(nivel, rng, "", "", bonus_calidad)
+
+
+## "Espada de bronce (raro)" o "una poción de curación", para contar lo que se encontró.
+static func texto_hallazgo(objeto: Dictionary) -> String:
+	if es_pocion(objeto):
+		return "una poción de curación"
+	return "%s (%s)" % [objeto["nombre"], nombre_calidad(objeto["calidad"]).to_lower()]
 
 
 ## Probabilidad (%) de cada calidad según el nivel del lugar. "bonus" (Buen ojo)
@@ -188,6 +222,12 @@ static func porcentaje_reduccion(valor: float) -> int:
 ## pagan por él (con Negociación); -1 = su precio base.
 static func describir(objeto: Dictionary, precio := -1) -> PackedStringArray:
 	var lineas: PackedStringArray = []
+	if es_pocion(objeto):
+		lineas.append("Tienes %d" % int(objeto.get("cantidad", 1)))
+		lineas.append("Cura %d de vida y %d de cada parte herida." % [POCION_VIDA, roundi(POCION_PARTES)])
+		lineas.append("Se toma en combate (gasta el turno) o entre combates.")
+		lineas.append("Se vende por %d de oro (de a una)" % (objeto["precio"] if precio < 0 else precio))
+		return lineas
 	lineas.append("%s · nivel %d" % [nombre_calidad(objeto["calidad"]), objeto["nivel"]])
 	if objeto["ranura"] == "arma":
 		var tipo: Dictionary = DatosArmas.tipo_de(objeto["base"])

@@ -2,7 +2,8 @@ class_name GeneradorMazmorra
 extends RefCounted
 ## Crea el plano de una mazmorra: un laberinto en cuadrícula con la entrada
 ## arriba, enemigos y cofres. La misma semilla da siempre el mismo plano; al
-## cambiar de semana cambia la semilla y la mazmorra se reinicia.
+## cambiar de semana cambia la semilla y la mazmorra se reinicia. Cada partida
+## suma su propia semilla, así que dos partidas no tienen las mismas mazmorras.
 
 enum Celda { MURO, SUELO }
 
@@ -14,17 +15,17 @@ const PROPORCION_ATAJOS := 0.12
 const DISTANCIA_MINIMA := 3
 
 
-## Semilla de una mazmorra en una semana.
-static func semilla(mazmorra_id: String, semana: int) -> int:
-	return hash("%s:%d" % [mazmorra_id, semana])
+## Semilla de una mazmorra en una semana de una partida.
+static func semilla(mazmorra_id: String, semana: int, semilla_partida := 0) -> int:
+	return hash("%s:%d:%d" % [mazmorra_id, semana, semilla_partida])
 
 
 ## Devuelve {"celdas": Array de filas (Array de Celda), "entrada": Vector2i,
 ## "enemigos": {Vector2i: enemigo_id}, "cofres": {Vector2i: true}}.
-static func generar(mazmorra_id: String, semana: int) -> Dictionary:
+static func generar(mazmorra_id: String, semana: int, semilla_partida := 0) -> Dictionary:
 	var datos: Dictionary = DatosAventura.MAZMORRAS[mazmorra_id]
 	var rng := RandomNumberGenerator.new()
-	rng.seed = semilla(mazmorra_id, semana)
+	rng.seed = semilla(mazmorra_id, semana, semilla_partida)
 	var celdas := _laberinto(rng)
 	var entrada := Vector2i(ANCHO / 2, 0)
 	celdas[0][entrada.x] = Celda.SUELO

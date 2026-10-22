@@ -231,3 +231,42 @@ func prueba_semana_de_trabajo() -> void:
 		verificar_cerca(resultado["dominio"], DatosTrabajos.DIAS * DatosTrabajos.DOMINIO_POR_DIA, "Gana dominio")
 	verificar(DatosTrabajos.prob_exito(100.0) > DatosTrabajos.prob_exito(0.0), "Con dominio sale mejor")
 	verificar(DatosTrabajos.prob_exito(100.0) <= 0.95, "Nunca es seguro")
+
+
+func prueba_cada_partida_tiene_sus_mazmorras() -> void:
+	var a := GeneradorMazmorra.generar("fortaleza_orca", 4, 111)
+	var b := GeneradorMazmorra.generar("fortaleza_orca", 4, 111)
+	var c := GeneradorMazmorra.generar("fortaleza_orca", 4, 222)
+	verificar(a["celdas"] == b["celdas"], "La misma partida y semana: el mismo plano")
+	verificar(a["celdas"] != c["celdas"], "Otra partida: otro plano")
+	var juego := EstadoReino.new()
+	juego.nueva_partida(true)
+	var otro := EstadoReino.new()
+	otro.nueva_partida(true)
+	verificar(juego.semilla != otro.semilla, "Cada partida nueva tiene su semilla")
+	juego.free()
+	otro.free()
+
+
+func prueba_el_oro_de_un_enemigo_va_con_el_nivel_del_lugar() -> void:
+	var juego := EstadoReino.new()
+	juego.nueva_partida(true)
+	juego.rng.seed = 4
+	var datos := DatosRivales.rival("maton")
+	var rango: Array = datos["oro"]
+	for i in 60:
+		var en_su_nivel := int(juego.recompensa_enemigo("maton", 2)["oro"])
+		verificar(en_su_nivel >= rango[0] and en_su_nivel <= rango[1], "En un lugar de su nivel, su oro")
+		var mas_dificil := int(juego.recompensa_enemigo("maton", 3)["oro"])
+		verificar(mas_dificil >= roundi(rango[0] * 1.5) and mas_dificil <= roundi(rango[1] * 1.5),
+			"En un lugar de nivel 3, la mitad más")
+	juego.free()
+
+
+func prueba_buen_ojo_hace_soltar_mas_objetos() -> void:
+	var juego := EstadoReino.new()
+	juego.nueva_partida(true)
+	verificar_cerca(juego.prob_botin_enemigo(), DatosAventura.PROB_BOTIN_ENEMIGO, "Sin Buen ojo, la probabilidad base")
+	juego.extra["buen_ojo"] = 10
+	verificar(juego.prob_botin_enemigo() > DatosAventura.PROB_BOTIN_ENEMIGO, "Con Buen ojo, más")
+	juego.free()

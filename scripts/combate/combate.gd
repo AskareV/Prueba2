@@ -3,7 +3,7 @@ extends Control
 ## Ataque: Atacar -> zona (6) -> parte (21) -> se resuelve el golpe.
 ## Las reglas están en MotorCombate; aquí solo el flujo de turnos y la interfaz.
 
-enum Estado { ESPERANDO, ACCIONES, ZONA, PARTE, ARMA, FIN, MAGIA }
+enum Estado { ESPERANDO, ACCIONES, ZONA, PARTE, ARMA, FIN, MAGIA, OBJETO }
 
 const ESCENA_PREPARACION := "res://escenas/preparacion.tscn"
 const COLOR_DANIO := Color("#ff6b6b")
@@ -59,6 +59,7 @@ var _boton_defender: Button
 var _boton_arma: Button
 var _boton_huir: Button
 var _boton_magia: Button
+var _boton_objeto: Button
 var _fila_turnos: HBoxContainer
 var _apuntar: VBoxContainer
 var _titulo_apuntar: Label
@@ -74,7 +75,8 @@ var _ventana_es_estado := false
 ## Segundos que faltan para volver a aceptar toques (ver PAUSA_ENTRE_MENUS).
 var _bloqueo := 0.0
 ## true si el combate viene de una mazmorra o zona del reino (ver Juego.combate):
-## el rey pelea con su equipo y al terminar vuelve a ese lugar.
+## el rey pelea con su equipo y sus heridas, puede tomar pociones y al terminar
+## vuelve a ese lugar con las heridas que le queden.
 var _modo_reino := false
 var _resultado := ""
 
@@ -82,7 +84,7 @@ var _resultado := ""
 func _ready() -> void:
 	_rng.randomize()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_modo_reino = not Juego.combate.is_empty() and Juego.combate.get("resultado", "") == ""
+	_modo_reino = not Partida.en_demo and not Juego.combate.is_empty() and Juego.combate.get("resultado", "") == ""
 	var rival_id: String = Juego.combate["rival"] if _modo_reino else Partida.rival
 	if _modo_reino:
 		_jugador = Juego.crear_rey()
@@ -183,18 +185,23 @@ func _crear_interfaz() -> void:
 	_acciones.add_theme_constant_override("separation", 12)
 	_anclar(_acciones, 0.5, 1.0, Vector2(-560, -102), Vector2(560, -12))
 	add_child(_acciones)
-	_boton_atacar = _boton("Atacar", _al_pulsar_atacar, Vector2(200, 88), 26)
-	_boton_defender = _boton("Defender", _al_pulsar_defender, Vector2(200, 88), 26)
-	_boton_magia = _boton("Magia", _al_pulsar_magia, Vector2(200, 88), 24)
-	_boton_arma = _boton("Cambiar arma", _al_pulsar_arma, Vector2(200, 88), 22)
-	_boton_huir = _boton("Huir", _al_pulsar_huir, Vector2(200, 88), 22)
+	# Seis botones caben en el ancho de la fila (en la demo no hay Objeto).
+	var ancho := 176.0
+	_boton_atacar = _boton("Atacar", _al_pulsar_atacar, Vector2(ancho, 88), 26)
+	_boton_defender = _boton("Defender", _al_pulsar_defender, Vector2(ancho, 88), 24)
+	_boton_magia = _boton("Magia", _al_pulsar_magia, Vector2(ancho, 88), 24)
+	_boton_objeto = _boton("Objeto", _al_pulsar_objeto, Vector2(ancho, 88), 22)
+	_boton_arma = _boton("Cambiar arma", _al_pulsar_arma, Vector2(ancho, 88), 21)
+	_boton_huir = _boton("Huir", _al_pulsar_huir, Vector2(ancho, 88), 22)
 	Estilo.con_franja(_boton_atacar, Color("#ef5350"))
 	Estilo.con_franja(_boton_defender, Color("#42a5f5"))
 	Estilo.con_franja(_boton_magia, DatosArmas.COLORES_TIPO["arcano"])
+	Estilo.con_franja(_boton_objeto, Color("#ec407a"))
 	Estilo.con_franja(_boton_arma, Color("#ab47bc"))
 	Estilo.con_franja(_boton_huir, Color("#9e9e9e"))
 	_boton_magia.visible = _jugador.usa_mana
-	for boton in [_boton_atacar, _boton_defender, _boton_magia, _boton_arma, _boton_huir]:
+	_boton_objeto.visible = _modo_reino
+	for boton in [_boton_atacar, _boton_defender, _boton_magia, _boton_objeto, _boton_arma, _boton_huir]:
 		_acciones.add_child(boton)
 
 	_apuntar = VBoxContainer.new()
@@ -347,6 +354,7 @@ func _ficha_turno(texto: String, color: Color) -> PanelContainer:
 func _actuar_rival() -> void:
 	var nombre := _mayuscula(_enemigo.con_articulo())
 	_enemigo.defendiendo = false
+	_enemigo.regenerar_mana()
 	if _enemigo.aturdido:
 		_enemigo.aturdido = false
 		_agregar_mensaje("%s está aturdido y pierde el turno." % nombre)
@@ -374,6 +382,38 @@ func _actuar_rival() -> void:
 			await _pausa(0.5)
 			_figura_jugador.marcar_objetivo("")
 			await _atacar(_enemigo, _jugador, parte_id)
+		"hechizo":
+			await _hechizo_del_rival(decision)
+
+
+## Un rival que sabe magia lanza un hechizo (ver IAEnemigo.elegir_hechizo).
+func _hechizo_del_rival(decision: Dictionary) -> void:
+	var nombre := _mayuscula(_enemigo.con_articulo())
+	var hechizo_id: String = decision["hechizo"]
+	var datos := DatosHechizos.hechizo(hechizo_id)
+	if datos["objetivo"] == "parte":
+		var parte_id: String = decision["parte"]
+		_enemigo.mana -= float(datos["coste"])
+		_enemigo.hechizo = DatosHechizos.como_arma(hechizo_id, _enemigo)
+		_agregar_mensaje("%s lanza %s." % [nombre, datos["nombre"]])
+		_actualizar_paneles()
+		_figura_jugador.marcar_objetivo(parte_id)
+		await _pausa(0.5)
+		_figura_jugador.marcar_objetivo("")
+		await _atacar(_enemigo, _jugador, parte_id)
+		_enemigo.hechizo = {}
+		return
+	var efecto := MotorCombate.lanzar_hechizo(_enemigo, hechizo_id)
+	if efecto.has("cura"):
+		_agregar_mensaje("%s lanza %s: recupera %d de vida." % [nombre, datos["nombre"], efecto["cura"]])
+		_texto_flotante(_figura_enemigo, "torax_der", "+%d" % efecto["cura"], COLOR_CURA)
+	else:
+		_orden.retrasar(_jugador, efecto["retraso"])
+		_actualizar_fila_turnos()
+		_agregar_mensaje("%s lanza %s: pierdes tiempo." % [nombre, datos["nombre"]])
+		_texto_flotante(_figura_jugador, "craneo", "Ralentizado", COLOR_AVISO)
+	_actualizar_paneles()
+	await _pausa(0.8)
 
 
 func _atacar(atacante: Luchador, defensor: Luchador, parte_id: String) -> void:
@@ -671,18 +711,15 @@ func _al_elegir_hechizo(hechizo_id: String) -> void:
 		return
 	_estado = Estado.ESPERANDO
 	_ocultar_controles()
-	_jugador.mana -= float(datos["coste"])
-	match String(datos["objetivo"]):
-		"propio":
-			var cura := mini(DatosHechizos.cura(_jugador), _jugador.vida_max - _jugador.vida)
-			_jugador.vida += cura
-			_agregar_mensaje("Lanzas %s: recuperas %d de vida." % [datos["nombre"], cura])
-			_texto_flotante(_figura_jugador, "torax_der", "+%d" % cura, COLOR_CURA)
-		"rival":
-			_orden.retrasar(_enemigo, DatosHechizos.RETRASO_RALENTIZAR)
-			_actualizar_fila_turnos()
-			_agregar_mensaje("Lanzas %s: %s pierde tiempo." % [datos["nombre"], _enemigo.con_articulo()])
-			_texto_flotante(_figura_enemigo, "craneo", "Ralentizado", COLOR_AVISO)
+	var efecto := MotorCombate.lanzar_hechizo(_jugador, hechizo_id)
+	if efecto.has("cura"):
+		_agregar_mensaje("Lanzas %s: recuperas %d de vida." % [datos["nombre"], efecto["cura"]])
+		_texto_flotante(_figura_jugador, "torax_der", "+%d" % efecto["cura"], COLOR_CURA)
+	else:
+		_orden.retrasar(_enemigo, efecto["retraso"])
+		_actualizar_fila_turnos()
+		_agregar_mensaje("Lanzas %s: %s pierde tiempo." % [datos["nombre"], _enemigo.con_articulo()])
+		_texto_flotante(_figura_enemigo, "craneo", "Ralentizado", COLOR_AVISO)
 	_actualizar_paneles()
 	await _pausa(0.8)
 	await _siguiente_turno()
@@ -692,6 +729,42 @@ func _al_elegir_hechizo(hechizo_id: String) -> void:
 func _dejar_hechizo() -> void:
 	_hechizo_id = ""
 	_jugador.hechizo = {}
+
+
+# --- Objetos (solo en el reino: las pociones del inventario) ---
+
+func _al_pulsar_objeto() -> void:
+	if _estado == Estado.ACCIONES and _entrada_libre() and _modo_reino:
+		_mostrar_objetos()
+
+
+func _mostrar_objetos() -> void:
+	_estado = Estado.OBJETO
+	_titulo_apuntar.text = "Objetos (usar uno gasta el turno)"
+	_limpiar_opciones()
+	_opciones.columns = 1
+	var texto := "Poción de curación ×%d\nRecuperas %d de vida y %d de cada parte herida." % [
+		Juego.pociones(), DatosBotin.POCION_VIDA, roundi(DatosBotin.POCION_PARTES)]
+	var boton := _boton(texto, _al_tomar_pocion, Vector2(460, 96), 19)
+	boton.disabled = Juego.pociones() == 0 or not _jugador.esta_herido()
+	Estilo.con_franja(boton, Color("#ec407a"))
+	_opciones.add_child(boton)
+	_boton_volver.text = "Volver"
+	_mostrar_panel_apuntar()
+	_bloquear_entrada()
+
+
+func _al_tomar_pocion() -> void:
+	if _estado != Estado.OBJETO or not _entrada_libre() or not _jugador.esta_herido() or not Juego.gastar_pocion():
+		return
+	_estado = Estado.ESPERANDO
+	_ocultar_controles()
+	var cura := _jugador.curar(DatosBotin.POCION_VIDA, DatosBotin.POCION_PARTES)
+	_agregar_mensaje("Tomas una poción de curación: recuperas %d de vida y tus heridas mejoran." % cura)
+	_texto_flotante(_figura_jugador, "torax_der", "+%d" % cura, COLOR_CURA)
+	_actualizar_paneles()
+	await _pausa(0.8)
+	await _siguiente_turno()
 
 
 # --- Entrada: tocar el cuerpo del rival y botón "atrás" ---
@@ -753,7 +826,7 @@ func _volver_atras() -> void:
 				_mostrar_hechizos()
 			else:
 				_mostrar_acciones()
-		Estado.ARMA, Estado.MAGIA:
+		Estado.ARMA, Estado.MAGIA, Estado.OBJETO:
 			_mostrar_acciones()
 		Estado.ACCIONES:
 			_ir_a_preparacion()
@@ -833,6 +906,9 @@ func _mostrar_acciones() -> void:
 		# En el reino el rey pelea con el arma equipada (se cambia en el Inventario).
 		_boton_arma.disabled = _modo_reino
 	_boton_huir.text = "Huir\n%d%%" % roundi(MotorCombate.prob_huir(_jugador, _enemigo) * 100.0)
+	if _modo_reino:
+		_boton_objeto.text = "Objeto\n(%d)" % Juego.pociones()
+		_boton_objeto.disabled = Juego.pociones() == 0
 	_etiqueta_turno.text = "Turno %d · Te toca" % _turno
 	_boton_menu.disabled = false
 	_boton_estado.disabled = false
@@ -1055,8 +1131,10 @@ func _mostrar_estado() -> void:
 		+ "(cobertura); al inutilizarlo es más fácil acertarles. Brazos y piernas quitan poca vida pero se "
 		+ "inutilizan rápido; sin brazos útiles se pelea a patadas. La visión afecta la precisión; las piernas, "
 		+ "la esquiva y la huida; el brazo del arma, el daño. La mano del arma puede soltarla; el cráneo puede "
-		+ "aturdir o desmayar. La velocidad decide quién actúa: arriba se ven los próximos turnos, y el más "
-		+ "rápido puede actuar dos veces seguidas. El sangrado, el dolor y las infecciones vendrán después.", 16, Estilo.TEXTO_SUAVE)
+		+ "aturdir o desmayar. Una fractura hace rendir 30% menos esa parte; sin los dos ojos se queda ciego; "
+		+ "con poca respiración se es más lento. La velocidad decide quién actúa: arriba se ven los próximos "
+		+ "turnos, y el más rápido puede actuar dos veces seguidas. En el reino las heridas siguen en el "
+		+ "próximo combate. El sangrado, el dolor y las infecciones vendrán después.", 16, Estilo.TEXTO_SUAVE)
 	reglas.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	reglas.custom_minimum_size = Vector2(1100, 0)
 	columna.add_child(reglas)
@@ -1110,7 +1188,9 @@ func _columna_estado(luchador: Luchador, titulo: String) -> VBoxContainer:
 			tipos.append("%s ×%d" % [tipo, conteo[tipo]] if conteo[tipo] > 1 else String(tipo))
 		if luchador.fracturas.has(parte_id) and not conteo.has("Fractura"):
 			tipos.append("Fractura")
-		var texto := "• %s: %s (%s)" % [DatosCuerpo.PARTES[parte_id]["nombre"], luchador.estado(parte_id).to_lower(), ", ".join(tipos)]
+		var texto := "• %s: %s" % [DatosCuerpo.PARTES[parte_id]["nombre"], luchador.estado(parte_id).to_lower()]
+		if not tipos.is_empty():
+			texto += " (%s)" % ", ".join(tipos)
 		lista.add_child(_etiqueta_simple(texto, 17, Barra.color_para(1.0 - nivel / 4.0)))
 	if not alguna:
 		lista.add_child(_etiqueta_simple("Sin heridas.", 17, Estilo.TEXTO_SUAVE))
@@ -1120,6 +1200,11 @@ func _columna_estado(luchador: Luchador, titulo: String) -> VBoxContainer:
 func _mostrar_fin(resultado: String) -> void:
 	_estado = Estado.FIN
 	_resultado = resultado
+	if _modo_reino:
+		# Las heridas siguen en el próximo combate; y si se cierra la aplicación
+		# ahora, la partida guardada ya tiene el resultado.
+		Juego.guardar_salud(_jugador)
+		Juego.combate["resultado"] = resultado
 	_ocultar_controles()
 	_boton_menu.disabled = false
 	var titulo := ""

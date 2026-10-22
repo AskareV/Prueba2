@@ -1,8 +1,9 @@
 class_name DatosHechizos
 extends RefCounted
-## Maná y hechizos del rey (provisionales). El bastón gasta maná en cada golpe;
-## sin maná pega como un palo. Los hechizos se pagan al lanzarlos y no dependen
-## del arma ni del brazo. Arcano los hace más fuertes; Mago da más maná.
+## Maná y hechizos (provisionales) del rey y de los enemigos que saben magia. El
+## bastón gasta maná en cada golpe; sin maná pega como un palo. Los hechizos se
+## pagan al lanzarlos y no dependen del arma ni del brazo. Arcano los hace más
+## fuertes; Mago da más maná. Los de un enemigo pegan según su poder mágico.
 
 ## Maná que gasta cada golpe con el bastón.
 const COSTE_BASTON := 3.0
@@ -36,10 +37,14 @@ static func hechizo(hechizo_id: String) -> Dictionary:
 	return HECHIZOS[hechizo_id]
 
 
-## Datos con que se resuelve un hechizo que se apunta como un ataque.
-static func como_arma(hechizo_id: String) -> Dictionary:
+## Datos con que se resuelve un hechizo que se apunta como un ataque (con el
+## poder mágico de quien lo lanza, si se da).
+static func como_arma(hechizo_id: String, lanzador: Luchador = null) -> Dictionary:
 	var datos: Dictionary = HECHIZOS[hechizo_id]["arma"].duplicate()
 	datos["hechizo"] = hechizo_id
+	if lanzador != null and not is_equal_approx(lanzador.poder_magico, 1.0):
+		datos["danio_min"] = maxi(1, roundi(int(datos["danio_min"]) * lanzador.poder_magico))
+		datos["danio_max"] = maxi(int(datos["danio_min"]), roundi(int(datos["danio_max"]) * lanzador.poder_magico))
 	return datos
 
 
@@ -47,9 +52,10 @@ static func puede_lanzar(luchador: Luchador, hechizo_id: String) -> bool:
 	return luchador.usa_mana and luchador.mana >= float(HECHIZOS[hechizo_id]["coste"])
 
 
-## Vida que recupera "Curación" según su Arcano.
+## Vida que recupera "Curación" según su Arcano (y su poder mágico).
 static func cura(luchador: Luchador) -> int:
-	return int(HECHIZOS["curacion"]["cura"]) + roundi(DatosEstadisticas.CURA_POR_ARCANO * luchador.puntos("arcano"))
+	var base := int(HECHIZOS["curacion"]["cura"]) + roundi(DatosEstadisticas.CURA_POR_ARCANO * luchador.puntos("arcano"))
+	return roundi(base * luchador.poder_magico)
 
 
 ## Datos del bastón cuando no alcanza el maná: golpe contundente más débil.

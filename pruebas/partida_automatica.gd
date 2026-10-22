@@ -25,6 +25,8 @@ func _initialize() -> void:
 	Engine.time_scale = 30.0
 	await process_frame
 	var partida: Node = root.get_node("Partida")
+	# Siempre la demo, aunque la partida guardada tenga un combate pendiente.
+	partida.set("en_demo", true)
 	var terminados := 0
 	var total := 0
 	var resultados := {}

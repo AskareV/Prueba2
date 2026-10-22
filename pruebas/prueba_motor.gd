@@ -321,3 +321,63 @@ func prueba_golpes_mostrados_coinciden_con_los_reales() -> void:
 					verificar(reales >= mostrado.x and reales <= mostrado.y,
 						"%s, %s, %s: muestra %d–%d golpes y hicieron falta %d" % [arma_id, caso, parte_id, mostrado.x, mostrado.y, reales])
 
+
+
+func prueba_una_fractura_hace_rendir_menos_la_parte() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	rey.integridad["antebrazo_der"] = 60.0
+	var sin_fractura := rey.mov_brazo("der")
+	var rapidez := rey.rapidez_efectiva()
+	rey.fracturas["antebrazo_der"] = true
+	verificar_cerca(rey.mov_brazo("der"), sin_fractura * Luchador.FACTOR_FRACTURA, "El brazo roto rinde 30% menos")
+	rey.integridad["antebrazo_der"] = 20.0
+	verificar(not rey.extremidad_util("brazo_der"), "Con 20 y fracturado ya no sirve (sin fractura serviría)")
+	rey.fracturas.erase("antebrazo_der")
+	verificar(rey.extremidad_util("brazo_der"), "Sin la fractura, con 20 todavía sirve")
+	rey.integridad["muslo_izq"] = 60.0
+	var piernas := rey.mov_piernas()
+	rey.fracturas["muslo_izq"] = true
+	verificar(rey.mov_piernas() < piernas, "Una pierna rota mueve menos")
+	verificar(rey.rapidez_efectiva() < rapidez, "Y es más lento")
+	rey.integridad["craneo"] = 60.0
+	rey.fracturas["craneo"] = true
+	verificar_cerca(rey.conciencia(), 0.6 * Luchador.FACTOR_FRACTURA, "Cráneo roto: más fácil desmayarse")
+
+
+func prueba_la_respiracion_frena() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var sano := rey.rapidez_efectiva()
+	rey.integridad["torax_der"] = 0.0
+	rey.integridad["torax_izq"] = 0.0
+	verificar_cerca(rey.respiracion(), 0.0, "Sin tórax no respira bien")
+	verificar_cerca(rey.rapidez_efectiva(), sano * (1.0 - Luchador.RESPIRACION_RAPIDEZ), "Hasta 30% más lento")
+
+
+func prueba_sin_los_dos_ojos_queda_ciego() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var rival := DatosRivales.crear_rival("bandido")
+	var normal := MotorCombate.prob_acierto(rey, rival, "abdomen")
+	rey.integridad["ojo_der"] = 0.0
+	verificar(not rey.esta_ciego(), "Con un ojo todavía ve")
+	rey.integridad["ojo_izq"] = 10.0
+	verificar(rey.esta_ciego(), "Sin los dos, ciego")
+	verificar_cerca(MotorCombate.prob_acierto(rey, rival, "abdomen"), maxf(normal * MotorCombate.FACTOR_CIEGO, MotorCombate.ACIERTO_MIN),
+		"Ciego acierta un tercio")
+
+
+func prueba_los_brutos_empujan() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	for rival_id in ["orco", "maton", "orco_guerrero", "verdugo"]:
+		verificar(MotorCombate.prob_empujar(DatosRivales.crear_rival(rival_id), rey) > 0.0, "El %s empuja" % rival_id)
+	verificar_cerca(MotorCombate.prob_empujar(DatosRivales.crear_rival("bandido"), rey), 0.0, "El bandido no")
+	var firme := DatosRivales.crear_rey(true, "espada", {"firmeza": 10.0})
+	var verdugo := DatosRivales.crear_rival("verdugo")
+	verificar(MotorCombate.prob_empujar(verdugo, firme) < MotorCombate.prob_empujar(verdugo, rey), "Firmeza resiste sus empujones")
+
+
+func prueba_huir_depende_de_quien_es_mas_rapido() -> void:
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var goblin := DatosRivales.crear_rival("goblin")
+	var verdugo := DatosRivales.crear_rival("verdugo")
+	verificar(MotorCombate.prob_huir(rey, goblin) < MotorCombate.prob_huir(rey, verdugo),
+		"Cuesta más escapar de un goblin rápido que de un verdugo lento")

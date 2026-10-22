@@ -1,9 +1,11 @@
 # Mi Juego (nombre provisional)
 
 Juego 2D horizontal para celular hecho con [Godot 4.7](https://godotengine.org/).
-Por ahora contiene una **versión preliminar del reino** (mazmorras, zonas, botín,
-inventario y trabajos) y una **demo de combate por turnos** con el sistema de
-cuerpo de 21 partes. El diseño acordado está en [`docs/diseno.md`](docs/diseno.md).
+Por ahora contiene una **versión preliminar del reino** (el rey y sus 7
+características, mazmorras, zonas, botín, inventario, trabajos y la ciudad) y una
+**demo de combate por turnos** con el sistema de cuerpo de 21 partes, maná y
+hechizos, y turnos por velocidad. El diseño acordado está en
+[`docs/diseno.md`](docs/diseno.md).
 
 ## Jugar
 
@@ -16,22 +18,28 @@ Cada APK nuevo se instala encima del anterior, sin desinstalar.
 ## El reino (preliminar)
 
 Desde el menú principal: *Nueva partida* (eliges si el rey es diestro o zurdo)
-o *Continuar*. Arriba están las pestañas:
+o *Continuar*. La partida **se guarda sola** y *Continuar* sigue donde quedó.
+Arriba están las pestañas:
 
 - **Rey:** nivel, experiencia y las **7 características** del rey (Fuerza,
   Destreza, Aguante, Resiliencia, Suerte, Inteligencia y Carisma), con 3 partes
   cada una. Al empezar repartes 15 puntos y cada nivel da 1 más. Cada punto en
-  una característica sube sus 3 partes y da 7 puntos solo para esas partes.
+  una característica sube sus 3 partes y da 3 puntos solo para esas partes.
+  Ninguna parte mejora más allá de +20.
 - **Inventario:** el botín. Tocas un objeto para equiparlo o venderlo (calidad
-  normal, rara, épica o legendaria; vale más cuanto mejor es).
-- **Ciudad:** castillo, herrería, granja, mercado y barracas, que se tocan para
-  reconstruirlos y mejorarlos. La ciudad se cuida sola: produce comida, cobra
-  impuestos y sus soldados la defienden. Si está mal protegida sube el
-  **peligro** y pueden atacarla y saquearla. En el castillo se descansa.
+  normal, rara, épica o legendaria; vale más cuanto mejor es), o una poción para
+  tomarla.
+- **Ciudad:** castillo, herrería, granja, mercado, barracas y enfermería, que se
+  tocan para reconstruirlos y mejorarlos. La ciudad se cuida sola: produce
+  comida, cobra impuestos y sus soldados la defienden. Si está mal protegida
+  sube el **peligro** y pueden atacarla y saquearla. En el castillo se descansa
+  (y te curas; más con la enfermería).
 - **Aventura:** mapa con 4 mazmorras (banderín oscuro) y 3 zonas de siete días
   (banderín rojo). En la mazmorra te mueves con la cruceta o tocando una casilla
   vecina; cada paso suma estrés, las espadas son enemigos, los cofres dan botín
-  y la **H** es la salida. Las mazmorras se reinician cada semana.
+  y la **H** es la salida. Las mazmorras se reinician cada semana. Las
+  **heridas duran** de un combate a otro: al caminar te curas un poco, y hay
+  pociones.
 - **Trabajo:** trabajos del rey que dan oro a cambio de estrés.
 - **Salir:** vuelve al menú principal.
 
@@ -49,6 +57,7 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
      cuántos golpes faltan para inutilizarlos.
    - **Defender:** te defiendes mejor y recibes la mitad de daño hasta tu próximo turno.
    - **Magia:** Llamarada, Curación o Ralentizar, gastando maná.
+   - **Objeto** (solo en el reino): tomar una poción.
    - **Cambiar o recoger el arma**, y **Huir**.
    - **Estado:** funciones de supervivencia, cobertura y partes heridas de ambos.
 3. **Turnos por velocidad:** arriba se ven los próximos turnos; el más rápido
@@ -57,8 +66,9 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
    cabeza y el torso quitan más, pero los cubren los brazos y las piernas. Cada
    brazo o pierna que inutilizas deja más expuestos la cabeza y el torso.
 5. Las heridas cambian el color de cada parte (sin gore) y afectan sus funciones:
-   sin ojos se apunta peor, con la mano del arma herida se puede soltar, un golpe
-   en el cráneo puede aturdir o desmayar, etc. Las reglas son **provisionales**.
+   sin los dos ojos quedas ciego, una fractura hace rendir menos la parte, con la
+   mano del arma herida se puede soltar, un golpe en el cráneo puede aturdir o
+   desmayar, etc. Las reglas son **provisionales**.
 
 ## Estructura
 
@@ -88,22 +98,25 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | `orden_turnos.gd` | Barra de turnos por velocidad |
 | `datos_hechizos.gd` | Maná, bastón y hechizos |
 | `luchador.gd` | Estado de un combatiente: vida, integridad de cada parte, lateralidad |
-| `motor_combate.gd` | Reglas: acierto, daño, armadura, fracturas, desarme, aturdimiento, desmayo |
-| `ia_enemigo.gd` | Cómo deciden los rivales: el plan de su personalidad, y a veces improvisan |
+| `motor_combate.gd` | Reglas: acierto, daño, armadura, fracturas, ceguera, desarme, aturdimiento, desmayo, empujones, huir y hechizos |
+| `ia_enemigo.gd` | Cómo deciden los rivales: el plan de su personalidad, a veces improvisan, se defienden y, si saben, lanzan hechizos |
 | `figura.gd` / `plantilla_humanoide.gd` | Dibujo del cuerpo por partes, heridas y animaciones |
+| `fondo_mazmorra.gd`, `antorchas.gd`, `vineta.gd` | Fondo de piedra, antorchas y oscurecido de los bordes |
 | `combate.gd` | Flujo de turnos e interfaz del combate |
 
 ### Archivos principales del reino
 
 | Archivo | Qué hace |
 |---|---|
-| `estado_reino.gd` | La partida (global `Juego`): semana, oro, estrés, inventario, equipo y la ciudad |
+| `estado_reino.gd` | La partida (global `Juego`): semana, oro, estrés, inventario, equipo, salud del rey y la ciudad; guarda y carga la partida |
 | `datos_ciudad.gd` | Edificios de la ciudad, sus costos y efectos, peligro y ataques |
 | `vista_ciudad.gd` | Dibujo de la ciudad con los edificios que se tocan |
-| `datos_botin.gd` | Calidades, armas y armaduras de botín, precios de venta |
-| `datos_aventura.gd` | Mazmorras, zonas, sucesos de los siete días |
-| `generador_mazmorra.gd` | Crea el plano de cada mazmorra según la semana |
+| `datos_botin.gd` | Calidades, armas, armaduras y pociones de botín, precios de venta |
+| `datos_aventura.gd` | Mazmorras, zonas, sucesos de los siete días y la curación al caminar |
+| `generador_mazmorra.gd` | Crea el plano de cada mazmorra según la semana y la partida |
 | `datos_trabajos.gd` | Trabajos del rey |
+| `mapa_reino.gd`, `tablero_mazmorra.gd` | Dibujo del mapa de aventura y de la cuadrícula de la mazmorra |
+| `ui_reino.gd` | Botones, paneles y barras compartidos por las pantallas del reino |
 | `reino.gd`, `mazmorra.gd`, `expedicion.gd`, `menu_principal.gd` | Pantallas |
 
 ## Pruebas
@@ -112,7 +125,7 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 godot --headless --import
 godot --headless --script res://pruebas/ejecutar.gd            # pruebas de las reglas y del equilibrio
 godot --headless --script res://pruebas/partida_automatica.gd  # combates completos pulsando botones
-godot --headless --script res://pruebas/recorrido_reino.gd     # recorre el reino: mazmorra, zona, inventario, trabajo y ciudad
+godot --headless --script res://pruebas/recorrido_reino.gd     # recorre el reino: mazmorra, zona, inventario, trabajo, ciudad, salud y Continuar
 godot --headless --script res://pruebas/simular.gd             # equilibrio: miles de combates por estrategia
 ```
 
@@ -122,7 +135,8 @@ inutilizar primero el brazo del arma) contra cada rival. Se pueden elegir alguna
 
 ## Compilación automática
 
-Cada `push` ejecuta GitHub Actions, que:
+Cada `push` que cambia el juego ejecuta GitHub Actions (los que solo cambian
+`docs/` o el README no), que:
 
 1. Descarga Godot y sus plantillas de exportación.
 2. Ejecuta las pruebas, una partida automática y un recorrido del reino.

@@ -15,6 +15,9 @@ extends RefCounted
 ## - rapidez: velocidad en la barra de turnos (el rey empieza con 13). Los
 ##   rivales de la demo tienen la del rey, para que se alternen como antes.
 ## - coraje: si la Presencia del rey lo supera por 3 o más, queda atemorizado.
+## - empuje: probabilidad de empujar al rival con cada golpe (los brutos).
+## - mana y hechizos: los que saben magia gastan maná con el bastón y lanzan esos
+##   hechizos; pegan y curan según su bastón (ver Luchador.poder_magico).
 
 ## Rivales de la demo de combate.
 const ORDEN := ["bandido", "orco", "lancero"]
@@ -40,7 +43,7 @@ const RIVALES := {
 	},
 	"orco": {
 		"nombre": "Orco", "articulo": "el", "vida": 105, "diestro": false, "arma": "maza",
-		"rapidez": 13, "coraje": 6, "personalidad": "bruto",
+		"rapidez": 13, "coraje": 6, "personalidad": "bruto", "empuje": 0.1,
 		"aspecto": {
 			"piel": Color("#6aa84f"), "torso": Color("#6b4423"), "hombros": Color("#8a8f99"),
 			"brazos": Color("#6aa84f"), "antebrazos": Color("#6aa84f"), "manos": Color("#6aa84f"),
@@ -95,6 +98,7 @@ static var ENEMIGOS := {
 	"chaman_goblin": {
 		"nombre": "Chamán goblin", "articulo": "el", "vida": 40, "diestro": false, "arma": "baston",
 		"rapidez": 14, "coraje": 3, "personalidad": "normal", "nivel": 1, "oro": [5, 10], "danio": [7, 10], "precision": 0.85,
+		"mana": 15, "hechizos": ["llamarada", "curacion"],
 		"armadura": {"torso": [0, 10], "cabeza": [0, 10]},
 		"aspecto": _GOBLIN.merged({"torso": Color("#5e35b1"), "muslos": Color("#5e35b1"), "escala": 0.72}, true),
 	},
@@ -112,7 +116,7 @@ static var ENEMIGOS := {
 	},
 	"maton": {
 		"nombre": "Matón", "articulo": "el", "vida": 90, "diestro": true, "arma": "maza",
-		"rapidez": 11, "coraje": 5, "personalidad": "bruto", "nivel": 2, "oro": [9, 16], "danio": [13, 17],
+		"rapidez": 11, "coraje": 5, "personalidad": "bruto", "nivel": 2, "oro": [9, 16], "danio": [13, 17], "empuje": 0.1,
 		"armadura": {"torso": [10, 2], "cabeza": [6, 0]},
 		"aspecto": {
 			"piel": Color("#c68642"), "torso": Color("#795548"), "hombros": Color("#5d4037"),
@@ -124,7 +128,7 @@ static var ENEMIGOS := {
 	},
 	"orco_guerrero": {
 		"nombre": "Orco guerrero", "articulo": "el", "vida": 115, "diestro": false, "arma": "maza",
-		"rapidez": 11, "coraje": 6, "personalidad": "bruto", "nivel": 3, "oro": [14, 24], "danio": [18, 23],
+		"rapidez": 11, "coraje": 6, "personalidad": "bruto", "nivel": 3, "oro": [14, 24], "danio": [18, 23], "empuje": 0.15,
 		"armadura": {"cabeza": [15, 4], "torso": [22, 6], "brazos": [10, 3], "piernas": [10, 3]},
 		"aspecto": _ORCO.merged({"accesorio": "casco", "accesorio_color": Color("#78909c"),
 			"ancho": 1.25, "escala": 1.12}, true),
@@ -139,6 +143,7 @@ static var ENEMIGOS := {
 	"chaman_orco": {
 		"nombre": "Chamán orco", "articulo": "el", "vida": 85, "diestro": true, "arma": "baston",
 		"rapidez": 12, "coraje": 6, "personalidad": "normal", "nivel": 3, "oro": [15, 25], "danio": [14, 18],
+		"mana": 25, "hechizos": ["llamarada", "curacion", "ralentizar"],
 		"armadura": {"cabeza": [4, 18], "torso": [6, 18]},
 		"aspecto": _ORCO.merged({"torso": Color("#4a148c"), "muslos": Color("#4a148c"),
 			"pelo": Color("#e0e0e0")}, true),
@@ -158,6 +163,7 @@ static var ENEMIGOS := {
 	"cultista": {
 		"nombre": "Cultista", "articulo": "el", "vida": 90, "diestro": true, "arma": "baston",
 		"rapidez": 13, "coraje": 8, "personalidad": "preciso", "nivel": 4, "oro": [22, 36], "danio": [18, 23],
+		"mana": 30, "hechizos": ["llamarada", "curacion", "ralentizar"],
 		"armadura": {"cabeza": [5, 35], "torso": [8, 40], "brazos": [4, 25], "piernas": [4, 25]},
 		"aspecto": {
 			"piel": Color("#e0c3a0"), "torso": Color("#4a148c"), "hombros": Color("#311b92"),
@@ -169,7 +175,7 @@ static var ENEMIGOS := {
 	},
 	"verdugo": {
 		"nombre": "Verdugo", "articulo": "el", "vida": 135, "diestro": true, "arma": "maza",
-		"rapidez": 10, "coraje": 9, "personalidad": "bruto", "nivel": 4, "oro": [28, 42], "danio": [20, 26],
+		"rapidez": 10, "coraje": 9, "personalidad": "bruto", "nivel": 4, "oro": [28, 42], "danio": [20, 26], "empuje": 0.2,
 		"armadura": {"cabeza": [10, 5], "torso": [30, 8], "brazos": [12, 4], "piernas": [12, 4]},
 		"aspecto": {
 			"piel": Color("#d9a066"), "torso": Color("#d9a066"), "hombros": Color("#212121"),
@@ -208,6 +214,16 @@ static func crear_rival(rival_id: String) -> Luchador:
 	luchador.personalidad = datos["personalidad"]
 	luchador.rapidez = float(datos.get("rapidez", luchador.rapidez))
 	luchador.coraje = float(datos.get("coraje", 0.0))
+	luchador.empuje = float(datos.get("empuje", 0.0))
+	if datos.has("mana"):
+		luchador.usa_mana = true
+		luchador.mana_max = float(datos["mana"])
+		luchador.mana = luchador.mana_max
+		luchador.hechizos.assign(datos.get("hechizos", []))
+		# Su magia pega como su bastón: la de un chamán orco más que la de uno goblin.
+		var baston: Dictionary = DatosArmas.arma("baston")
+		var danio_baston: Array = datos.get("danio", [baston["danio_min"], baston["danio_max"]])
+		luchador.poder_magico = float(danio_baston[0] + danio_baston[1]) / float(baston["danio_min"] + baston["danio_max"])
 	if datos.has("danio") or datos.has("precision"):
 		var base: Dictionary = DatosArmas.arma(datos["arma"])
 		var danio: Array = datos.get("danio", [base["danio_min"], base["danio_max"]])
@@ -230,6 +246,6 @@ const ZONAS_DE_GRUPO := {
 
 ## El rey con sus características (vacío = todas en la base, como en la demo).
 static func crear_rey(diestro: bool, arma_id: String, estadisticas := {}) -> Luchador:
-	var rey := Luchador.new("Rey", 100, diestro, arma_id, true)
+	var rey := Luchador.new("Rey", DatosEstadisticas.VIDA_BASE, diestro, arma_id, true)
 	rey.aplicar_estadisticas(estadisticas)
 	return rey

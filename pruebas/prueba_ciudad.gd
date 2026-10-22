@@ -148,14 +148,18 @@ func prueba_el_mercado_cobra_impuestos_y_vende() -> void:
 	var juego := _juego_nuevo()
 	_ciudad_segura(juego)
 	juego.mejorar_edificio("mercado")
-	verificar_igual(juego.mercado.size(), DatosCiudad.OBJETOS_MERCADO[1], "Al reconstruirlo ya vende")
+	# Los objetos de su nivel y, aparte, un montón de pociones.
+	var en_venta: int = DatosCiudad.OBJETOS_MERCADO[1] + 1
+	verificar_igual(juego.mercado.size(), en_venta, "Al reconstruirlo ya vende")
+	verificar(DatosBotin.es_pocion(juego.mercado[-1]), "También vende pociones")
+	verificar_igual(juego.mercado[-1]["cantidad"], DatosCiudad.POCIONES_MERCADO[1], "Las pociones de su nivel")
 	var antes: Array[Dictionary] = juego.mercado.duplicate(true)
 	var oro := juego.oro
 	var informe := juego.semana_ciudad()
 	verificar(not informe.has("ataque"), "Con defensa de sobra no atacan")
 	verificar_igual(informe["impuestos"], DatosCiudad.IMPUESTOS[1], "Cobra los impuestos de su nivel")
 	verificar_igual(juego.oro, oro + DatosCiudad.IMPUESTOS[1], "Suma el oro")
-	verificar_igual(juego.mercado.size(), DatosCiudad.OBJETOS_MERCADO[1], "Siempre vende los de su nivel")
+	verificar_igual(juego.mercado.size(), en_venta, "Siempre vende los de su nivel")
 	verificar(juego.mercado != antes, "Cada semana cambia lo que vende")
 	juego.oro = 10000
 	var objeto: Dictionary = juego.mercado[0]
@@ -164,7 +168,7 @@ func prueba_el_mercado_cobra_impuestos_y_vende() -> void:
 	verificar(juego.comprar(0), "Comprar")
 	verificar_igual(juego.oro, 10000 - precio, "Cobra el precio")
 	verificar_igual(juego.inventario.size(), en_inventario + 1, "Va al inventario")
-	verificar_igual(juego.mercado.size(), DatosCiudad.OBJETOS_MERCADO[1] - 1, "Ya no está a la venta")
+	verificar_igual(juego.mercado.size(), en_venta - 1, "Ya no está a la venta")
 	verificar(not juego.comprar(99), "Un índice que no existe no vale")
 	juego.oro = 0
 	verificar(not juego.comprar(0), "Sin oro no se compra")
@@ -177,8 +181,9 @@ func prueba_negociacion_baja_el_precio_pero_nunca_por_debajo_de_la_venta() -> vo
 	var normal := juego.precio_compra(objeto)
 	verificar_igual(normal, roundi(objeto["precio"] * DatosCiudad.MARGEN_MERCADO), "Precio normal")
 	juego.extra["negociacion"] = 27
-	verificar_igual(juego.precio_compra(objeto), roundi(objeto["precio"] * DatosCiudad.MARGEN_MERCADO * DatosCiudad.PRECIO_MINIMO),
-		"La rebaja llega como mucho a la mitad")
+	var tope := 1.0 - DatosEstadisticas.COMPRA_POR_NEGOCIACION * DatosEstadisticas.TOPE_PUNTOS
+	verificar_igual(juego.precio_compra(objeto), roundi(objeto["precio"] * DatosCiudad.MARGEN_MERCADO * tope),
+		"La rebaja tiene tope (el de los puntos)")
 	var anterior := normal
 	for puntos in [5, 10, 25, 30, 40, 120, 500]:
 		juego.extra["negociacion"] = puntos
@@ -186,8 +191,8 @@ func prueba_negociacion_baja_el_precio_pero_nunca_por_debajo_de_la_venta() -> vo
 		verificar(compra <= anterior, "Más Negociación nunca encarece la compra (%d)" % puntos)
 		verificar(compra > juego.precio_venta(objeto), "Comprar sigue costando más que vender (%d)" % puntos)
 		anterior = compra
-	verificar_igual(juego.precio_venta(objeto), roundi(objeto["precio"] * DatosEstadisticas.VENTA_MAXIMA_NEGOCIACION),
-		"La venta tiene tope")
+	verificar_igual(juego.precio_venta(objeto), roundi(objeto["precio"]
+		* (1.0 + DatosEstadisticas.VENTA_POR_NEGOCIACION * DatosEstadisticas.TOPE_PUNTOS)), "La venta tiene tope")
 	juego.free()
 
 

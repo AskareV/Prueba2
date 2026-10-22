@@ -5,3 +5,6 @@ extends Node
 var diestro := true
 var arma := "espada"
 var rival := "bandido"
+## true mientras se juega la demo: el combate no es del reino aunque la partida
+## guardada tenga uno pendiente.
+var en_demo := false

@@ -1,8 +1,9 @@
 extends Control
 ## Salida a una zona (banderín rojo del mapa): siete casillas, "Día 1" a
 ## "Día 7". Cada toque revela el suceso del día siguiente: combate, oro, un
-## objeto, un día tranquilo, descanso o una trampa. Cada día suma estrés; con
-## 70 el rey vuelve a casa. Al volver termina la semana.
+## objeto, un día tranquilo, descanso o una trampa. Cada día de marcha suma
+## estrés (Cardio lo baja); con 70 el rey vuelve a casa, aunque ese día tocara
+## un combate. Al volver termina la semana.
 
 const ESCENA_REINO := "res://escenas/reino.tscn"
 const ESCENA_COMBATE := "res://escenas/combate.tscn"
@@ -13,6 +14,8 @@ const ESPERA_ATRAS_MS := 800
 
 var _datos: Dictionary
 var _barra_estres: Barra
+var _barra_vida: Barra
+var _boton_pocion: Button
 var _botones_dia: Array[Button] = []
 var _descripcion: Label
 var _boton_volver: Button
@@ -46,7 +49,11 @@ func _crear_interfaz(area: Control) -> void:
 	_barra_estres = UIReino.barra_estres()
 	_barra_estres.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	cabecera.add_child(_barra_estres)
-	cabecera.add_child(UIReino.etiqueta("Salida a %s · %s" % [_datos["nombre"], _datos["dificultad"]], 28,
+	cabecera.add_child(UIReino.etiqueta("Vida", 22))
+	_barra_vida = UIReino.barra_vida()
+	_barra_vida.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	cabecera.add_child(_barra_vida)
+	cabecera.add_child(UIReino.etiqueta("%s · %s" % [_datos["nombre"], _datos["dificultad"]], 28,
 		UIReino.COLOR_TITULO))
 	# Siete días: cinco arriba y dos abajo, como en el juego original.
 	for i in DatosAventura.DIAS_ZONA:
@@ -66,6 +73,10 @@ func _crear_interfaz(area: Control) -> void:
 	_boton_volver = UIReino.boton("Volver a casa", _al_volver, Vector2(320, 76), 24)
 	_boton_volver.position = Vector2(930, 600)
 	area.add_child(_boton_volver)
+	_boton_pocion = UIReino.boton("", _al_tomar_pocion, Vector2(320, 76), 22)
+	_boton_pocion.position = Vector2(590, 600)
+	Estilo.con_franja(_boton_pocion, Color("#ec407a"))
+	area.add_child(_boton_pocion)
 
 
 ## "Atrás" solo termina una salida que ya terminó (como la mazmorra, una salida
@@ -84,7 +95,14 @@ func _al_pulsar_dia(indice: int) -> void:
 	var dias: Array = Juego.expedicion["dias"]
 	if _saliendo or indice != dias.size() or _terminada():
 		return
-	Juego.sumar_estres(DatosAventura.ESTRES_POR_DIA)
+	Juego.sumar_estres(Juego.estres_de_paso(DatosAventura.ESTRES_POR_DIA))
+	Juego.curar_al_caminar(DatosAventura.PASOS_POR_DIA)
+	# Con el estrés al máximo se vuelve a casa: ese día ya no pasa nada (ni un combate).
+	if Juego.estres >= DatosAventura.ESTRES_MAXIMO:
+		_registrar("Agotado", "Un día entero de marcha te deja agotado.")
+		_comprobar_estres()
+		_actualizar()
+		return
 	var nivel: int = _datos["nivel"]
 	var suceso := DatosAventura.sortear_suceso(Juego.rng, Juego.puntos_de("amuleto"))
 	match suceso:
@@ -100,9 +118,9 @@ func _al_pulsar_dia(indice: int) -> void:
 			Juego.oro += oro
 			_registrar("+%d de oro" % oro, "Encuentras una bolsa olvidada con %d de oro." % oro)
 		"objeto":
-			var objeto := Juego.agregar(DatosBotin.generar(nivel, Juego.rng))
-			_registrar(objeto["nombre"], "Encuentras %s (%s)." % [objeto["nombre"],
-				DatosBotin.nombre_calidad(objeto["calidad"]).to_lower()])
+			var objeto := Juego.agregar(DatosBotin.generar_botin(nivel, Juego.rng))
+			_registrar("Poción" if DatosBotin.es_pocion(objeto) else String(objeto["nombre"]),
+				"Encuentras %s." % DatosBotin.texto_hallazgo(objeto))
 		"descanso":
 			Juego.sumar_estres(-10.0)
 			_registrar("Descanso", "Acampas junto a un arroyo y descansas: −10 de estrés.")
@@ -113,6 +131,13 @@ func _al_pulsar_dia(indice: int) -> void:
 		_:
 			_registrar("Tranquilo", "Un día tranquilo de marcha. No pasa nada.")
 	_comprobar_estres()
+	_actualizar()
+
+
+## Toma una poción entre combates.
+func _al_tomar_pocion() -> void:
+	if _saliendo or not Juego.usar_pocion():
+		return
 	_actualizar()
 
 
@@ -149,7 +174,7 @@ func _procesar_combate() -> void:
 			var texto := "Venciste al %s: %d de oro" % [nombre, botin["oro"]]
 			var objeto: Dictionary = botin["objeto"]
 			if not objeto.is_empty():
-				texto += " y %s (%s)" % [objeto["nombre"], DatosBotin.nombre_calidad(objeto["calidad"]).to_lower()]
+				texto += " y %s" % DatosBotin.texto_hallazgo(objeto)
 			_registrar("Victoria", "%s. %s." % [texto, Juego.texto_xp(botin)])
 		"derrota":
 			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_DERROTA))
@@ -162,6 +187,10 @@ func _procesar_combate() -> void:
 
 func _actualizar() -> void:
 	UIReino.actualizar_estres(_barra_estres, Juego.estres)
+	UIReino.actualizar_vida(_barra_vida)
+	var pociones := Juego.pociones()
+	_boton_pocion.text = "Tomar poción (%d)" % pociones
+	_boton_pocion.disabled = pociones == 0 or not Juego.esta_herido()
 	var dias: Array = Juego.expedicion["dias"]
 	var cortado := _cortada()
 	for i in _botones_dia.size():

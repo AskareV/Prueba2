@@ -76,6 +76,12 @@ const ESTRES_DERROTA := 50.0
 ## Experiencia por vencer a un enemigo y por abrir un cofre, por nivel del lugar.
 const XP_POR_VICTORIA := 10
 const XP_POR_COFRE := 4
+## Al caminar el rey se va curando (ver EstadoReino.curar_al_caminar): cada paso
+## cura esta parte de la vida máxima (y ×100 de integridad a cada parte, 1 punto)
+## y este maná. Un día de marcha en una zona cuenta como PASOS_POR_DIA pasos.
+const CURA_POR_PASO := 0.01
+const MANA_POR_PASO := 0.5
+const PASOS_POR_DIA := 4.0
 ## Sucesos buenos de las zonas: el Amuleto los hace más probables (y la trampa menos).
 const SUCESOS_BUENOS := ["oro", "objeto", "descanso"]
 

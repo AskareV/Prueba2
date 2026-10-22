@@ -12,6 +12,7 @@ const ARCHIVOS := [
 	"res://pruebas/prueba_reino.gd",
 	"res://pruebas/prueba_estadisticas.gd",
 	"res://pruebas/prueba_ciudad.gd",
+	"res://pruebas/prueba_salud.gd",
 ]
 
 

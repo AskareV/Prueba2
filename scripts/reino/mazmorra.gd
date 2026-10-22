@@ -1,7 +1,8 @@
 extends Control
 ## Exploración de una mazmorra (como en My Pet Protector, adaptada al celular):
-## cada paso suma estrés y descubre las casillas de alrededor. Al pisar un
-## enemigo empieza un combate; un cofre da botín; volver a pisar la H saca de la
+## cada paso suma estrés, descubre las casillas de alrededor y cura un poco al
+## rey (las heridas de un combate siguen en el siguiente). Al pisar un enemigo
+## empieza un combate; un cofre da botín; volver a pisar la H saca de la
 ## mazmorra. Con 70 de estrés el rey vuelve a casa. Al salir termina la semana
 ## y la mazmorra se reinicia.
 
@@ -18,6 +19,8 @@ static var ayuda_vista := false
 var _datos: Dictionary
 var _tablero: TableroMazmorra
 var _barra_estres: Barra
+var _barra_vida: Barra
+var _boton_pocion: Button
 var _registro: Label
 var _ayuda: Control
 var _mensajes: PackedStringArray = []
@@ -55,7 +58,7 @@ func _ready() -> void:
 
 ## Plano nuevo de esta semana, con el rey en la entrada.
 func _preparar_mazmorra() -> void:
-	var plano := GeneradorMazmorra.generar(Juego.mazmorra["id"], Juego.semana)
+	var plano := GeneradorMazmorra.generar(Juego.mazmorra["id"], Juego.semana, Juego.semilla)
 	Juego.mazmorra["plano"] = plano
 	Juego.mazmorra["pos"] = plano["entrada"]
 	Juego.mazmorra["anterior"] = plano["entrada"]
@@ -79,6 +82,12 @@ func _crear_cabecera(area: Control) -> void:
 	_barra_estres = UIReino.barra_estres()
 	_barra_estres.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	fila.add_child(_barra_estres)
+	var vida := UIReino.etiqueta("Vida", 22)
+	vida.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	fila.add_child(vida)
+	_barra_vida = UIReino.barra_vida()
+	_barra_vida.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	fila.add_child(_barra_vida)
 	var titulo := UIReino.etiqueta("%s · %s" % [_datos["nombre"], _datos["dificultad"]], 28, UIReino.COLOR_TITULO)
 	titulo.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	fila.add_child(titulo)
@@ -115,6 +124,11 @@ func _crear_lateral(area: Control) -> void:
 		flecha.set_anchors_preset(Control.PRESET_FULL_RECT)
 		boton.add_child(flecha)
 		cruceta.add_child(boton)
+	_boton_pocion = UIReino.boton("", _al_tomar_pocion, Vector2(290, 60), 20)
+	_boton_pocion.position = Vector2(970, 650)
+	_boton_pocion.focus_mode = Control.FOCUS_NONE
+	Estilo.con_franja(_boton_pocion, Color("#ec407a"))
+	area.add_child(_boton_pocion)
 
 
 func _crear_ayuda(area: Control) -> void:
@@ -179,6 +193,7 @@ func _mover(direccion: Vector2i) -> void:
 	if not GeneradorMazmorra.es_suelo(plano["celdas"], destino):
 		return
 	Juego.sumar_estres(Juego.estres_de_paso(_datos["estres_por_paso"]))
+	Juego.curar_al_caminar()
 	Juego.mazmorra["anterior"] = origen
 	Juego.mazmorra["pos"] = destino
 	_revelar(destino)
@@ -217,9 +232,16 @@ func _revelar(celda: Vector2i) -> void:
 func _abrir_cofre(celda: Vector2i) -> void:
 	Juego.mazmorra["plano"]["cofres"].erase(celda)
 	var botin := Juego.abrir_cofre(int(_datos["nivel"]))
-	var objeto: Dictionary = botin["objeto"]
-	_mensaje("Abres un cofre: %d de oro y %s (%s). %s." % [botin["oro"], objeto["nombre"],
-		DatosBotin.nombre_calidad(objeto["calidad"]).to_lower(), Juego.texto_xp(botin)])
+	_mensaje("Abres un cofre: %d de oro y %s. %s." % [botin["oro"], DatosBotin.texto_hallazgo(botin["objeto"]),
+		Juego.texto_xp(botin)])
+
+
+## Toma una poción entre combates.
+func _al_tomar_pocion() -> void:
+	if _saliendo or _ayuda.visible or not Juego.usar_pocion():
+		return
+	_mensaje("Tomas una poción de curación.")
+	_actualizar()
 
 
 # --- Combate ---
@@ -248,7 +270,7 @@ func _procesar_combate() -> void:
 			var texto := "Venciste al %s: %d de oro" % [nombre, botin["oro"]]
 			var objeto: Dictionary = botin["objeto"]
 			if not objeto.is_empty():
-				texto += " y %s (%s)" % [objeto["nombre"], DatosBotin.nombre_calidad(objeto["calidad"]).to_lower()]
+				texto += " y %s" % DatosBotin.texto_hallazgo(objeto)
 			_mensaje("%s. %s." % [texto, Juego.texto_xp(botin)])
 			_comprobar_estres()
 		"derrota":
@@ -289,6 +311,10 @@ func _mensaje(texto: String) -> void:
 
 func _actualizar() -> void:
 	UIReino.actualizar_estres(_barra_estres, Juego.estres)
+	UIReino.actualizar_vida(_barra_vida)
+	var pociones := Juego.pociones()
+	_boton_pocion.text = "Tomar poción (%d)" % pociones
+	_boton_pocion.disabled = pociones == 0 or not Juego.esta_herido()
 	_tablero.actualizar(Juego.mazmorra["plano"], Juego.mazmorra["visibles"], Juego.mazmorra["pos"])
 	if _mensajes.is_empty():
 		_mensaje("Entras a %s." % _datos["nombre"])

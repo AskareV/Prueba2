@@ -9,6 +9,7 @@ const COLORES_ESTADO := {
 	"Mano torpe": Color("#8e24aa"),
 	"En guardia": Color("#1e88e5"),
 	"Atemorizado": Color("#6d4c41"),
+	"Ciego": Color("#37474f"),
 }
 const COLOR_MANA := Color("#26a69a")
 
@@ -101,6 +102,8 @@ func _estados_activos() -> Array[String]:
 		lista.append("En guardia")
 	if _luchador.atemorizado:
 		lista.append("Atemorizado")
+	if _luchador.esta_ciego():
+		lista.append("Ciego")
 	return lista
 
 

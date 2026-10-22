@@ -15,15 +15,49 @@ const PROB_IMPROVISAR := 0.25
 ## Acierto mínimo para ir directo a la cabeza o el torso; si es menor, primero
 ## inutiliza el brazo del arma del rival para abrir su defensa.
 const ACIERTO_PARA_IR_AL_CUERPO := 0.4
+## Con esta parte de su vida o menos, se defiende 1 de cada 4 turnos.
+const VIDA_PARA_DEFENDER := 0.5
+const PROB_DEFENDER := 0.25
+## Los que saben magia: se curan con poca vida, frenan al rival si es más rápido
+## y a veces lanzan una llamarada.
+const VIDA_PARA_CURARSE := 0.4
+const PROB_CURARSE := 0.5
+const PROB_RALENTIZAR := 0.15
+const PROB_LLAMARADA := 0.3
 
 
-## Devuelve {"accion": "atacar", "parte": ...}, {"accion": "defender"} o {"accion": "recoger"}.
+## Devuelve {"accion": "atacar", "parte": ...}, {"accion": "defender"},
+## {"accion": "recoger"} o {"accion": "hechizo", "hechizo": ..., "parte": ...}.
 static func decidir(yo: Luchador, rival: Luchador, rng: RandomNumberGenerator) -> Dictionary:
 	if yo.desarmado and (yo.puede_empunar("der") or yo.puede_empunar("izq")):
 		return {"accion": "recoger"}
-	if yo.vida <= yo.vida_max * 0.3 and rng.randf() < 0.18:
+	var magia := elegir_hechizo(yo, rival, rng)
+	if not magia.is_empty():
+		return magia
+	if yo.vida <= yo.vida_max * VIDA_PARA_DEFENDER and rng.randf() < PROB_DEFENDER:
 		return {"accion": "defender"}
 	return {"accion": "atacar", "parte": elegir_parte(yo, rival, rng)}
+
+
+## Un hechizo que le conviene lanzar ahora, o vacío (los que no saben magia, nunca).
+static func elegir_hechizo(yo: Luchador, rival: Luchador, rng: RandomNumberGenerator) -> Dictionary:
+	if yo.hechizos.is_empty():
+		return {}
+	if _puede(yo, "curacion") and yo.vida <= yo.vida_max * VIDA_PARA_CURARSE and rng.randf() < PROB_CURARSE:
+		return {"accion": "hechizo", "hechizo": "curacion"}
+	if _puede(yo, "ralentizar") and rival.rapidez_efectiva() > yo.rapidez_efectiva() and rng.randf() < PROB_RALENTIZAR:
+		return {"accion": "hechizo", "hechizo": "ralentizar"}
+	if _puede(yo, "llamarada") and rng.randf() < PROB_LLAMARADA:
+		# Apunta como un ataque, pero con los datos de la llamarada.
+		yo.hechizo = DatosHechizos.como_arma("llamarada", yo)
+		var parte := elegir_parte(yo, rival, rng)
+		yo.hechizo = {}
+		return {"accion": "hechizo", "hechizo": "llamarada", "parte": parte}
+	return {}
+
+
+static func _puede(yo: Luchador, hechizo_id: String) -> bool:
+	return yo.hechizos.has(hechizo_id) and DatosHechizos.puede_lanzar(yo, hechizo_id)
 
 
 ## Plan por personalidad: el astuto va por la mano del arma del rival hasta

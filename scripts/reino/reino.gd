@@ -223,7 +223,9 @@ func _crear_resumen_rey() -> void:
 	barra.texto = "Experiencia %d / %d" % [Juego.xp, Juego.xp_para_subir()]
 	columna.add_child(barra)
 	var rey := Juego.crear_rey()
-	columna.add_child(UIReino.etiqueta("Vida %d · Maná %d" % [rey.vida_max, roundi(rey.mana_max)], 17, Estilo.TEXTO_SUAVE))
+	columna.add_child(UIReino.etiqueta("Vida %d / %d · Maná %d" % [rey.vida, rey.vida_max, roundi(rey.mana_max)], 17, Estilo.TEXTO_SUAVE))
+	if Juego.esta_herido():
+		columna.add_child(UIReino.parrafo(_texto_heridas(), 228, 15, UIReino.COLOR_AVISO))
 	columna.add_child(UIReino.etiqueta("Rapidez %s" % _formato(rey.rapidez), 17, Estilo.TEXTO_SUAVE))
 	var principales := _puntos_principales_libres()
 	var de_partes := 0
@@ -325,6 +327,18 @@ func _tarjeta_descripcion() -> PanelContainer:
 		columna.add_child(UIReino.etiqueta("Características", 21, UIReino.COLOR_TITULO))
 		columna.add_child(UIReino.parrafo("Toca un nombre para ver qué hace. Todo empieza en 3; cada punto por encima mejora un poco.", 208, 16))
 	return tarjeta
+
+
+## "Heridas en 3 partes (1 fractura)" o, sin partes heridas, "Te falta vida".
+func _texto_heridas() -> String:
+	var partes := Juego.integridad.size()
+	if partes == 0:
+		return "Te falta vida."
+	var texto := "Heridas en %d %s" % [partes, "parte" if partes == 1 else "partes"]
+	var fracturas := Juego.fracturas.size()
+	if fracturas > 0:
+		texto += " (%d %s)" % [fracturas, "fractura" if fracturas == 1 else "fracturas"]
+	return texto + "."
 
 
 ## Botón con menos margen a los lados, para que quepa en una tarjeta.
@@ -537,8 +551,17 @@ func _crear_detalle() -> void:
 		if quitar.disabled:
 			columna.add_child(UIReino.parrafo("El arma se cambia equipando otra.", 330, 16))
 		return
-	columna.add_child(UIReino.boton("Equipar", _al_equipar, Vector2(330, 62), 22))
-	var texto_venta := "Vender por %d de oro" % Juego.precio_venta(objeto)
+	var es_pocion := DatosBotin.es_pocion(objeto)
+	if es_pocion:
+		columna.add_child(UIReino.parrafo("Tu vida: %d / %d.%s" % [Juego.vida_actual(), Juego.vida_maxima(),
+			"" if Juego.esta_herido() else " Estás sano."], 330, 17, Estilo.TEXTO))
+		var tomar := UIReino.boton("Tomar una", _al_tomar_pocion, Vector2(330, 62), 22)
+		tomar.disabled = not Juego.esta_herido()
+		Estilo.con_franja(tomar, Color("#ec407a"))
+		columna.add_child(tomar)
+	else:
+		columna.add_child(UIReino.boton("Equipar", _al_equipar, Vector2(330, 62), 22))
+	var texto_venta := ("Vender una por %d de oro" if es_pocion else "Vender por %d de oro") % Juego.precio_venta(objeto)
 	if _venta_pendiente:
 		texto_venta = "¿Seguro? Toca para vender"
 	var vender := UIReino.boton(texto_venta, _al_vender, Vector2(330, 62), 20)
@@ -586,8 +609,19 @@ func _al_vender() -> void:
 		UIReino.bloquear_toques(self, 0.35)
 		return
 	var oro := Juego.vender(objeto["id"])
-	_seleccion = {}
-	_avisar("Vendiste %s por %d de oro." % [objeto["nombre"], oro])
+	# De las pociones se vende una: si quedan, siguen elegidas.
+	if _objeto_de_mochila(objeto["id"]).is_empty():
+		_seleccion = {}
+	_avisar("Vendiste %s por %d de oro." % ["una poción" if DatosBotin.es_pocion(objeto) else String(objeto["nombre"]), oro])
+	_mostrar_pestana("inventario")
+
+
+func _al_tomar_pocion() -> void:
+	if not Juego.usar_pocion():
+		return
+	_avisar("Tomaste una poción: vida %d / %d." % [Juego.vida_actual(), Juego.vida_maxima()])
+	if not _seleccion_valida():
+		_seleccion = {}
 	_mostrar_pestana("inventario")
 
 
@@ -702,6 +736,8 @@ func _dibujar_edificio() -> void:
 			_detalle_mercado(derecha, nivel)
 		"barracas":
 			_detalle_barracas(derecha, nivel)
+		"enfermeria":
+			_detalle_enfermeria(derecha, nivel)
 
 
 func _detalle_castillo(columna: VBoxContainer) -> void:
@@ -723,8 +759,25 @@ func _detalle_castillo(columna: VBoxContainer) -> void:
 	if not Juego.informe_ciudad.is_empty():
 		columna.add_child(UIReino.etiqueta("Semana %d" % Juego.informe_ciudad["semana"], 20, UIReino.COLOR_TITULO))
 		columna.add_child(UIReino.parrafo(_resumen_semana(Juego.informe_ciudad), 540, 17))
-	var descansar := UIReino.boton("Descansar una semana (−%d de estrés)" % roundi(EstadoReino.ESTRES_DESCANSO), _al_descansar, Vector2(540, 60), 21)
+	var descansar := UIReino.boton("Descansar una semana\n−%d de estrés · cura el %d%% de tus heridas" % [
+		roundi(EstadoReino.ESTRES_DESCANSO), _porcentaje_descanso()], _al_descansar, Vector2(540, 74), 20)
 	columna.add_child(descansar)
+
+
+## Parte de la vida y de cada parte herida que cura descansar ahora (en %).
+func _porcentaje_descanso() -> int:
+	return mini(roundi(Juego.cura_al_descansar() * Juego.multiplicador_curacion() * 100.0), 100)
+
+
+func _detalle_enfermeria(columna: VBoxContainer, nivel: int) -> void:
+	columna.add_child(UIReino.etiqueta("Salud del rey", 24, UIReino.COLOR_TITULO))
+	var estado := _texto_heridas() if Juego.esta_herido() else "Estás sano."
+	columna.add_child(UIReino.parrafo("Vida %d / %d. %s" % [Juego.vida_actual(), Juego.vida_maxima(), estado], 540, 18, Estilo.TEXTO))
+	columna.add_child(UIReino.parrafo("Descansar una semana en el castillo cura el %d%% de la vida y de cada parte herida (Recuperación ×%s)." % [
+		_porcentaje_descanso(), _multiplicador(Juego.multiplicador_curacion())], 540, 17))
+	if nivel <= 0:
+		columna.add_child(UIReino.parrafo("Reconstrúyela para que descansar cure más.", 540, 17))
+	columna.add_child(UIReino.parrafo("Al caminar por una mazmorra o una zona también te curas poco a poco. Las pociones curan en el momento (se compran en el mercado).", 540, 17))
 
 
 ## Todo lo que pasó en la ciudad esa semana, en un párrafo.
@@ -791,10 +844,18 @@ func _detalle_mercado(columna: VBoxContainer, nivel: int) -> void:
 	for i in Juego.mercado.size():
 		var objeto: Dictionary = Juego.mercado[i]
 		var precio := Juego.precio_compra(objeto)
-		var texto: String = "%s (%s, nivel %d)\n" % [objeto["nombre"], DatosBotin.nombre_calidad(objeto["calidad"]).to_lower(), objeto["nivel"]]
-		# El dato principal: el daño de un arma, o la armadura y la resistencia mágica de una pieza.
-		var dato: String = DatosBotin.describir(objeto)[1] if objeto["ranura"] == "arma" else "Arm. %d · Res. mág. %d" % [
-			objeto["armadura"], objeto["resistencia_magica"]]
+		var es_pocion := DatosBotin.es_pocion(objeto)
+		var texto: String = String(objeto["nombre"]) + "\n" if es_pocion else "%s (%s, nivel %d)\n" % [
+			objeto["nombre"], DatosBotin.nombre_calidad(objeto["calidad"]).to_lower(), objeto["nivel"]]
+		# El dato principal: lo que cura una poción, el daño de un arma, o la
+		# armadura y la resistencia mágica de una pieza.
+		var dato: String
+		if es_pocion:
+			dato = "Cura %d de vida · quedan %d" % [DatosBotin.POCION_VIDA, int(objeto.get("cantidad", 1))]
+		elif objeto["ranura"] == "arma":
+			dato = DatosBotin.describir(objeto)[1]
+		else:
+			dato = "Arm. %d · Res. mág. %d" % [objeto["armadura"], objeto["resistencia_magica"]]
 		texto += "Toca otra vez para comprar por %d de oro" % precio if i == _compra_pendiente else "%s · %d de oro" % [dato, precio]
 		var boton := UIReino.boton(texto, _al_comprar.bind(i), Vector2(540, 62), 17)
 		boton.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -865,7 +926,7 @@ func _al_comprar(indice: int) -> void:
 	if not Juego.comprar(indice):
 		return
 	_compra_pendiente = -1
-	_avisar("Compraste %s por %d de oro." % [objeto["nombre"], precio])
+	_avisar("Compraste %s por %d de oro." % ["una poción" if DatosBotin.es_pocion(objeto) else String(objeto["nombre"]), precio])
 	_actualizar_ciudad()
 
 
@@ -877,8 +938,9 @@ func _al_reclutar() -> void:
 
 
 func _al_descansar() -> void:
+	var herido := Juego.esta_herido()
 	Juego.descansar()
-	_avisar("Descansaste. Empieza la semana %d." % Juego.semana)
+	_avisar("Descansaste%s. Empieza la semana %d." % [" y te curaste" if herido else "", Juego.semana])
 	_mostrar_pestana("ciudad")
 	_mostrar_noticias()
 
@@ -950,6 +1012,10 @@ func _al_elegir_lugar(lugar_id: String) -> void:
 	columna.add_child(UIReino.parrafo("Enemigos: %s." % DatosAventura.nombres_enemigos(lugar_id), 680, 18))
 	if es_mazmorra:
 		columna.add_child(UIReino.parrafo("Cada paso suma estrés; con %d vuelves a casa. La mazmorra se reinicia cada semana." % roundi(DatosAventura.ESTRES_MAXIMO), 680, 17))
+	var vida := "Tu vida: %d / %d." % [Juego.vida_actual(), Juego.vida_maxima()]
+	if Juego.vida_actual() < Juego.vida_maxima() / 2:
+		vida += " Estás herido: descansa en el castillo o toma una poción antes de salir."
+	columna.add_child(UIReino.parrafo(vida, 680, 18, UIReino.COLOR_AVISO if Juego.esta_herido() else Estilo.TEXTO_SUAVE))
 	var puede := Juego.estres < DatosAventura.ESTRES_MAXIMO
 	if not puede:
 		columna.add_child(UIReino.parrafo("Estás demasiado estresado para salir. Descansa primero (en el castillo, en la Ciudad).", 680, 18, Color("#ef9a9a")))

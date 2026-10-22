@@ -24,9 +24,13 @@ const GUARDIA_MAXIMA := 0.8
 ## Golpe crítico: multiplica el daño (ver Golpe de suerte).
 const MULTIPLICADOR_CRITICO := 1.5
 ## Atemorizado por la Presencia del rey: acierta, pega y avanza menos.
-const ATEMORIZADO_ACIERTO := 0.9
-const ATEMORIZADO_DANIO := 0.85
-const ATEMORIZADO_RAPIDEZ := 0.9
+const ATEMORIZADO_ACIERTO := 0.92
+const ATEMORIZADO_DANIO := 0.9
+const ATEMORIZADO_RAPIDEZ := 0.95
+## Huir: cuánto suma (o resta) cada punto de rapidez de ventaja sobre el que persigue.
+const HUIDA_POR_RAPIDEZ := 0.02
+## Ciego (sin los dos ojos): acierta esta parte de lo normal.
+const FACTOR_CIEGO := 1.0 / 3.0
 
 
 static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
@@ -36,7 +40,7 @@ static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: Strin
 	var exponente: float = tipo["exp_tamano"]
 	var precision: float = arma["precision"]
 	var prob := precision * pow(tamano, exponente)
-	prob *= 0.5 + 0.5 * atacante.vision()
+	prob *= FACTOR_CIEGO if atacante.esta_ciego() else 0.5 + 0.5 * atacante.vision()
 	if _usa_el_brazo(atacante) and atacante.mano_torpe:
 		prob *= atacante.penalizacion_mano_torpe(PENALIZACION_MANO_TORPE_PRECISION)
 	prob *= 1.0 - defensor.defensa(DatosCuerpo.zona_de(parte_id))
@@ -117,7 +121,8 @@ static func multiplicador_desgaste(atacante: Luchador, defensor: Luchador, parte
 
 
 ## Golpes acertados que faltan para inutilizar esa parte o, en brazos y piernas,
-## para que la extremidad deje de servir (con el cuello inutilizado basta menos).
+## para que la extremidad deje de servir (con el cuello inutilizado o una
+## fractura basta menos; un golpe contundente puede fracturarla por el camino).
 ## Devuelve (golpes si todos pegan fuerte, golpes si todos pegan flojo); (0, 0)
 ## si ya está inutilizada. "golpes_en_guardia": cuántos golpes seguidos recibe
 ## el defensor en guardia antes de su próximo turno (2 si el atacante actúa dos
@@ -125,32 +130,45 @@ static func multiplicador_desgaste(atacante: Luchador, defensor: Luchador, parte
 static func golpes_para_inutilizar(atacante: Luchador, defensor: Luchador, parte_id: String,
 		golpes_en_guardia := 1) -> Vector2i:
 	var zona_id := DatosCuerpo.zona_de(parte_id)
-	var umbral := Luchador.INUTILIZADA
-	if DatosCuerpo.ZONAS[zona_id]["defensa"] != "cubierta":
-		if not defensor.extremidad_util(zona_id):
-			return Vector2i.ZERO
-		umbral = minf(Luchador.INUTILIZADA / defensor.factor_columna(), 100.0)
-	var restante: float = defensor.integridad[parte_id] - umbral
-	if restante < 0.0:
+	var extremidad: bool = DatosCuerpo.ZONAS[zona_id]["defensa"] != "cubierta"
+	if extremidad and not defensor.extremidad_util(zona_id):
+		return Vector2i.ZERO
+	if defensor.integridad[parte_id] < _umbral_inutilizar(defensor, extremidad, defensor.fracturas.has(parte_id)):
 		return Vector2i.ZERO
 	var arma: Dictionary = atacante.datos_arma()
-	var primero := multiplicador_desgaste(atacante, defensor, parte_id)
+	return Vector2i(
+		_golpes_hasta(atacante, defensor, parte_id, extremidad, arma["danio_max"], golpes_en_guardia),
+		_golpes_hasta(atacante, defensor, parte_id, extremidad, arma["danio_min"], golpes_en_guardia))
+
+
+## Integridad bajo la cual la parte deja de servir: en brazos y piernas, el cuello
+## inutilizado (columna) y una fractura la suben.
+static func _umbral_inutilizar(defensor: Luchador, extremidad: bool, fracturada: bool) -> float:
+	if not extremidad:
+		return Luchador.INUTILIZADA
+	var factor := defensor.factor_columna() * (Luchador.FACTOR_FRACTURA if fracturada else 1.0)
+	return minf(Luchador.INUTILIZADA / factor, 100.0)
+
+
+## Golpes con ese daño de arma hasta que la parte deja de servir. Los primeros
+## "en_guardia" los frena la guardia; si el arma es contundente y la parte tiene
+## hueso, la cuenta la fractura cuando llega al umbral (y desde ahí sirve menos).
+static func _golpes_hasta(atacante: Luchador, defensor: Luchador, parte_id: String, extremidad: bool,
+		danio_arma: float, en_guardia: int) -> int:
+	var primero := danio_arma * multiplicador_desgaste(atacante, defensor, parte_id)
 	# La guardia protege hasta el próximo turno del defensor.
 	var siguientes := primero / factor_guardia(atacante, defensor) if defensor.defendiendo else primero
-	return Vector2i(
-		_golpes_hasta(restante, arma["danio_max"] * primero, arma["danio_max"] * siguientes, golpes_en_guardia),
-		_golpes_hasta(restante, arma["danio_min"] * primero, arma["danio_min"] * siguientes, golpes_en_guardia))
-
-
-## Golpes hasta que el desgaste acumulado supere "restante": los primeros
-## "en_guardia" con el desgaste "primero" y los demás con "siguientes".
-static func _golpes_hasta(restante: float, primero: float, siguientes: float, en_guardia := 1) -> int:
-	var total := 0.0
+	var puede_fracturar: bool = atacante.datos_arma()["tipo"] == "contundente" and DatosCuerpo.PARTES[parte_id]["hueso"]
+	var umbral_fractura := UMBRAL_FRACTURA + DatosEstadisticas.FRACTURA_POR_EXPLOSIVA * atacante.puntos("fuerza_explosiva")
+	var fracturada := defensor.fracturas.has(parte_id)
+	var integridad: float = defensor.integridad[parte_id]
 	var golpes := 0
 	while golpes < 1000:
 		golpes += 1
-		total += maxf(primero if golpes <= en_guardia else siguientes, 0.01)
-		if total > restante:
+		integridad -= maxf(primero if golpes <= en_guardia else siguientes, 0.01)
+		if puede_fracturar and integridad < umbral_fractura:
+			fracturada = true
+		if integridad < _umbral_inutilizar(defensor, extremidad, fracturada):
 			break
 	return golpes
 
@@ -253,11 +271,12 @@ static func _resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: S
 
 
 ## Probabilidad de que un golpe acertado empuje al defensor hacia atrás en la
-## barra de turnos (solo con Fuerza explosiva y golpes con arma, no hechizos).
+## barra de turnos (con Fuerza explosiva o un enemigo bruto, y golpes con arma,
+## no hechizos).
 static func prob_empujar(atacante: Luchador, defensor: Luchador) -> float:
 	if not atacante.hechizo.is_empty():
 		return 0.0
-	var prob := minf(DatosEstadisticas.EMPUJON_POR_EXPLOSIVA * atacante.puntos("fuerza_explosiva"),
+	var prob := minf(atacante.empuje + DatosEstadisticas.EMPUJON_POR_EXPLOSIVA * atacante.puntos("fuerza_explosiva"),
 		DatosEstadisticas.EMPUJON_MAXIMO)
 	if prob <= 0.0:
 		return 0.0
@@ -303,11 +322,40 @@ static func _intentar_desarme(atacante: Luchador, defensor: Luchador, parte_id: 
 	return false
 
 
-## Probabilidad de huir: depende de las piernas de ambos y de la Velocidad.
+## Probabilidad de huir: depende de las piernas de los dos, de la Velocidad y de
+## quién es más rápido (cuesta más escapar de un goblin que de un verdugo).
 static func prob_huir(quien_huye: Luchador, perseguidor: Luchador) -> float:
 	var prob := 0.25 + 0.5 * quien_huye.mov_piernas() - 0.2 * perseguidor.mov_piernas()
 	prob += DatosEstadisticas.HUIDA_POR_VELOCIDAD * quien_huye.puntos("velocidad")
+	prob += HUIDA_POR_RAPIDEZ * (quien_huye.rapidez - perseguidor.rapidez)
 	return clampf(prob, 0.05, 0.9)
+
+
+## Lanza un hechizo que no se apunta a una parte (Curación o Ralentizar): paga el
+## maná y, si cura, cura. Devuelve {"cura": vida recuperada} o {"retraso": tiempo
+## que pierde el rival en la barra (lo aplica quien lleva los turnos)}.
+static func lanzar_hechizo(lanzador: Luchador, hechizo_id: String) -> Dictionary:
+	var datos := DatosHechizos.hechizo(hechizo_id)
+	lanzador.mana -= float(datos["coste"])
+	match String(datos["objetivo"]):
+		"propio":
+			var cura := mini(DatosHechizos.cura(lanzador), lanzador.vida_max - lanzador.vida)
+			lanzador.vida += cura
+			return {"cura": cura}
+		"rival":
+			return {"retraso": DatosHechizos.RETRASO_RALENTIZAR}
+	return {}
+
+
+## Lanza un hechizo contra una parte (Llamarada): paga el maná y se resuelve como
+## un ataque con los datos del hechizo.
+static func lanzar_hechizo_a(lanzador: Luchador, defensor: Luchador, hechizo_id: String, parte_id: String,
+		rng: RandomNumberGenerator, turno: int) -> Dictionary:
+	lanzador.mana -= float(DatosHechizos.hechizo(hechizo_id)["coste"])
+	lanzador.hechizo = DatosHechizos.como_arma(hechizo_id, lanzador)
+	var resultado := resolver_ataque(lanzador, defensor, parte_id, rng, turno)
+	lanzador.hechizo = {}
+	return resultado
 
 
 ## La Presencia del rey supera de lejos el coraje del rival.

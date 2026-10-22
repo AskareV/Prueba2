@@ -16,6 +16,11 @@ const COBERTURA_POR_BRAZO := 0.10
 const COBERTURA_POR_PIERNA := 0.03
 ## En guardia, toda zona es más difícil de alcanzar.
 const DEFENSA_GUARDIA := 0.2
+## Una parte fracturada rinde esto (30% menos) en las funciones: un brazo pega
+## más flojo y se inutiliza antes, una pierna esquiva y avanza menos, etc.
+const FACTOR_FRACTURA := 0.7
+## Con la respiración baja es más lento en la barra de turnos (hasta 30% menos).
+const RESPIRACION_RAPIDEZ := 0.3
 const ESTADOS := ["Sana", "Leve", "Herida", "Grave", "Inutilizada"]
 
 var nombre: String
@@ -49,13 +54,21 @@ var tiene_estadisticas := false
 var rapidez := DatosEstadisticas.RAPIDEZ_BASE
 ## Coraje ante la presencia del rey: si su Presencia lo supera de lejos, se atemoriza.
 var coraje := 0.0
-## Maná: solo lo usa el rey. Los enemigos con bastón no lo gastan.
+## Maná: lo usan el rey y los enemigos que saben magia (su bastón también lo gasta).
 var usa_mana := false
 var mana_max := 0.0
 var mana := 0.0
 ## Hechizo que está lanzando: mientras dura, ocupa el lugar del arma
 ## (ver datos_arma y DatosHechizos).
 var hechizo: Dictionary = {}
+## Hechizos que lanza un enemigo por su cuenta (ver IAEnemigo). El rey usa el
+## botón Magia.
+var hechizos: Array[String] = []
+## Fuerza de la magia de un enemigo (1 = la del rey sin Arcano): sus hechizos
+## pegan y curan más o menos según su bastón.
+var poder_magico := 1.0
+## Probabilidad propia de empujar al rival con un golpe (los enemigos brutos).
+var empuje := 0.0
 var _vida_base := 0
 
 ## Armadura por zona del cuerpo: zona -> {"fisica": n, "magica": n}. Frena el
@@ -100,16 +113,17 @@ func valor_de(sub_id: String) -> float:
 	return float(estadisticas.get(sub_id, DatosEstadisticas.BASE))
 
 
-## Puntos de esa sub por encima de la base: de esto dependen sus efectos.
+## Puntos de esa sub por encima de la base (como mucho el tope): de esto
+## dependen sus efectos.
 func puntos(sub_id: String) -> float:
-	return maxf(valor_de(sub_id) - DatosEstadisticas.BASE, 0.0)
+	return DatosEstadisticas.puntos_utiles(valor_de(sub_id))
 
 
 ## Fija las características del rey y lo que depende de ellas: vida, maná y rapidez.
 func aplicar_estadisticas(p_estadisticas: Dictionary) -> void:
 	estadisticas = p_estadisticas
 	tiene_estadisticas = true
-	vida_max = _vida_base + roundi(DatosEstadisticas.VIDA_POR_VITALIDAD * puntos("vitalidad"))
+	vida_max = _vida_base + DatosEstadisticas.vida_extra(puntos("vitalidad"))
 	vida = vida_max
 	usa_mana = true
 	# Entero, aunque el Amuleto deje puntos con decimales.
@@ -128,9 +142,10 @@ func regenerar_mana() -> void:
 		mana = minf(mana + regeneracion_mana(), mana_max)
 
 
-## Rapidez real: las piernas heridas y el miedo lo frenan.
+## Rapidez real: las piernas heridas, la falta de aire y el miedo lo frenan.
 func rapidez_efectiva() -> float:
 	var valor_rapidez := rapidez * (0.6 + 0.4 * mov_piernas())
+	valor_rapidez *= 1.0 - RESPIRACION_RAPIDEZ * (1.0 - respiracion())
 	if atemorizado:
 		valor_rapidez *= MotorCombate.ATEMORIZADO_RAPIDEZ
 	return maxf(valor_rapidez, 1.0)
@@ -228,8 +243,19 @@ func empunar() -> bool:
 
 # --- Partes del cuerpo ---
 
+## Cuánto rinde una parte para las funciones (0 a 1): su integridad, y menos si
+## está fracturada.
 func factor(parte_id: String) -> float:
-	return integridad[parte_id] / 100.0
+	var valor: float = integridad[parte_id] / 100.0
+	if fracturas.has(parte_id):
+		valor *= FACTOR_FRACTURA
+	return valor
+
+
+## Rinde menos por una fractura: el umbral de integridad bajo el que la parte ya
+## no sirve para moverse (ver extremidad_util) sube.
+func factor_fractura(parte_id: String) -> float:
+	return FACTOR_FRACTURA if fracturas.has(parte_id) else 1.0
 
 
 func esta_inutilizada(parte_id: String) -> bool:
@@ -281,6 +307,11 @@ func heridas_de(parte_id: String) -> Dictionary:
 
 func conciencia() -> float:
 	return factor("craneo")
+
+
+## Sin los dos ojos (los dos inutilizados) está ciego: acierta mucho menos.
+func esta_ciego() -> bool:
+	return esta_inutilizada("ojo_der") and esta_inutilizada("ojo_izq")
 
 
 ## Con un ojo se ve peor (sin profundidad); sin los dos, casi nada.
@@ -393,6 +424,28 @@ func fuerza_ataque() -> float:
 		"patadas":
 			return mov_piernas()
 	return mov_brazo(lado_arma())
+
+
+## Cura vida y la integridad de todas las partes a la vez (una poción). Una parte
+## que se cura del todo deja de estar fracturada.
+func curar(cantidad_vida: int, partes: float) -> int:
+	var antes := vida
+	vida = mini(vida + cantidad_vida, vida_max)
+	for parte_id in integridad:
+		integridad[parte_id] = minf(integridad[parte_id] + partes, 100.0)
+		if integridad[parte_id] >= 100.0:
+			fracturas.erase(parte_id)
+	return vida - antes
+
+
+## Le falta vida o tiene alguna parte herida.
+func esta_herido() -> bool:
+	if vida < vida_max:
+		return true
+	for parte_id in integridad:
+		if integridad[parte_id] < 100.0:
+			return true
+	return false
 
 
 # --- Textos para narrar ---

@@ -1,13 +1,13 @@
 class_name DatosCiudad
 extends RefCounted
-## Ciudad del reino (provisional): cinco edificios fijos que se reconstruyen y
+## Ciudad del reino (provisional): seis edificios fijos que se reconstruyen y
 ## mejoran con oro, y el peligro de la ciudad. La ciudad se cuida sola: produce
 ## su comida, cobra impuestos y sus soldados la defienden sin el rey. Si está
 ## mal protegida, el peligro sube y pueden atacarla. Todos los números son
 ## provisionales.
 
 const NIVEL_MAXIMO := 3
-const ORDEN := ["castillo", "herreria", "granja", "mercado", "barracas"]
+const ORDEN := ["castillo", "herreria", "granja", "mercado", "barracas", "enfermeria"]
 
 ## "costos": oro para pasar al nivel 1, 2 y 3 (el nivel 0 es "en ruinas").
 ## "articulo": el nombre con su artículo, para las frases ("la granja").
@@ -38,10 +38,15 @@ const EDIFICIOS := {
 		"descripcion": "Aquí se reclutan los soldados que cuidan la ciudad: bajan el peligro cada semana y la defienden si la atacan.",
 		"costos": [150, 400, 900],
 	},
+	"enfermeria": {
+		"nombre": "Enfermería", "articulo": "la enfermería", "color": Color("#f48fb1"), "posicion": Vector2(0.5, 0.8),
+		"descripcion": "Cuida al rey: con más nivel, descansar en el castillo cura más sus heridas.",
+		"costos": [120, 300, 700],
+	},
 }
 
 ## Nivel con el que empieza cada edificio en una partida nueva (0 = en ruinas).
-const NIVEL_INICIAL := {"castillo": 1, "herreria": 0, "granja": 0, "mercado": 0, "barracas": 0}
+const NIVEL_INICIAL := {"castillo": 1, "herreria": 0, "granja": 0, "mercado": 0, "barracas": 0, "enfermeria": 0}
 
 # --- Efectos por nivel (índice = nivel 0 a 3) ---
 
@@ -57,10 +62,15 @@ const EQUIPO_SOLDADOS := [1.0, 1.25, 1.5, 1.75]
 const COMIDA_GRANJA := [0, 10, 18, 28]
 ## Oro de impuestos que cobra el mercado por semana.
 const IMPUESTOS := [0, 15, 30, 50]
-## Objetos a la venta en el mercado (cambian cada semana).
+## Objetos a la venta en el mercado (cambian cada semana), y además pociones.
 const OBJETOS_MERCADO := [0, 3, 4, 5]
+const POCIONES_MERCADO := [0, 2, 3, 4]
 ## Soldados que caben en las barracas.
 const SOLDADOS_MAXIMOS := [0, 5, 10, 15]
+## Descansar una semana en el castillo cura esta parte de la vida del rey (y ×100
+## de integridad a cada parte herida), más lo que suma la enfermería.
+const CURA_DESCANSO := 0.4
+const CURA_ENFERMERIA := [0.0, 0.2, 0.4, 0.6]
 
 # --- Soldados y comida ---
 
@@ -91,10 +101,8 @@ const SAQUEO_COMIDA := 0.5
 const BAJAS_DERROTA := 0.5
 const PELIGRO_DERROTA := 20.0
 
-## Precio en el mercado: el precio de venta por esto, rebajado por Negociación
-## (como mucho hasta PRECIO_MINIMO del precio normal).
+## Precio en el mercado: el precio de venta por esto, rebajado por Negociación.
 const MARGEN_MERCADO := 4.0
-const PRECIO_MINIMO := 0.5
 ## Mejorar la calidad en la herrería: el precio de venta base del objeto ya
 ## mejorado por esto.
 const COSTO_HERRERIA := 3.0
@@ -127,4 +135,7 @@ static func efecto(edificio_id: String, nivel: int) -> String:
 			return "Cobra %d de oro por semana y vende %d objetos de nivel %d." % [IMPUESTOS[nivel], OBJETOS_MERCADO[nivel], nivel]
 		"barracas":
 			return "Caben %d soldados." % SOLDADOS_MAXIMOS[nivel]
+		"enfermeria":
+			return "Descansar en el castillo cura el %d%% (sin ella, el %d%%)." % [
+				roundi((CURA_DESCANSO + CURA_ENFERMERIA[nivel]) * 100.0), roundi(CURA_DESCANSO * 100.0)]
 	return ""

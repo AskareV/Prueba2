@@ -54,6 +54,7 @@ static func pelear(rey: Luchador, rival: Luchador, estrategia: String, rng: Rand
 			rey.regenerar_mana()
 			_actuar_contando(rey, rival, rng, turno, estrategia, racha["rey"], orden)
 		else:
+			rival.regenerar_mana()
 			_actuar_contando(rival, rey, rng, turno, "ia", racha["rival"], orden)
 		if rey.fuera_de_combate() or rival.fuera_de_combate():
 			break
@@ -76,7 +77,7 @@ static func _actuar_contando(yo: Luchador, otro: Luchador, rng: RandomNumberGene
 
 
 ## Hace actuar a un luchador como en la escena de combate. Con "orden", un
-## empujón retrasa al otro en la barra de turnos.
+## empujón o Ralentizar retrasan al otro en la barra de turnos.
 static func actuar(yo: Luchador, otro: Luchador, rng: RandomNumberGenerator, turno: int, estrategia: String,
 		orden: OrdenTurnos = null) -> void:
 	yo.defendiendo = false
@@ -95,6 +96,13 @@ static func actuar(yo: Luchador, otro: Luchador, rng: RandomNumberGenerator, tur
 			var resultado := MotorCombate.resolver_ataque(yo, otro, decision["parte"], rng, turno)
 			if orden != null and resultado["empujon"]:
 				orden.retrasar(otro, DatosHechizos.RETRASO_EMPUJON)
+		"hechizo":
+			if decision.has("parte"):
+				MotorCombate.lanzar_hechizo_a(yo, otro, decision["hechizo"], decision["parte"], rng, turno)
+			else:
+				var efecto := MotorCombate.lanzar_hechizo(yo, decision["hechizo"])
+				if orden != null and efecto.has("retraso"):
+					orden.retrasar(otro, efecto["retraso"])
 
 
 static func elegir_parte(estrategia: String, yo: Luchador, otro: Luchador, rng: RandomNumberGenerator) -> String:

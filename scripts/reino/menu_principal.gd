@@ -1,23 +1,22 @@
 extends Control
-## Menú principal: seguir la partida del reino, empezar una nueva o abrir la
-## demo de combate.
+## Menú principal: seguir la partida del reino (se guarda sola), empezar una
+## nueva o abrir la demo de combate. "Atrás" pregunta antes de cerrar el juego.
 
 const ESCENA_REINO := "res://escenas/reino.tscn"
 const ESCENA_DEMO := "res://escenas/preparacion.tscn"
-## Milisegundos tras abrir el menú en que "atrás" no cierra el juego: un doble
-## "atrás" desde el reino no debe cerrarlo sin querer (la partida no se guarda).
-const ESPERA_SALIR_MS := 800
+const ESCENA_COMBATE := "res://escenas/combate.tscn"
+const ESCENA_MAZMORRA := "res://escenas/mazmorra.tscn"
+const ESCENA_EXPEDICION := "res://escenas/expedicion.tscn"
 
 var _fondo: FondoMazmorra
 var _antorchas: Antorchas
 var _vineta: Vineta
 var _botones: VBoxContainer
 var _eleccion: PanelContainer
-var _abierto_en := 0
+var _salida: PanelContainer
 
 
 func _ready() -> void:
-	_abierto_en = Time.get_ticks_msec()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fondo = FondoMazmorra.new()
 	add_child(_fondo)
@@ -48,6 +47,7 @@ func _ready() -> void:
 	_agregar_boton("Demo de combate", _al_pulsar_demo, Color("#42a5f5"))
 
 	_crear_eleccion(area)
+	_crear_salida(area)
 	get_viewport().size_changed.connect(_reubicar)
 	_reubicar()
 	UIReino.bloquear_toques(self)
@@ -87,6 +87,31 @@ func _crear_eleccion(area: Control) -> void:
 	columna.add_child(cancelar)
 
 
+## Ventana para confirmar que se quiere cerrar el juego.
+func _crear_salida(area: Control) -> void:
+	_salida = UIReino.panel()
+	_salida.position = Vector2(390, 250)
+	_salida.custom_minimum_size = Vector2(500, 0)
+	_salida.visible = false
+	area.add_child(_salida)
+	var columna := VBoxContainer.new()
+	columna.add_theme_constant_override("separation", 14)
+	_salida.add_child(columna)
+	var pregunta := UIReino.etiqueta("¿Salir del juego?", 26, UIReino.COLOR_TITULO)
+	pregunta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	columna.add_child(pregunta)
+	var aviso := UIReino.parrafo("Tu partida está guardada.", 460, 18)
+	aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	aviso.visible = Juego.en_curso
+	columna.add_child(aviso)
+	var fila := HBoxContainer.new()
+	fila.alignment = BoxContainer.ALIGNMENT_CENTER
+	fila.add_theme_constant_override("separation", 14)
+	columna.add_child(fila)
+	fila.add_child(UIReino.boton("Seguir jugando", _al_cancelar, Vector2(220, 72), 22))
+	fila.add_child(UIReino.boton("Salir", _al_salir, Vector2(200, 72), 24))
+
+
 func _reubicar() -> void:
 	var tamano := get_viewport_rect().size
 	var suelo := (tamano.y - 720.0) / 2.0 + 620.0
@@ -97,14 +122,32 @@ func _reubicar() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
-		if _eleccion.visible:
+		if _eleccion.visible or _salida.visible:
 			_al_cancelar()
-		elif Time.get_ticks_msec() - _abierto_en >= ESPERA_SALIR_MS:
-			get_tree().quit()
+		else:
+			_botones.visible = false
+			_salida.visible = true
+			UIReino.bloquear_toques(self, 0.35)
 
 
+func _al_salir() -> void:
+	if Juego.en_curso:
+		Juego.guardar()
+	get_tree().quit()
+
+
+## Sigue donde quedó la partida: en un combate (empieza de nuevo), en una
+## mazmorra, en una zona o en el reino.
 func _al_continuar() -> void:
-	get_tree().change_scene_to_file.call_deferred(ESCENA_REINO)
+	Partida.en_demo = false
+	var escena := ESCENA_REINO
+	if not Juego.combate.is_empty():
+		escena = ESCENA_COMBATE if Juego.combate.get("resultado", "") == "" else String(Juego.combate["escena"])
+	elif not Juego.mazmorra.is_empty():
+		escena = ESCENA_MAZMORRA
+	elif not Juego.expedicion.is_empty():
+		escena = ESCENA_EXPEDICION
+	get_tree().change_scene_to_file.call_deferred(escena)
 
 
 func _al_pulsar_nueva() -> void:
@@ -115,12 +158,15 @@ func _al_pulsar_nueva() -> void:
 
 func _al_cancelar() -> void:
 	_eleccion.visible = false
+	_salida.visible = false
 	_botones.visible = true
 	UIReino.bloquear_toques(self, 0.35)
 
 
 func _al_elegir_mano(diestro: bool) -> void:
+	Partida.en_demo = false
 	Juego.nueva_partida(diestro)
+	Juego.guardar()
 	get_tree().change_scene_to_file.call_deferred(ESCENA_REINO)
 
 

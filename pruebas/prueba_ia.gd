@@ -83,3 +83,61 @@ func prueba_con_la_guardia_abierta_sigue_su_personalidad() -> void:
 	var lancero := DatosRivales.crear_rival("lancero")
 	verificar(_veces(orco, rey, ["craneo"], rng) > 600, "El orco (bruto) va a tu cráneo")
 	verificar(_veces(lancero, rey, ["cuello", "ojo_der", "ojo_izq"], rng) > 600, "El lancero (preciso) va a tu cuello y ojos")
+
+
+func prueba_con_poca_vida_se_defiende_mas() -> void:
+	var rng := rng_fijo(40)
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var orco := DatosRivales.crear_rival("orco")
+	var defensas := 0
+	for i in 1000:
+		if IAEnemigo.decidir(orco, rey, rng)["accion"] == "defender":
+			defensas += 1
+	verificar_igual(defensas, 0, "Sano no se defiende")
+	orco.vida = orco.vida_max / 2
+	defensas = 0
+	for i in 1000:
+		if IAEnemigo.decidir(orco, rey, rng)["accion"] == "defender":
+			defensas += 1
+	verificar(defensas > 200 and defensas < 300, "Con la mitad de vida, 1 de cada 4 (%d de 1000)" % defensas)
+
+
+func prueba_los_chamanes_lanzan_hechizos() -> void:
+	var rng := rng_fijo(41)
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var chaman := DatosRivales.crear_rival("chaman_orco")
+	verificar(chaman.usa_mana and chaman.hechizos.has("llamarada"), "El chamán orco sabe magia")
+	verificar(chaman.poder_magico > DatosRivales.crear_rival("chaman_goblin").poder_magico, "Más fuerte que el goblin")
+	var llamaradas := 0
+	for i in 400:
+		var decision := IAEnemigo.decidir(chaman, rey, rng)
+		if decision["accion"] == "hechizo" and decision["hechizo"] == "llamarada":
+			llamaradas += 1
+			verificar(DatosCuerpo.PARTES.has(decision["parte"]), "Apunta a una parte")
+	verificar(llamaradas > 60, "A veces lanza una llamarada (%d de 400)" % llamaradas)
+	verificar(chaman.hechizo.is_empty(), "Elegir no lo deja con el hechizo puesto")
+	# Con poca vida se cura.
+	chaman.vida = 10
+	var curas := 0
+	for i in 400:
+		var decision := IAEnemigo.decidir(chaman, rey, rng)
+		if decision["accion"] == "hechizo" and decision["hechizo"] == "curacion":
+			curas += 1
+	verificar(curas > 120, "Herido, se cura (%d de 400)" % curas)
+	var mana := chaman.mana
+	var efecto := MotorCombate.lanzar_hechizo(chaman, "curacion")
+	verificar(int(efecto["cura"]) > 0 and chaman.vida > 10, "La curación le devuelve vida")
+	verificar_cerca(chaman.mana, mana - float(DatosHechizos.hechizo("curacion")["coste"]), "Y gasta maná")
+	# La llamarada de un enemigo pega según su poder mágico.
+	var resultado := MotorCombate.lanzar_hechizo_a(chaman, rey, "llamarada", "abdomen", rng, 1)
+	verificar_igual(resultado["arma"], "llamarada", "Se resuelve como la llamarada")
+	verificar(chaman.hechizo.is_empty(), "Después vuelve a su bastón")
+	verificar(int(DatosHechizos.como_arma("llamarada", chaman)["danio_max"]) > int(DatosHechizos.como_arma("llamarada")["danio_max"]),
+		"Su llamarada pega más que la base")
+	# Sin maná ya no lanza nada.
+	chaman.mana = 0.0
+	for i in 200:
+		verificar(IAEnemigo.decidir(chaman, rey, rng)["accion"] != "hechizo", "Sin maná no hay hechizos")
+	var bandido := DatosRivales.crear_rival("bandido")
+	for i in 200:
+		verificar(IAEnemigo.decidir(bandido, rey, rng)["accion"] != "hechizo", "Quien no sabe magia nunca la lanza")

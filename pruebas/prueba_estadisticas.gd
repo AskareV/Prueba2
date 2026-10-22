@@ -34,24 +34,25 @@ func prueba_un_punto_principal_sube_sus_tres_subs() -> void:
 	juego.free()
 
 
-func prueba_cada_punto_principal_da_7_solo_para_sus_partes() -> void:
+func prueba_cada_punto_principal_da_3_solo_para_sus_partes() -> void:
 	var juego := _juego_nuevo()
+	verificar_igual(DatosEstadisticas.PUNTOS_SUB_POR_PRINCIPAL, 3, "Cada punto principal da 3 para sus partes")
 	verificar(juego.aplicar_puntos({"fuerza": 3}, {}), "3 puntos en Fuerza")
-	verificar_igual(juego.puntos_sub_de("fuerza"), 21, "3 puntos en Fuerza dan 21 para sus partes")
+	verificar_igual(juego.puntos_sub_de("fuerza"), 9, "3 puntos en Fuerza dan 9 para sus partes")
 	verificar_igual(juego.puntos_sub_de("destreza"), 0, "Las demás no reciben puntos")
 	verificar(not juego.aplicar_puntos({}, {"velocidad": 1}), "Los puntos de Fuerza no sirven para Destreza")
-	verificar(not juego.aplicar_puntos({}, {"fuerza_maxima": 22}), "No más de los 21")
-	verificar(juego.aplicar_puntos({}, {"fuerza_maxima": 15, "fuerza_agarre": 6}), "Los 21 en las partes de Fuerza")
-	verificar_cerca(juego.valor_sub("fuerza_maxima"), 21.0, "3 + 3 por Fuerza + 15")
+	verificar(not juego.aplicar_puntos({}, {"fuerza_maxima": 10}), "No más de los 9")
+	verificar(juego.aplicar_puntos({}, {"fuerza_maxima": 6, "fuerza_agarre": 3}), "Los 9 en las partes de Fuerza")
+	verificar_cerca(juego.valor_sub("fuerza_maxima"), 12.0, "3 + 3 por Fuerza + 6")
 	verificar_cerca(juego.valor_sub("fuerza_explosiva"), 6.0, "Sin puntos propios, solo los de Fuerza")
 	verificar_igual(juego.puntos_sub_de("fuerza"), 0, "Ya no quedan")
 	verificar(not juego.aplicar_puntos({}, {"fuerza_maxima": 1}), "Sin puntos no se puede")
 	# El punto principal y sus partes se pueden repartir de una vez.
-	verificar(juego.aplicar_puntos({"destreza": 1, "inteligencia": 1}, {"velocidad": 5, "arcano": 7}), "Principal y partes juntos")
-	verificar_cerca(juego.valor_sub("velocidad"), 9.0, "3 + 1 por Destreza + 5")
-	verificar_igual(juego.puntos_sub_de("destreza"), 2, "Sobran 2 para Destreza")
-	verificar_igual(juego.total_puntos_sub(), 2, "En total quedan 2")
-	verificar(not juego.aplicar_puntos({"carisma": 1}, {"presencia": 8}), "Un punto da 7, no 8")
+	verificar(juego.aplicar_puntos({"destreza": 1, "inteligencia": 1}, {"velocidad": 2, "arcano": 3}), "Principal y partes juntos")
+	verificar_cerca(juego.valor_sub("velocidad"), 6.0, "3 + 1 por Destreza + 2")
+	verificar_igual(juego.puntos_sub_de("destreza"), 1, "Sobra 1 para Destreza")
+	verificar_igual(juego.total_puntos_sub(), 1, "En total queda 1")
+	verificar(not juego.aplicar_puntos({"carisma": 1}, {"presencia": 4}), "Un punto da 3, no 4")
 	verificar_igual(juego.puntos_principales, 10, "Lo rechazado no gasta el punto principal")
 	verificar_igual(juego.puntos_sub_de("carisma"), 0, "Ni da sus puntos")
 	juego.free()
@@ -62,10 +63,14 @@ func prueba_amuleto_suma_a_las_demas() -> void:
 	juego.puntos_sub = {"suerte": 10}
 	verificar(juego.aplicar_puntos({}, {"amuleto": 10}), "10 puntos en Amuleto")
 	verificar_cerca(juego.valor_sub("amuleto"), 13.0, "Amuleto en 13")
-	verificar_cerca(juego.valor_sub("velocidad"), 4.0, "10 puntos de Amuleto suman 1 a las demás")
-	verificar_cerca(juego.valor_sub("golpe_suerte"), 4.0, "También a las de Suerte")
+	var suma := 10 * DatosEstadisticas.AMULETO_POR_PUNTO
+	verificar_cerca(juego.valor_sub("velocidad"), 3.0 + suma, "10 puntos de Amuleto suman a las demás")
+	verificar_cerca(juego.valor_sub("golpe_suerte"), 3.0 + suma, "También a las de Suerte")
 	var pendiente := juego.valor_sub("velocidad", {}, {"amuleto": 5})
-	verificar_cerca(pendiente, 4.5, "Los puntos sin confirmar se ven antes de aplicarlos")
+	verificar_cerca(pendiente, 3.0 + 15 * DatosEstadisticas.AMULETO_POR_PUNTO, "Los puntos sin confirmar se ven antes de aplicarlos")
+	juego.extra["amuleto"] = 100
+	verificar_cerca(juego.valor_sub("velocidad"), 3.0 + DatosEstadisticas.TOPE_PUNTOS * DatosEstadisticas.AMULETO_POR_PUNTO,
+		"Amuleto también tiene tope")
 	juego.free()
 
 
@@ -99,7 +104,7 @@ func prueba_el_rey_toma_sus_caracteristicas() -> void:
 	verificar(juego.aplicar_puntos({}, {"vitalidad": 4, "velocidad": 3, "mago": 2, "golpe_suerte": 3}), "Puntos aplicados")
 	var rey := juego.crear_rey()
 	verificar_igual(rey.vida_max, 120, "Vitalidad sube la vida")
-	verificar_cerca(rey.rapidez, 14.5, "Velocidad sube la rapidez (0,5 por punto)")
+	verificar_cerca(rey.rapidez, 13.0 + 3 * DatosEstadisticas.RAPIDEZ_POR_VELOCIDAD, "Velocidad sube la rapidez")
 	verificar(rey.mana_max > base.mana_max and rey.regeneracion_mana() > base.regeneracion_mana(), "Mago: más maná")
 	verificar(rey.prob_critico() > 0.0, "Golpe de suerte da críticos")
 	juego.free()
@@ -212,7 +217,7 @@ func prueba_precision_reflejos_y_fuerza() -> void:
 	for parte_id in ["craneo", "abdomen", "mano_der"]:
 		var normal := MotorCombate.prob_acierto(rey, rival, parte_id)
 		var mejor := MotorCombate.prob_acierto(habil, rival, parte_id)
-		verificar_cerca(mejor - normal, 0.05, "Precisión suma un poco en %s" % parte_id, 0.0001)
+		verificar_cerca(mejor - normal, 5 * DatosEstadisticas.ACIERTO_POR_PRECISION, "Precisión suma un poco en %s" % parte_id, 0.0001)
 	verificar(MotorCombate.prob_acierto(rival, habil, "abdomen") < MotorCombate.prob_acierto(rival, rey, "abdomen"),
 		"Reflejos: le cuesta más acertarte")
 	verificar(MotorCombate.multiplicador_golpe(habil, rival, "abdomen") > MotorCombate.multiplicador_golpe(rey, rival, "abdomen"),
@@ -245,7 +250,9 @@ func prueba_criticos_solo_con_suerte() -> void:
 		if resultado["critico"]:
 			criticos += 1
 			verificar(resultado["acierto"], "Un crítico siempre acierta")
-	verificar(criticos > 50, "Con mucha suerte salen críticos (%d)" % criticos)
+	verificar(criticos > 20, "Con mucha suerte salen críticos (%d)" % criticos)
+	verificar_cerca(con_suerte.prob_critico(), DatosEstadisticas.CRITICO_POR_SUERTE * DatosEstadisticas.TOPE_PUNTOS,
+		"Pero con tope: 60 puntos valen como 20")
 	var sin_suerte := DatosRivales.crear_rey(true, "espada")
 	for i in 100:
 		var rival := DatosRivales.crear_rival("orco")
@@ -284,8 +291,13 @@ func prueba_baston_gasta_mana() -> void:
 	verificar_cerca(rey.mana, 1.0, "Sin maná no gasta")
 	rey.regenerar_mana()
 	verificar(rey.mana > 1.0, "Recupera maná en su turno")
+	var goblin := DatosRivales.crear_rival("goblin")
+	verificar(not goblin.usa_mana, "Los enemigos sin magia no usan maná")
 	var chaman := DatosRivales.crear_rival("chaman_goblin")
-	verificar(not chaman.usa_mana and chaman.datos_arma()["tipo"] == "arcano", "Los enemigos no gastan maná")
+	verificar(chaman.usa_mana and chaman.datos_arma()["tipo"] == "arcano", "Los chamanes usan maná")
+	var mana_chaman := chaman.mana
+	MotorCombate.resolver_ataque(chaman, DatosRivales.crear_rey(true, "espada"), "abdomen", rng, 1)
+	verificar_cerca(chaman.mana, mana_chaman - DatosHechizos.COSTE_BASTON, "Su bastón también gasta maná")
 
 
 func prueba_hechizos() -> void:
@@ -306,3 +318,21 @@ func prueba_hechizos() -> void:
 	verificar(DatosArmas.es_magico(rey.datos_arma()["tipo"]), "Se lanza aunque esté desarmado")
 	var resultado := MotorCombate.resolver_ataque(rey, rival, "abdomen", rng_fijo(1), 1)
 	verificar_igual(resultado["arma"], "llamarada", "El golpe se narra como el hechizo")
+
+
+func prueba_ninguna_parte_mejora_mas_alla_del_tope() -> void:
+	var tope := DatosEstadisticas.BASE + DatosEstadisticas.TOPE_PUNTOS
+	var en_el_tope := DatosRivales.crear_rey(true, "espada", {"fuerza_maxima": tope, "vitalidad": tope, "velocidad": tope})
+	var pasado := DatosRivales.crear_rey(true, "espada", {"fuerza_maxima": tope + 40, "vitalidad": tope + 40, "velocidad": tope + 40})
+	var rival := DatosRivales.crear_rival("bandido")
+	verificar_cerca(pasado.puntos("fuerza_maxima"), DatosEstadisticas.TOPE_PUNTOS, "Los puntos útiles llegan al tope")
+	verificar_cerca(MotorCombate.multiplicador_golpe(pasado, rival, "abdomen"), MotorCombate.multiplicador_golpe(en_el_tope, rival, "abdomen"),
+		"Fuerza máxima no crece más allá del tope")
+	verificar_igual(pasado.vida_max, en_el_tope.vida_max, "Vitalidad tampoco")
+	verificar_cerca(pasado.rapidez, en_el_tope.rapidez, "Ni Velocidad")
+	var juego := _juego_nuevo()
+	juego.extra["buen_ojo"] = 100
+	verificar_cerca(juego.puntos_de("buen_ojo"), DatosEstadisticas.TOPE_PUNTOS, "En el reino también")
+	verificar_cerca(juego.prob_botin_enemigo(), minf(DatosAventura.PROB_BOTIN_ENEMIGO
+		* (1.0 + DatosEstadisticas.OBJETOS_POR_BUEN_OJO * DatosEstadisticas.TOPE_PUNTOS), 1.0), "Buen ojo: más objetos, con tope")
+	juego.free()

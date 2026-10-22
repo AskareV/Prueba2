@@ -1,12 +1,20 @@
 class_name EstadoReino
 extends Node
 ## Estado de la partida del reino (autoload "Juego"): semana, oro, estrés,
-## inventario, equipo, la ciudad y lo que está en curso (mazmorra, zona o combate).
-## Por ahora el juego no tiene fin: las semanas siguen sin límite.
-## Todavía no se guarda en disco: al cerrar la aplicación se pierde.
+## inventario, equipo, la salud del rey, la ciudad y lo que está en curso
+## (mazmorra, zona o combate). Por ahora el juego no tiene fin: las semanas
+## siguen sin límite. La partida del autoload se guarda sola en ARCHIVO cada vez
+## que algo cambia (lo mira cada segundo) y al salir o pasar la aplicación a
+## segundo plano; al abrir el juego se carga.
 
 ## Estrés que baja al descansar una semana en el castillo (provisional).
 const ESTRES_DESCANSO := 40.0
+## Archivo de la partida guardada. Si cambia el formato, sube la versión y las
+## partidas viejas se ignoran.
+const ARCHIVO := "user://partida.save"
+const VERSION_GUARDADO := 1
+## Cada cuántos segundos se mira si hay algo nuevo que guardar.
+const INTERVALO_GUARDADO := 1.0
 
 var en_curso := false
 var semana := 1
@@ -30,6 +38,8 @@ var aviso := ""
 ## Pestaña que abre la pantalla del reino al volver (ej. "aventura").
 var pestana := "rey"
 var rng := RandomNumberGenerator.new()
+## Semilla propia de la partida: cada partida tiene sus propias mazmorras.
+var semilla := 0
 var _siguiente_id := 1
 
 ## Nivel y experiencia (ver DatosEstadisticas.xp_para_subir).
@@ -54,6 +64,40 @@ var peligro := 0.0
 var mercado: Array[Dictionary] = []
 var informe_ciudad: Dictionary = {}
 
+## Salud del rey entre combates (las heridas duran): vida y maná que le faltan,
+## integridad de las partes heridas (las que no están, sanas), fracturas y golpes
+## recibidos en las partes que siguen heridas.
+var vida_perdida := 0
+var mana_perdido := 0.0
+var integridad: Dictionary = {}
+var fracturas: Dictionary = {}
+var heridas: Array[Dictionary] = []
+
+## Solo la partida del autoload se guarda sola (las de las pruebas, no).
+var _guardado_automatico := false
+var _ultimo_guardado := ""
+var _reloj_guardado := 0.0
+
+
+func _ready() -> void:
+	_guardado_automatico = true
+	cargar()
+
+
+func _process(delta: float) -> void:
+	if not _guardado_automatico or not en_curso:
+		return
+	_reloj_guardado += delta
+	if _reloj_guardado >= INTERVALO_GUARDADO:
+		_reloj_guardado = 0.0
+		guardar()
+
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_WM_CLOSE_REQUEST, NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT]:
+		if _guardado_automatico and en_curso:
+			guardar()
+
 
 func nueva_partida(p_diestro: bool) -> void:
 	en_curso = true
@@ -71,6 +115,7 @@ func nueva_partida(p_diestro: bool) -> void:
 	pestana = "rey"
 	_siguiente_id = 1
 	rng.randomize()
+	semilla = rng.randi()
 	equipo["arma"] = _con_id(DatosBotin.crear_arma("espada", 1, "normal"))
 	nivel = 1
 	xp = 0
@@ -84,23 +129,116 @@ func nueva_partida(p_diestro: bool) -> void:
 	peligro = 0.0
 	mercado = []
 	informe_ciudad = {}
+	vida_perdida = 0
+	mana_perdido = 0.0
+	integridad = {}
+	fracturas = {}
+	heridas = []
 	aviso = "Reparte tus %d puntos iniciales en la pestaña Rey." % DatosEstadisticas.PUNTOS_INICIALES
+
+
+# --- Guardar y cargar ---
+
+## Todo lo que hace falta para seguir la partida, en un diccionario.
+func datos_guardado() -> Dictionary:
+	return {
+		"version": VERSION_GUARDADO, "semana": semana, "oro": oro, "estres": estres, "diestro": diestro,
+		"inventario": inventario, "equipo": equipo, "dominio": dominio, "mazmorra": mazmorra,
+		"expedicion": expedicion, "combate": combate, "aviso": aviso, "pestana": pestana,
+		"semilla": semilla, "siguiente_id": _siguiente_id, "rng_semilla": rng.seed, "rng_estado": rng.state,
+		"nivel": nivel, "xp": xp, "puntos_principales": puntos_principales, "puntos_sub": puntos_sub,
+		"veces": veces, "extra": extra, "edificios": edificios, "comida": comida, "soldados": soldados,
+		"peligro": peligro, "mercado": mercado, "informe_ciudad": informe_ciudad,
+		"vida_perdida": vida_perdida, "mana_perdido": mana_perdido, "integridad": integridad,
+		"fracturas": fracturas, "heridas": heridas,
+	}
+
+
+## Guarda la partida si cambió algo desde la última vez. Escribe primero en un
+## archivo aparte y después lo renombra: si la aplicación se cierra a la mitad,
+## la partida anterior sigue entera. Devuelve false si no se pudo escribir.
+func guardar(ruta := ARCHIVO) -> bool:
+	var texto := var_to_str(datos_guardado())
+	if texto == _ultimo_guardado:
+		return true
+	var temporal := ruta + ".tmp"
+	var archivo := FileAccess.open(temporal, FileAccess.WRITE)
+	if archivo == null:
+		return false
+	archivo.store_string(texto)
+	archivo.close()
+	if DirAccess.rename_absolute(temporal, ruta) != OK:
+		return false
+	_ultimo_guardado = texto
+	return true
+
+
+## Carga la partida guardada, si hay una válida. Lo que falte en el archivo queda
+## como en una partida nueva.
+func cargar(ruta := ARCHIVO) -> bool:
+	if not FileAccess.file_exists(ruta):
+		return false
+	var datos: Variant = str_to_var(FileAccess.get_file_as_string(ruta))
+	if not (datos is Dictionary) or int(datos.get("version", 0)) != VERSION_GUARDADO:
+		return false
+	nueva_partida(bool(datos.get("diestro", true)))
+	semana = int(datos.get("semana", semana))
+	oro = int(datos.get("oro", oro))
+	estres = float(datos.get("estres", estres))
+	inventario.assign(datos.get("inventario", inventario))
+	equipo = datos.get("equipo", equipo)
+	dominio = datos.get("dominio", dominio)
+	mazmorra = datos.get("mazmorra", mazmorra)
+	expedicion = datos.get("expedicion", expedicion)
+	combate = datos.get("combate", combate)
+	aviso = String(datos.get("aviso", ""))
+	pestana = String(datos.get("pestana", pestana))
+	semilla = int(datos.get("semilla", semilla))
+	_siguiente_id = int(datos.get("siguiente_id", _siguiente_id))
+	rng.seed = int(datos.get("rng_semilla", rng.seed))
+	rng.state = int(datos.get("rng_estado", rng.state))
+	nivel = int(datos.get("nivel", nivel))
+	xp = int(datos.get("xp", xp))
+	puntos_principales = int(datos.get("puntos_principales", puntos_principales))
+	puntos_sub = datos.get("puntos_sub", puntos_sub)
+	veces = datos.get("veces", veces)
+	extra = datos.get("extra", extra)
+	edificios = DatosCiudad.NIVEL_INICIAL.merged(datos.get("edificios", {}), true)
+	comida = int(datos.get("comida", comida))
+	soldados = int(datos.get("soldados", soldados))
+	peligro = float(datos.get("peligro", peligro))
+	mercado.assign(datos.get("mercado", mercado))
+	informe_ciudad = datos.get("informe_ciudad", informe_ciudad)
+	vida_perdida = int(datos.get("vida_perdida", 0))
+	mana_perdido = float(datos.get("mana_perdido", 0.0))
+	integridad = datos.get("integridad", {})
+	fracturas = datos.get("fracturas", {})
+	heridas.assign(datos.get("heridas", []))
+	_ultimo_guardado = var_to_str(datos_guardado())
+	return true
+
+
 
 
 # --- Semanas y estrés ---
 
 ## Termina la semana: la ciudad vive su semana (ver semana_ciudad), las
-## mazmorras se reinician y empieza la siguiente.
+## mazmorras se reinician, el rey recupera todo su maná y empieza la siguiente.
+## Las heridas no se curan solas: hay que descansar (o caminar, o una poción).
 func pasar_semana() -> void:
 	semana_ciudad()
 	semana += 1
 	mazmorra = {}
 	expedicion = {}
 	combate = {}
+	mana_perdido = 0.0
 
 
+## Descansa una semana en el castillo: baja el estrés y cura las heridas (más
+## con la enfermería y con Recuperación).
 func descansar() -> void:
 	sumar_estres(-ESTRES_DESCANSO)
+	curar_fraccion(cura_al_descansar())
 	pasar_semana()
 
 
@@ -117,8 +255,14 @@ func _con_id(objeto: Dictionary) -> Dictionary:
 	return objeto
 
 
-## Guarda un objeto nuevo en el inventario y lo devuelve con su id.
+## Guarda un objeto nuevo en el inventario y lo devuelve con su id. Las pociones
+## se apilan: si ya hay, suma a la cantidad y devuelve esa.
 func agregar(objeto: Dictionary) -> Dictionary:
+	if DatosBotin.es_pocion(objeto):
+		for guardado in inventario:
+			if DatosBotin.es_pocion(guardado):
+				guardado["cantidad"] = int(guardado.get("cantidad", 1)) + int(objeto.get("cantidad", 1))
+				return guardado
 	var guardado := _con_id(objeto)
 	inventario.push_front(guardado)
 	return guardado
@@ -131,13 +275,18 @@ func _indice(id: int) -> int:
 	return -1
 
 
-## Vende un objeto del inventario. Devuelve el oro ganado (0 si no estaba).
+## Vende un objeto del inventario (de las pociones, una). Devuelve el oro ganado
+## (0 si no estaba).
 func vender(id: int) -> int:
 	var i := _indice(id)
 	if i < 0:
 		return 0
-	var precio := precio_venta(inventario[i])
-	inventario.remove_at(i)
+	var objeto: Dictionary = inventario[i]
+	var precio := precio_venta(objeto)
+	if DatosBotin.es_pocion(objeto) and int(objeto.get("cantidad", 1)) > 1:
+		objeto["cantidad"] = int(objeto["cantidad"]) - 1
+	else:
+		inventario.remove_at(i)
 	oro += precio
 	return precio
 
@@ -145,7 +294,7 @@ func vender(id: int) -> int:
 ## Equipa un objeto del inventario; lo que había en esa ranura vuelve al inventario.
 func equipar(id: int) -> bool:
 	var i := _indice(id)
-	if i < 0:
+	if i < 0 or DatosBotin.es_pocion(inventario[i]):
 		return false
 	var objeto: Dictionary = inventario[i]
 	inventario.remove_at(i)
@@ -181,13 +330,121 @@ func armadura_por_zona() -> Dictionary:
 	return total
 
 
-## El rey listo para combatir, con su arma, su armadura y sus características.
+## El rey listo para combatir, con su arma, su armadura, sus características y
+## las heridas que todavía tiene (siempre con al menos 1 de vida).
 func crear_rey() -> Luchador:
 	var arma: Dictionary = equipo.get("arma", {})
 	var rey := DatosRivales.crear_rey(diestro, arma.get("base", "espada"), estadisticas())
 	rey.arma_objeto = arma
 	rey.armadura = armadura_por_zona()
+	rey.vida = clampi(rey.vida_max - vida_perdida, 1, rey.vida_max)
+	rey.mana = clampf(rey.mana_max - mana_perdido, 0.0, rey.mana_max)
+	for parte_id in integridad:
+		rey.integridad[parte_id] = float(integridad[parte_id])
+	rey.fracturas = fracturas.duplicate()
+	rey.heridas.assign(heridas.duplicate(true))
 	return rey
+
+
+# --- Salud del rey: las heridas duran entre combates ---
+
+## Guarda cómo quedó el rey al terminar un combate.
+func guardar_salud(rey: Luchador) -> void:
+	vida_perdida = rey.vida_max - rey.vida
+	mana_perdido = rey.mana_max - rey.mana
+	integridad = {}
+	for parte_id in rey.integridad:
+		if rey.integridad[parte_id] < 100.0:
+			integridad[parte_id] = rey.integridad[parte_id]
+	fracturas = {}
+	for parte_id in rey.fracturas:
+		if integridad.has(parte_id):
+			fracturas[parte_id] = true
+	heridas.assign(rey.heridas.filter(func(herida: Dictionary) -> bool: return integridad.has(herida["parte"])))
+
+
+func vida_maxima() -> int:
+	return DatosEstadisticas.VIDA_BASE + DatosEstadisticas.vida_extra(puntos_de("vitalidad"))
+
+
+## Vida que tiene ahora (al menos 1: aunque pierda un combate, lo traen vivo).
+func vida_actual() -> int:
+	return clampi(vida_maxima() - vida_perdida, 1, vida_maxima())
+
+
+## Le falta vida o tiene alguna parte herida.
+func esta_herido() -> bool:
+	return vida_perdida > 0 or not integridad.is_empty()
+
+
+## Cuánto más se cura el rey gracias a Recuperación.
+func multiplicador_curacion() -> float:
+	return DatosEstadisticas.aumento(puntos_de("recuperacion"), DatosEstadisticas.CURA_POR_RECUPERACION)
+
+
+## Cura "vida" puntos de vida y "partes" de integridad a cada parte herida. Una
+## parte que se cura del todo deja de estar fracturada y olvida sus golpes.
+func curar(vida: int, partes: float) -> void:
+	vida_perdida = maxi(vida_perdida - vida, 0)
+	for parte_id in integridad.keys():
+		var valor := float(integridad[parte_id]) + partes
+		if valor >= 100.0:
+			integridad.erase(parte_id)
+			fracturas.erase(parte_id)
+		else:
+			integridad[parte_id] = valor
+	heridas.assign(heridas.filter(func(herida: Dictionary) -> bool: return integridad.has(herida["parte"])))
+
+
+## Cura esa parte de la vida máxima (al menos 1) y esos puntos ×100 de cada
+## parte (0,05 = 5% de la vida y 5 de integridad), aumentado por Recuperación.
+func curar_fraccion(fraccion: float) -> void:
+	var mult := multiplicador_curacion()
+	curar(maxi(roundi(vida_maxima() * fraccion * mult), 1), 100.0 * fraccion * mult)
+
+
+## Al caminar el rey se va curando: cada paso de la mazmorra (y cada día de una
+## zona, que cuenta como varios pasos) cura un poco la vida, todas las partes a
+## la vez y el maná.
+func curar_al_caminar(pasos := 1.0) -> void:
+	curar_fraccion(DatosAventura.CURA_POR_PASO * pasos)
+	mana_perdido = maxf(mana_perdido - DatosAventura.MANA_POR_PASO * pasos, 0.0)
+
+
+## Parte de la vida (y de cada parte herida) que cura descansar una semana en el
+## castillo, antes de Recuperación: más con la enfermería.
+func cura_al_descansar() -> float:
+	return DatosCiudad.CURA_DESCANSO + DatosCiudad.CURA_ENFERMERIA[nivel_edificio("enfermeria")]
+
+
+func pociones() -> int:
+	var total := 0
+	for objeto in inventario:
+		if DatosBotin.es_pocion(objeto):
+			total += int(objeto.get("cantidad", 1))
+	return total
+
+
+## Saca una poción del inventario (para tomarla en combate). false si no hay.
+func gastar_pocion() -> bool:
+	for i in inventario.size():
+		var objeto: Dictionary = inventario[i]
+		if not DatosBotin.es_pocion(objeto):
+			continue
+		if int(objeto.get("cantidad", 1)) > 1:
+			objeto["cantidad"] = int(objeto["cantidad"]) - 1
+		else:
+			inventario.remove_at(i)
+		return true
+	return false
+
+
+## Toma una poción fuera del combate. false si no hay o si el rey está sano.
+func usar_pocion() -> bool:
+	if not esta_herido() or not gastar_pocion():
+		return false
+	curar(DatosBotin.POCION_VIDA, DatosBotin.POCION_PARTES)
+	return true
 
 
 # --- Características, experiencia y niveles ---
@@ -206,13 +463,14 @@ func valor_sub(sub_id: String, pendientes_principal := {}, pendientes_sub := {})
 	valor += int(extra.get(sub_id, 0)) + int(pendientes_sub.get(sub_id, 0))
 	if sub_id != "amuleto":
 		var amuleto := valor_sub("amuleto", pendientes_principal, pendientes_sub)
-		valor += DatosEstadisticas.AMULETO_POR_PUNTO * maxf(amuleto - DatosEstadisticas.BASE, 0.0)
+		valor += DatosEstadisticas.AMULETO_POR_PUNTO * DatosEstadisticas.puntos_utiles(amuleto)
 	return valor
 
 
-## Puntos de una sub por encima de la base (de esto dependen los efectos).
+## Puntos de una sub por encima de la base, como mucho el tope (de esto dependen
+## los efectos).
 func puntos_de(sub_id: String) -> float:
-	return maxf(valor_sub(sub_id) - DatosEstadisticas.BASE, 0.0)
+	return DatosEstadisticas.puntos_utiles(valor_sub(sub_id))
 
 
 ## Todas las subs con su valor, para el combate.
@@ -301,7 +559,8 @@ func texto_xp(resultado_xp: Dictionary) -> String:
 
 # --- Efectos de las características fuera del combate ---
 
-## Estrés de un paso en la mazmorra (Cardio lo baja).
+## Estrés de caminar: un paso en la mazmorra o un día de marcha en una zona
+## (Cardio lo baja).
 func estres_de_paso(base: float) -> float:
 	return base * DatosEstadisticas.reduccion(puntos_de("cardio"), DatosEstadisticas.PASO_POR_CARDIO)
 
@@ -316,16 +575,20 @@ func oro_hallado(base: int) -> int:
 	return roundi(base * DatosEstadisticas.aumento(puntos_de("buen_ojo"), DatosEstadisticas.ORO_POR_BUEN_OJO))
 
 
+## Probabilidad de que un enemigo vencido suelte un objeto (Buen ojo la sube).
+func prob_botin_enemigo() -> float:
+	return minf(DatosAventura.PROB_BOTIN_ENEMIGO * DatosEstadisticas.aumento(puntos_de("buen_ojo"),
+		DatosEstadisticas.OBJETOS_POR_BUEN_OJO), 1.0)
+
+
 ## Multiplicador de las calidades raras o mejores del botín (Buen ojo).
 func bonus_calidad() -> float:
 	return DatosEstadisticas.aumento(puntos_de("buen_ojo"), DatosEstadisticas.CALIDAD_POR_BUEN_OJO)
 
 
-## Lo que pagan por un objeto (Negociación lo sube, hasta VENTA_MAXIMA_NEGOCIACION).
+## Lo que pagan por un objeto (Negociación lo sube).
 func precio_venta(objeto: Dictionary) -> int:
-	var aumento := minf(DatosEstadisticas.aumento(puntos_de("negociacion"), DatosEstadisticas.VENTA_POR_NEGOCIACION),
-		DatosEstadisticas.VENTA_MAXIMA_NEGOCIACION)
-	return roundi(int(objeto["precio"]) * aumento)
+	return roundi(int(objeto["precio"]) * DatosEstadisticas.aumento(puntos_de("negociacion"), DatosEstadisticas.VENTA_POR_NEGOCIACION))
 
 
 ## Multiplicador del pago de los trabajos (Presencia).
@@ -336,30 +599,33 @@ func multiplicador_pago() -> float:
 # --- Botín ---
 
 ## Recompensa por vencer a un enemigo en un lugar de ese nivel: oro, experiencia
-## y, a veces, un objeto (ya guardado). El objeto es del nivel del lugar; el oro,
-## el del enemigo (o según el nivel del lugar si no tiene). Buen ojo mejora el
-## oro y la calidad. Devuelve {"oro", "objeto" (o vacío), "xp", "niveles"}.
+## y, a veces, un objeto (ya guardado). El objeto es del nivel del lugar, y el
+## oro del enemigo se ajusta a ese nivel (un matón, de nivel 2, da más en un
+## lugar de nivel 3). Buen ojo mejora el oro, la calidad y lo seguido que sueltan
+## objetos. Devuelve {"oro", "objeto" (o vacío), "xp", "niveles"}.
 func recompensa_enemigo(enemigo_id: String, nivel_lugar: int) -> Dictionary:
 	var datos := DatosRivales.rival(enemigo_id)
-	var rango: Array = datos.get("oro", [3 * nivel_lugar, 8 * nivel_lugar])
-	var ganado := oro_hallado(rng.randi_range(rango[0], rango[1]))
+	var rango: Array = datos.get("oro", [3, 8])
+	var escala := float(nivel_lugar) / float(datos.get("nivel", 1))
+	var ganado := oro_hallado(roundi(rng.randi_range(rango[0], rango[1]) * escala))
 	oro += ganado
 	var objeto := {}
-	if rng.randf() < DatosAventura.PROB_BOTIN_ENEMIGO:
-		objeto = agregar(DatosBotin.generar(nivel_lugar, rng, "", "", bonus_calidad()))
+	if rng.randf() < prob_botin_enemigo():
+		objeto = agregar(DatosBotin.generar_botin(nivel_lugar, rng, bonus_calidad()))
 	var resultado := ganar_xp(DatosAventura.XP_POR_VICTORIA * nivel_lugar)
 	resultado["oro"] = ganado
 	resultado["objeto"] = objeto
 	return resultado
 
 
-## Un cofre siempre trae un objeto, algo de oro y un poco de experiencia.
+## Un cofre siempre trae un objeto (a veces una poción), algo de oro y un poco
+## de experiencia.
 func abrir_cofre(nivel_lugar: int) -> Dictionary:
 	var ganado := oro_hallado(rng.randi_range(5, 15) * nivel_lugar)
 	oro += ganado
 	var resultado := ganar_xp(DatosAventura.XP_POR_COFRE * nivel_lugar)
 	resultado["oro"] = ganado
-	resultado["objeto"] = agregar(DatosBotin.generar(nivel_lugar, rng, "", "", bonus_calidad()))
+	resultado["objeto"] = agregar(DatosBotin.generar_botin(nivel_lugar, rng, bonus_calidad()))
 	return resultado
 
 
@@ -589,30 +855,40 @@ static func _cantidad(n: int, singular: String, plural: String) -> String:
 	return "%d %s" % [n, singular if n == 1 else plural]
 
 
+## Lo que vende el mercado esta semana: objetos al azar y unas pociones.
 func _renovar_mercado() -> void:
 	mercado = []
 	var nivel_mercado := nivel_edificio("mercado")
 	for i in DatosCiudad.OBJETOS_MERCADO[nivel_mercado]:
 		mercado.append(DatosBotin.generar(nivel_mercado, rng))
+	var pociones_venta: int = DatosCiudad.POCIONES_MERCADO[nivel_mercado]
+	if pociones_venta > 0:
+		mercado.append(DatosBotin.crear_pocion(pociones_venta))
 
 
-## Lo que cuesta comprar un objeto en el mercado (Negociación lo baja hasta la
-## mitad; por seguridad, nunca queda por debajo de lo que te pagarían al venderlo).
+## Lo que cuesta comprar un objeto en el mercado (Negociación lo baja; por
+## seguridad, nunca queda por debajo de lo que te pagarían al venderlo).
 func precio_compra(objeto: Dictionary) -> int:
-	var rebaja := maxf(1.0 - DatosEstadisticas.COMPRA_POR_NEGOCIACION * puntos_de("negociacion"), DatosCiudad.PRECIO_MINIMO)
+	var rebaja := DatosEstadisticas.reduccion(puntos_de("negociacion"), DatosEstadisticas.COMPRA_POR_NEGOCIACION)
 	return maxi(roundi(int(objeto["precio"]) * DatosCiudad.MARGEN_MERCADO * rebaja), precio_venta(objeto) + 1)
 
 
-## Compra el objeto "indice" del mercado y lo guarda en el inventario.
+## Compra el objeto "indice" del mercado (de las pociones, una) y lo guarda en
+## el inventario.
 func comprar(indice: int) -> bool:
 	if indice < 0 or indice >= mercado.size():
 		return false
-	var precio := precio_compra(mercado[indice])
+	var objeto: Dictionary = mercado[indice]
+	var precio := precio_compra(objeto)
 	if oro < precio:
 		return false
 	oro -= precio
-	agregar(mercado[indice])
-	mercado.remove_at(indice)
+	if DatosBotin.es_pocion(objeto) and int(objeto.get("cantidad", 1)) > 1:
+		objeto["cantidad"] = int(objeto["cantidad"]) - 1
+		agregar(DatosBotin.crear_pocion())
+	else:
+		agregar(objeto)
+		mercado.remove_at(indice)
 	return true
 
 
