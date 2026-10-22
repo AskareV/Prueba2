@@ -199,7 +199,8 @@ y después se va a la cabeza o el torso.
     camino).
 - Así atacar los brazos tiene sentido aunque quiten poca vida: abren la defensa y
   debilitan al rival.
-- Los combates duran unos **21 a 26 turnos** (antes, unos 11).
+- Los combates duran unos **23 a 29 turnos** de media, según cómo se ataque
+  (antes de estos cambios, unos 11).
 
 ### 6.3 Efectos provisionales de las funciones (B.2)
 
@@ -243,20 +244,22 @@ pueden hacerte retroceder un tercio de turno (orco y matón 10%, orco guerrero
 
 ### 6.5 Equilibrio (simulado)
 
-Victorias del rey (sin características) en miles de combates simulados con la
-barra de turnos, promedio de las tres armas, según cómo elige a qué atacar:
+Victorias del rey (sin características) en 600 combates simulados por casilla
+y arma, promedio de las tres armas, según cómo elige a qué atacar. Medido de
+nuevo con las reglas actuales (los rivales se defienden con la mitad de vida y
+el orco empuja):
 
 | Cómo ataca el rey | Bandido | Lancero | Orco |
 |---|---|---|---|
-| Inutiliza el brazo del arma y luego va al cuerpo | 96% | 90% | 72% |
-| Inutiliza los dos brazos y luego va al cuerpo | 93% | 83% | 73% |
-| La parte del torso que más daña | 78% | 50% | 34% |
-| Primero las piernas | 68% | 47% | 35% |
-| Como la IA de los rivales | 72% | 46% | 27% |
-| Siempre al abdomen | 62% | 34% | 21% |
-| Siempre al cuello | 41% | 25% | 14% |
-| Siempre al cráneo | 35% | 21% | 20% |
-| Partes al azar | 18% | 6% | 2% |
+| Inutiliza el brazo del arma y luego va al cuerpo | 96% | 89% | 72% |
+| Inutiliza los dos brazos y luego va al cuerpo | 92% | 76% | 66% |
+| La parte del torso que más daña | 83% | 62% | 45% |
+| Como la IA de los rivales | 78% | 54% | 35% |
+| Primero las piernas | 66% | 43% | 27% |
+| Siempre al abdomen | 60% | 29% | 13% |
+| Siempre al cuello | 59% | 41% | 28% |
+| Siempre al cráneo | 38% | 24% | 21% |
+| Partes al azar | 20% | 6% | 2% |
 
 - Inutilizar primero el brazo del arma rinde mucho más que ir directo al
   abdomen, y contra cada rival atacar siempre la misma parte rinde menos que
@@ -595,22 +598,46 @@ Por ahora el rey sabe los tres desde el principio.
 
 ### 8.5 Equilibrio con características (simulado)
 
-Victorias del rey con espada y la barra de turnos, según cómo repartió sus 15
-puntos iniciales (los 7 puntos de partes de cada uno, por igual entre sus 3
-partes). "Parejo": 3 en Fuerza y 2 en cada una de las demás. "Guerrero": 5 en
-Fuerza, Destreza y Aguante.
+Medido con las reglas actuales (3 puntos de partes por punto principal y tope
+de +20). Los puntos principales (los 15 del principio y uno por nivel) se reparten
+en las mismas proporciones, y los de partes por igual entre sus 3 partes.
+"Parejo": 3 en Fuerza y 2 en cada una de las demás. "Guerrero": 5 en Fuerza,
+Destreza y Aguante. "Todo fuerza": los 15 en Fuerza. El rey pelea como la IA
+de los rivales, con espada y armadura de metal.
 
-| Reparto | Ladrón (equipo inicial) | Orco cazador (nivel 2) | Caballero negro (nivel 3 épico) | Verdugo (nivel 3 épico) | Verdugo (equipo inicial) |
+**Un combate, empezando sano** (150 combates por casilla):
+
+| Rey | Reparto | Ladrón | Orco guerrero | Cultista | Caballero negro | Verdugo |
+|---|---|---|---|---|---|---|
+| Nivel 1, sin armadura | Sin puntos | 83% | 2% | 15% | 0% | 0% |
+| | Parejo | 100% | 74% | 76% | 17% | 32% |
+| | Guerrero | 100% | 97% | 99% | 63% | 91% |
+| | Todo fuerza | 99% | 54% | 68% | 17% | 35% |
+| Nivel 5, equipo nivel 2 raro | Sin puntos | 100% | 39% | 53% | 7% | 20% |
+| | Parejo | 100% | 99% | 99% | 95% | 97% |
+| Nivel 10, equipo nivel 3 raro | Sin puntos | 99% | 69% | 72% | 25% | 53% |
+| | Parejo | 100% | 100% | 100% | 99% | 100% |
+
+**Una mazmorra entera**, con las heridas que duran de un combate al siguiente y
+6 pasos de cura entre combates (100 intentos; % de veces que vence a todos):
+
+| Rey | Reparto | Madriguera goblin | Guarida de bandidos | Fortaleza orca | Ciudadela maldita |
 |---|---|---|---|---|---|
-| Sin puntos | 80% | 22% | 22% (69% con táctica) | 57% | 0% (9% con táctica) |
-| Parejo | 100% | 100% | 99% (100% con táctica) | 100% | 97% |
-| Guerrero | 100% | 100% | 100% | 100% | 100% |
+| Nivel 1, sin armadura | Sin puntos | 16% | 0% | 0% | 0% |
+| | Parejo | 99% | 14% | 0% | 0% |
+| | Guerrero | 100% | 50% | 0% | 0% |
+| Nivel 5, equipo nivel 2 raro | Parejo | 100% | 99% | 3% | 0% |
+| | Guerrero | 100% | 99% | 57% | 10% |
+| Nivel 10, equipo nivel 3 raro | Parejo | 100% | 100% | 79% | 10% |
+| | Guerrero | 100% | 100% | 98% | 89% |
 
-Sin táctica, salvo donde se indica. **Ojo:** con los 15 puntos y sus 105
-puntos de partes el rey gana casi todo, incluso al verdugo con el equipo
-inicial. Cada nivel suma otro punto (+1 en 3 partes y 7 puntos más) y los
-enemigos no suben. Hay que decidir si los enemigos crecen (con las semanas o
-con el nivel del rey) o si cada punto vale menos.
+- Antes de estos cambios, con los 15 puntos el rey "parejo" ganaba el 97% al
+  verdugo con el equipo inicial; ahora, el 32%.
+- Poner los 15 puntos en Fuerza rinde mucho menos que repartirlos entre Fuerza,
+  Destreza y Aguante: con el tope, los puntos de más no sirven.
+- Las heridas que duran hacen que la dificultad real sea la mazmorra entera,
+  no un combate suelto: al empezar, solo la madriguera goblin se puede limpiar.
+- Los enemigos todavía no se hacen más fuertes con las semanas.
 
 ## 9. Pendientes
 
