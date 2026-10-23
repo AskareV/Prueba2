@@ -347,7 +347,7 @@ func _actualizar(inmediato := false) -> void:
 	for hijo in _lista_objetos.get_children():
 		_lista_objetos.remove_child(hijo)
 		hijo.queue_free()
-	_lista_objetos.add_child(UIReino.lista_objetos(_al_usar_objeto, 274))
+	_lista_objetos.add_child(UIReino.lista_objetos(_al_usar_objeto, 258))
 	_salud.text = UIReino.texto_salud()
 	_tablero.actualizar(Juego.mazmorra["plano"], Juego.mazmorra["visibles"], Juego.mazmorra["pos"])
 	if _mensajes.is_empty():

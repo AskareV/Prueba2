@@ -1260,7 +1260,7 @@ func _cerrar_ventana() -> void:
 func _mostrar_estado() -> void:
 	if _estado == Estado.FIN:
 		return
-	var columna := _abrir_ventana(Vector2(1180, 640))
+	var columna := _abrir_ventana(Vector2(1180, 690))
 	_ventana_es_estado = true
 	var titulo := _etiqueta_simple("Estado de los combatientes", 30, Color("#ffe082"))
 	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1271,17 +1271,14 @@ func _mostrar_estado() -> void:
 	columna.add_child(fila)
 	fila.add_child(_columna_estado(_jugador, "Rey (tú)"))
 	fila.add_child(_columna_estado(_enemigo, _enemigo.nombre))
-	var reglas := _etiqueta_simple("Reglas provisionales: cada brazo y pierna útil cubre la cabeza y el torso "
-		+ "(cobertura); al inutilizarlo es más fácil acertarles. Brazos y piernas quitan poca vida pero se "
-		+ "inutilizan rápido; sin brazos útiles se pelea a patadas. La visión afecta la precisión; las piernas, "
-		+ "la esquiva y la huida; el brazo del arma, el daño. La mano del arma puede soltarla; el cráneo puede "
-		+ "aturdir o desmayar. Una fractura hace rendir 30% menos esa parte; sin los dos ojos se queda ciego; "
-		+ "con poca respiración se es más lento. La velocidad decide quién actúa: arriba se ven los próximos "
-		+ "turnos, y el más rápido puede actuar dos veces seguidas. Los cortes y las perforaciones sangran "
-		+ "por fuera, y los golpes contundentes en la cabeza y el torso, por dentro: en cada turno se pierde "
-		+ "la sangre de todas las heridas y baja la vida máxima; con mucha sangre perdida se acierta y se pega "
-		+ "menos, y con la mitad se muere. En el reino las heridas siguen en el próximo combate. El dolor "
-		+ "vendrá después.", 16, Estilo.TEXTO_SUAVE)
+	var reglas := _etiqueta_simple("Reglas provisionales: los brazos y las piernas útiles cubren la cabeza y el "
+		+ "torso; al inutilizarlos es más fácil acertarles. La visión afecta la precisión; las piernas, la esquiva "
+		+ "y la huida; el brazo del arma, el daño; el cráneo puede aturdir o desmayar. Una fractura hace rendir 30% "
+		+ "menos esa parte; sin los dos ojos se queda ciego; con poca respiración se es más lento. Los cortes y las "
+		+ "perforaciones sangran por fuera, y los golpes contundentes en la cabeza y el torso, por dentro: en cada "
+		+ "turno se pierde sangre y baja la vida máxima; con mucha sangre perdida se rinde menos y con la mitad se "
+		+ "muere. El más rápido puede actuar dos veces seguidas. En el reino las heridas siguen en el próximo combate.",
+		15, Estilo.TEXTO_SUAVE)
 	reglas.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	reglas.custom_minimum_size = Vector2(1100, 0)
 	columna.add_child(reglas)
@@ -1294,22 +1291,22 @@ func _mostrar_estado() -> void:
 func _fila_barra(texto: String, valor: float) -> HBoxContainer:
 	var fila := HBoxContainer.new()
 	fila.add_theme_constant_override("separation", 10)
-	var nombre := _etiqueta_simple(texto, 18, Estilo.TEXTO)
+	var nombre := _etiqueta_simple(texto, 16, Estilo.TEXTO)
 	nombre.custom_minimum_size = Vector2(140, 0)
 	fila.add_child(nombre)
 	var barra := Barra.new()
-	barra.custom_minimum_size = Vector2(250, 16)
+	barra.custom_minimum_size = Vector2(250, 14)
 	barra.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	barra.valor = valor
 	fila.add_child(barra)
-	fila.add_child(_etiqueta_simple("%d%%" % roundi(valor * 100.0), 18, Barra.color_para(valor)))
+	fila.add_child(_etiqueta_simple("%d%%" % roundi(valor * 100.0), 16, Barra.color_para(valor)))
 	return fila
 
 
 func _columna_estado(luchador: Luchador, titulo: String) -> VBoxContainer:
 	var columna := VBoxContainer.new()
 	columna.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	columna.add_theme_constant_override("separation", 5)
+	columna.add_theme_constant_override("separation", 2)
 	columna.add_child(_etiqueta_simple("%s · %d / %d de vida" % [titulo, luchador.vida, luchador.vida_max], 24, Color.WHITE))
 	for funcion_id in DatosCuerpo.FUNCIONES:
 		columna.add_child(_fila_barra(DatosCuerpo.NOMBRES_FUNCION[funcion_id], luchador.funcion(funcion_id)))
@@ -1324,7 +1321,7 @@ func _columna_estado(luchador: Luchador, titulo: String) -> VBoxContainer:
 	var lista := VBoxContainer.new()
 	lista.add_theme_constant_override("separation", 2)
 	var desplazable := ScrollContainer.new()
-	desplazable.custom_minimum_size = Vector2(0, 140)
+	desplazable.custom_minimum_size = Vector2(0, 120)
 	desplazable.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	desplazable.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	desplazable.add_child(lista)

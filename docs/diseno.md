@@ -217,15 +217,23 @@ y después se va a la cabeza o el torso.
 
 | Zona | Cómo se defiende | Acierto con espada, rival sano |
 |---|---|---|
-| Brazos | Van delante para bloquear: no esquivan | 64% (mano) a 85% |
-| Piernas | Esquivan (igual que antes) | 42% (pie) a 60% (muslo) |
-| Torso | Esquiva y lo **cubren** los brazos y las piernas | 46–48% |
-| Cabeza | Igual que el torso; además es pequeña | 16% (ojos) a 33% (cráneo) |
+| Brazos | Van delante para bloquear: no esquivan | 80% (mano) a 95% |
+| Piernas | Esquivan (igual que antes) | 51% (pie) a 78% (muslo) |
+| Torso | Esquiva y lo **cubren** los brazos y las piernas | 61–65% |
+| Cabeza | Igual que el torso; además es pequeña | 17% (ojos) a 41% (cráneo) |
+
+- **Fallar menos:** el acierto sube hasta ×1,35 en las partes grandes (en el
+  tórax, de 48% a 65%) y menos en las chicas (×1 + 0,35 × tamaño: en un ojo,
+  ×1,11). Para que los combates duren lo mismo, cada golpe quita menos vida,
+  desgasta menos la parte y sangra menos, en la misma proporción en que subió
+  su acierto: en promedio cada ataque hace lo mismo que antes, pero se falla
+  menos y el daño depende menos de la suerte. El botón de cada parte ya muestra
+  el acierto y el daño nuevos.
 
 - **Cobertura:** cada brazo útil cubre la cabeza y el torso (10%) y cada pierna
   útil también (3%). Un brazo o una pierna **inutilizado** deja de cubrir, así
   que el acierto en cabeza y torso **sube**. Ejemplo: inutilizar el antebrazo del
-  arma del orco sube el acierto en su tórax de 48% a 57%.
+  arma del orco sube el acierto en su tórax de 65% a 77%.
 - Las piernas además esquivan: si están heridas, el torso, la cabeza y las
   piernas son más fáciles de acertar (los brazos no esquivan) y cuesta huir.
 - En guardia (Defender), toda zona es más difícil de alcanzar.
@@ -236,15 +244,15 @@ y después se va a la cabeza o el torso.
   maza 15–19, lanza 12–16), para que el daño dependa poco de la suerte.
 - Cada parte convierte esa fuerza, por separado, en:
   - **vida perdida:** poca en brazos y piernas, más en torso y cabeza;
-  - **desgaste de la parte:** brazos y piernas se inutilizan en 3 a 7 golpes,
+  - **desgaste de la parte:** brazos y piernas se inutilizan en 4 a 9 golpes,
     según el arma (la lanza tarda más). El botón muestra cuántos faltan, por
     ejemplo "Inutilizar: 4–5 golpes", contando la guardia, las lesiones de
     cuello y las fracturas (también la que puede causar una maza por el
     camino).
 - Así atacar los brazos tiene sentido aunque quiten poca vida: abren la defensa y
   debilitan al rival.
-- Los combates duran unos **23 a 29 turnos** de media, según cómo se ataque
-  (antes de estos cambios, unos 11).
+- Los combates duran unos **24 a 30 turnos** de media, según cómo se ataque (35
+  si se va siempre al cuello), lo mismo que antes de acertar más.
 
 ### 6.3 Efectos provisionales de las funciones (B.2)
 
@@ -291,27 +299,27 @@ pueden hacerte retroceder un tercio de turno (orco y matón 10%, orco guerrero
 
 Victorias del rey (sin características) en 600 combates simulados por casilla
 y arma, promedio de las tres armas, según cómo elige a qué atacar. Medido de
-nuevo con las reglas actuales (los rivales se defienden con la mitad de vida y
-el orco empuja):
+nuevo con las reglas actuales (con sangrado y el acierto nuevo):
 
 | Cómo ataca el rey | Bandido | Lancero | Orco |
 |---|---|---|---|
-| Inutiliza el brazo del arma y luego va al cuerpo | 96% | 89% | 72% |
-| Inutiliza los dos brazos y luego va al cuerpo | 92% | 76% | 66% |
-| La parte del torso que más daña | 83% | 62% | 45% |
-| Como la IA de los rivales | 78% | 54% | 35% |
-| Primero las piernas | 66% | 43% | 27% |
-| Siempre al abdomen | 60% | 29% | 13% |
-| Siempre al cuello | 59% | 41% | 28% |
-| Siempre al cráneo | 38% | 24% | 21% |
-| Partes al azar | 20% | 6% | 2% |
+| Inutiliza el brazo del arma y luego va al cuerpo | 97% | 97% | 84% |
+| Inutiliza los dos brazos y luego va al cuerpo | 93% | 92% | 80% |
+| La parte del torso que más daña | 83% | 68% | 42% |
+| Como la IA de los rivales | 77% | 57% | 25% |
+| Primero las piernas | 60% | 45% | 22% |
+| Siempre al abdomen | 50% | 24% | 6% |
+| Siempre al cuello | 61% | 55% | 39% |
+| Siempre al cráneo | 26% | 24% | 17% |
+| Partes al azar | 19% | 11% | 5% |
 
 - Inutilizar primero el brazo del arma rinde mucho más que ir directo al
   abdomen, y contra cada rival atacar siempre la misma parte rinde menos que
-  abrir la guardia.
-- Con la barra de turnos, empezar por las piernas rinde mucho más que antes
-  (era 33%, 12% y 7%): las piernas heridas frenan al rival y el rey actúa dos
-  veces seguidas más a menudo.
+  abrir la guardia. Con menos fallos, la mejor forma de pelear gana todavía más
+  seguido (antes 96%, 89% y 72%).
+- Contra el bandido y el lancero se pierde sangre (sus cortes y estocadas); el
+  orco casi no te hace sangrar, pero sus mazazos pegan fuerte. Entre el 0% y el
+  10% de los combates terminan con alguien desangrado, según cómo se ataque.
 - Dificultad de los rivales: bandido fácil, lancero medio, orco difícil.
 
 ## 7. Reino (versión preliminar)
@@ -687,36 +695,40 @@ en las mismas proporciones, y los de partes por igual entre sus 3 partes.
 Destreza y Aguante. "Todo fuerza": los 15 en Fuerza. El rey pelea como la IA
 de los rivales, con espada y armadura de metal.
 
-**Un combate, empezando sano** (150 combates por casilla):
+**Un combate, empezando sano** (150 combates por casilla; con sangrado y el
+acierto nuevo):
 
 | Rey | Reparto | Ladrón | Orco guerrero | Cultista | Caballero negro | Verdugo |
 |---|---|---|---|---|---|---|
-| Nivel 1, sin armadura | Sin puntos | 83% | 2% | 15% | 0% | 0% |
-| | Parejo | 100% | 74% | 76% | 17% | 32% |
-| | Guerrero | 100% | 97% | 99% | 63% | 91% |
-| | Todo fuerza | 99% | 54% | 68% | 17% | 35% |
-| Nivel 5, equipo nivel 2 raro | Sin puntos | 100% | 39% | 53% | 7% | 20% |
-| | Parejo | 100% | 99% | 99% | 95% | 97% |
-| Nivel 10, equipo nivel 3 raro | Sin puntos | 99% | 69% | 72% | 25% | 53% |
+| Nivel 1, sin armadura | Sin puntos | 83% | 4% | 13% | 0% | 0% |
+| | Parejo | 100% | 78% | 86% | 3% | 47% |
+| | Guerrero | 100% | 100% | 100% | 31% | 99% |
+| | Todo fuerza | 100% | 58% | 85% | 1% | 28% |
+| Nivel 5, equipo nivel 2 raro | Sin puntos | 99% | 51% | 77% | 1% | 12% |
+| | Parejo | 100% | 100% | 100% | 89% | 100% |
+| Nivel 10, equipo nivel 3 raro | Sin puntos | 100% | 97% | 95% | 33% | 66% |
 | | Parejo | 100% | 100% | 100% | 99% | 100% |
 
-**Una mazmorra entera**, con las heridas que duran de un combate al siguiente,
-6 pasos de cura entre combates y sin pociones (300 intentos; % de veces que
-vence a todos). Si la mano del arma queda inútil, el combate siguiente empieza
-con la otra mano:
+- El caballero negro (espada, 19–24) quedó más difícil: sus cortes hacen sangrar
+  mucho. El verdugo (maza) casi no hace sangrar y quedó algo más fácil.
+
+**Una mazmorra entera**, con las heridas y lo que sangra de un combate al
+siguiente, 6 pasos de cura entre combates (sangrando también) y sin pociones ni
+vendas (300 intentos; % de veces que vence a todos). Si la mano del arma queda
+inútil, el combate siguiente empieza con la otra mano:
 
 | Rey | Reparto | Madriguera goblin | Guarida de bandidos | Fortaleza orca | Ciudadela maldita |
 |---|---|---|---|---|---|
 | Nivel 1, sin armadura | Sin puntos | 13% | 0% | 0% | 0% |
-| | Parejo | 99% | 7% | 0% | 0% |
-| | Guerrero | 100% | 50% | 0% | 0% |
-| Nivel 5, equipo nivel 2 raro | Parejo | 100% | 96% | 1% | 0% |
-| | Guerrero | 100% | 100% | 52% | 8% |
-| Nivel 10, equipo nivel 3 raro | Parejo | 100% | 100% | 63% | 4% |
-| | Guerrero | 100% | 100% | 93% | 80% |
+| | Parejo | 100% | 3% | 0% | 0% |
+| | Guerrero | 100% | 47% | 0% | 0% |
+| Nivel 5, equipo nivel 2 raro | Parejo | 100% | 97% | 1% | 0% |
+| | Guerrero | 100% | 99% | 55% | 7% |
+| Nivel 10, equipo nivel 3 raro | Parejo | 100% | 100% | 74% | 3% |
+| | Guerrero | 100% | 100% | 100% | 75% |
 
-- Antes de estos cambios, con los 15 puntos el rey "parejo" ganaba el 97% al
-  verdugo con el equipo inicial; ahora, el 32%.
+- Con los 3 puntos por principal y el tope de +20, el rey "parejo" de nivel 1
+  le gana al verdugo el 47% (antes de esos cambios, el 97%).
 - Poner los 15 puntos en Fuerza rinde mucho menos que repartirlos entre Fuerza,
   Destreza y Aguante: con el tope, los puntos de más no sirven.
 - Las heridas que duran hacen que la dificultad real sea la mazmorra entera,

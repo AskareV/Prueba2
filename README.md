@@ -27,19 +27,21 @@ Arriba están las pestañas:
   una característica sube sus 3 partes y da 3 puntos solo para esas partes.
   Ninguna parte mejora más allá de +20.
 - **Inventario:** el botín. Tocas un objeto para equiparlo o venderlo (calidad
-  normal, rara, épica o legendaria; vale más cuanto mejor es), o una poción para
-  tomarla.
+  normal, rara, épica o legendaria; vale más cuanto mejor es), o una poción, una
+  venda, un torniquete o una medicina para usarla.
 - **Ciudad:** castillo, herrería, granja, mercado, barracas y enfermería, que se
   tocan para reconstruirlos y mejorarlos. La ciudad se cuida sola: produce
   comida, cobra impuestos y sus soldados la defienden. Si está mal protegida
   sube el **peligro** y pueden atacarla y saquearla. En el castillo se descansa
-  (y te curas; más con la enfermería).
+  (y te curas; más con la enfermería, que además para el sangrado por dentro y
+  cura las infecciones).
 - **Aventura:** mapa con 4 mazmorras (banderín oscuro) y 3 zonas de siete días
   (banderín rojo). En la mazmorra te mueves con la cruceta o tocando una casilla
   vecina; cada paso suma estrés, las espadas son enemigos, los cofres dan botín
   y la **H** es la salida. Las mazmorras se reinician cada semana. Las
   **heridas duran** de un combate a otro: al caminar te curas un poco, y hay
-  pociones.
+  pociones. Lo que **sangra** sigue sangrando al caminar (vendas y torniquetes
+  lo paran) y las heridas abiertas pueden **infectarse** con los días.
 - **Trabajo:** trabajos del rey que dan oro a cambio de estrés.
 - **Salir:** vuelve al menú principal.
 
@@ -57,9 +59,11 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
      cuántos golpes faltan para inutilizarlos.
    - **Defender:** te defiendes mejor y recibes la mitad de daño hasta tu próximo turno.
    - **Magia:** Llamarada, Curación o Ralentizar, gastando maná.
-   - **Objeto** (solo en el reino): tomar una poción.
+   - **Objeto** (solo en el reino): una poción, una venda, un torniquete o una
+     medicina.
    - **Cambiar o recoger el arma**, y **Huir**.
-   - **Estado:** funciones de supervivencia, cobertura y partes heridas de ambos.
+   - **Estado:** funciones de supervivencia, cobertura, sangre y partes heridas
+     (y cuáles sangran) de ambos.
 3. **Turnos por velocidad:** arriba se ven los próximos turnos; el más rápido
    puede actuar dos veces seguidas.
 4. **Táctica:** los brazos son fáciles de acertar pero quitan poca vida; la
@@ -69,6 +73,11 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
    sin los dos ojos quedas ciego, una fractura hace rendir menos la parte, con la
    mano del arma herida se puede soltar, un golpe en el cráneo puede aturdir o
    desmayar, etc. Las reglas son **provisionales**.
+6. **Sangrado:** los cortes y las perforaciones sangran por fuera, y los golpes
+   contundentes en la cabeza y el torso, por dentro. En cada turno se pierde la
+   sangre de todas las heridas y baja la vida máxima; con mucha sangre perdida se
+   acierta y se pega menos, se pierden turnos y se puede caer en shock; con la
+   mitad, se muere.
 
 ## Estructura
 
@@ -92,13 +101,14 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | Archivo | Qué hace |
 |---|---|
 | `datos_cuerpo.gd` | Las 21 partes, las 6 zonas y las funciones de supervivencia |
+| `datos_heridas.gd` | Sangrado e infecciones: cuánto sangra cada herida, estados por la sangre perdida, vendas y torniquetes, etapas de las infecciones |
 | `datos_armas.gd` | Las armas (espada, maza, lanza y bastón mágico) y sus números provisionales |
 | `datos_rivales.gd` | Rivales de la demo, enemigos del reino y aspecto del rey |
 | `datos_estadisticas.gd` | Las 7 características del rey, sus partes y cuánto vale cada punto |
 | `orden_turnos.gd` | Barra de turnos por velocidad |
 | `datos_hechizos.gd` | Maná, bastón y hechizos |
 | `luchador.gd` | Estado de un combatiente: vida, integridad de cada parte, lateralidad |
-| `motor_combate.gd` | Reglas: acierto, daño, armadura, fracturas, ceguera, desarme, aturdimiento, desmayo, empujones, huir y hechizos |
+| `motor_combate.gd` | Reglas: acierto, daño, armadura, fracturas, sangrado, ceguera, desarme, aturdimiento, desmayo, empujones, huir y hechizos |
 | `ia_enemigo.gd` | Cómo deciden los rivales: el plan de su personalidad, a veces improvisan, se defienden y, si saben, lanzan hechizos |
 | `figura.gd` / `plantilla_humanoide.gd` | Dibujo del cuerpo por partes, heridas y animaciones |
 | `fondo_mazmorra.gd`, `antorchas.gd`, `vineta.gd` | Fondo de piedra, antorchas y oscurecido de los bordes |
@@ -111,7 +121,7 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | `estado_reino.gd` | La partida (global `Juego`): semana, oro, estrés, inventario, equipo, salud del rey y la ciudad; guarda y carga la partida |
 | `datos_ciudad.gd` | Edificios de la ciudad, sus costos y efectos, peligro y ataques |
 | `vista_ciudad.gd` | Dibujo de la ciudad con los edificios que se tocan |
-| `datos_botin.gd` | Calidades, armas, armaduras y pociones de botín, precios de venta |
+| `datos_botin.gd` | Calidades, armas, armaduras, pociones, vendas, torniquetes y medicinas de botín, precios de venta |
 | `datos_aventura.gd` | Mazmorras, zonas, sucesos de los siete días y la curación al caminar |
 | `generador_mazmorra.gd` | Crea el plano de cada mazmorra según la semana y la partida |
 | `datos_trabajos.gd` | Trabajos del rey |
@@ -125,7 +135,7 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 godot --headless --import
 godot --headless --script res://pruebas/ejecutar.gd            # pruebas de las reglas y del equilibrio
 godot --headless --script res://pruebas/partida_automatica.gd  # combates completos pulsando botones
-godot --headless --script res://pruebas/recorrido_reino.gd     # recorre el reino: mazmorra, zona, inventario, trabajo, ciudad, salud y Continuar
+godot --headless --script res://pruebas/recorrido_reino.gd     # recorre el reino: mazmorra, zona, inventario, trabajo, ciudad, salud, sangrado y Continuar
 godot --headless --script res://pruebas/simular.gd             # equilibrio: miles de combates por estrategia
 ```
 

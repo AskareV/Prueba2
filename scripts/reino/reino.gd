@@ -817,9 +817,10 @@ func _detalle_enfermeria(columna: VBoxContainer, nivel: int) -> void:
 		estado += " " + salud + "."
 	columna.add_child(UIReino.parrafo("Vida %d / %d. %s" % [Juego.vida_actual(), Juego.vida_maxima(), estado], 540, 18, Estilo.TEXTO))
 	var fraccion := Juego.cura_al_descansar()
-	columna.add_child(UIReino.parrafo("Descansar una semana en el castillo: recuperas hasta %d de vida (el %d%% de tu vida máxima), el mismo %% de tu sangre y %d puntos de cada parte herida. Ya cuenta Recuperación (×%s)." % [
-		Juego.vida_curada(fraccion), roundi(fraccion * Juego.multiplicador_curacion() * 100.0),
-		roundi(Juego.partes_curadas(fraccion)), _multiplicador(Juego.multiplicador_curacion())], 540, 17))
+	var ahora := (" Ahora: %s." % _texto_cura_descanso().replace("\n", " · ")) if Juego.necesita_curarse() else ""
+	columna.add_child(UIReino.parrafo("Descansar una semana en el castillo cura el %d%% de tu vida máxima y de tu sangre, y %d puntos de cada parte herida (ya cuenta Recuperación, ×%s).%s" % [
+		roundi(fraccion * Juego.multiplicador_curacion() * 100.0), roundi(Juego.partes_curadas(fraccion)),
+		_multiplicador(Juego.multiplicador_curacion()), ahora], 540, 17))
 	if nivel <= 0:
 		columna.add_child(UIReino.parrafo("Reconstrúyela para que descansar cure más y te trate el sangrado por dentro y las infecciones.", 540, 17))
 	else:
@@ -888,31 +889,43 @@ func _detalle_mercado(columna: VBoxContainer, nivel: int) -> void:
 	columna.add_child(UIReino.parrafo("Cobra %d de oro de impuestos por semana. Lo que vende cambia cada semana. Lo que compras va al Inventario, y ahí también se vende." % Juego.impuestos(), 540, 17))
 	if Juego.mercado.is_empty():
 		columna.add_child(UIReino.parrafo("Ya compraste todo lo de esta semana.", 540, 18))
+	# Las pociones, vendas, torniquetes y medicinas van de a dos por fila, para
+	# que todo quepa en la ventana.
+	var pilas := GridContainer.new()
+	pilas.columns = 2
+	pilas.add_theme_constant_override("h_separation", 6)
+	pilas.add_theme_constant_override("v_separation", 6)
 	for i in Juego.mercado.size():
 		var objeto: Dictionary = Juego.mercado[i]
 		var precio := Juego.precio_compra(objeto)
 		var es_consumible := DatosBotin.es_consumible(objeto)
 		var texto: String = String(objeto["nombre"]) + "\n" if es_consumible else "%s (%s, nivel %d)\n" % [
 			objeto["nombre"], DatosBotin.nombre_calidad(objeto["calidad"]).to_lower(), objeto["nivel"]]
-		# El dato principal: para qué sirve una poción, venda, torniquete o
-		# medicina, el daño de un arma, o la armadura y la resistencia mágica de
-		# una pieza.
+		# El dato principal: cuántas quedan de una pila, el daño de un arma, o la
+		# armadura y la resistencia mágica de una pieza.
 		var dato: String
 		if es_consumible:
-			var resumen: String = DatosBotin.CONSUMIBLES[objeto["ranura"]]["resumen"]
-			dato = "%s · quedan %d" % [resumen[0].to_upper() + resumen.substr(1), int(objeto.get("cantidad", 1))]
-		elif objeto["ranura"] == "arma":
-			dato = DatosBotin.describir(objeto)[1]
+			texto += "Toca otra vez: %d de oro" % precio if i == _compra_pendiente else "%d de oro · quedan %d" % [
+				precio, int(objeto.get("cantidad", 1))]
 		else:
-			dato = "Arm. %d · Res. mág. %d" % [objeto["armadura"], objeto["resistencia_magica"]]
-		texto += "Toca otra vez para comprar por %d de oro" % precio if i == _compra_pendiente else "%s · %d de oro" % [dato, precio]
-		var boton := UIReino.boton(texto, _al_comprar.bind(i), Vector2(540, 62), 17)
+			if objeto["ranura"] == "arma":
+				dato = DatosBotin.describir(objeto)[1]
+			else:
+				dato = "Arm. %d · Res. mág. %d" % [objeto["armadura"], objeto["resistencia_magica"]]
+			texto += "Toca otra vez para comprar por %d de oro" % precio if i == _compra_pendiente else "%s · %d de oro" % [dato, precio]
+		var boton := UIReino.boton(texto, _al_comprar.bind(i), Vector2(267 if es_consumible else 540, 62), 17)
 		boton.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		boton.clip_text = true
 		boton.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		boton.disabled = Juego.oro < precio
-		Estilo.con_franja(boton, DatosBotin.color_calidad(objeto["calidad"]))
-		columna.add_child(boton)
+		if es_consumible:
+			Estilo.con_franja(boton, DatosBotin.CONSUMIBLES[objeto["ranura"]]["color"])
+			pilas.add_child(boton)
+		else:
+			Estilo.con_franja(boton, DatosBotin.color_calidad(objeto["calidad"]))
+			columna.add_child(boton)
+	if pilas.get_child_count() > 0:
+		columna.add_child(pilas)
 
 
 func _detalle_barracas(columna: VBoxContainer, nivel: int) -> void:

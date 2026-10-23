@@ -139,13 +139,16 @@ static func boton_objeto(objeto: Dictionary, al_pulsar: Callable, tamano: Vector
 
 ## Botones para usar objetos entre combates (pociones, vendas, torniquetes y
 ## medicinas), con cuántos hay; los que ahora no servirían, apagados. "al_usar"
-## recibe el tipo.
-static func lista_objetos(al_usar: Callable, ancho: float) -> VBoxContainer:
-	var lista := VBoxContainer.new()
-	lista.add_theme_constant_override("separation", 6)
+## recibe el tipo; "ancho" es el de cada botón.
+static func lista_objetos(al_usar: Callable, ancho: float, columnas := 1) -> GridContainer:
+	var lista := GridContainer.new()
+	lista.columns = columnas
+	lista.add_theme_constant_override("h_separation", 6)
+	lista.add_theme_constant_override("v_separation", 6)
 	for tipo in DatosBotin.ORDEN_CONSUMIBLES:
 		var datos: Dictionary = DatosBotin.CONSUMIBLES[tipo]
-		var nuevo := boton("%s (%d)" % [datos["nombre"], Juego.cantidad(tipo)], al_usar.bind(tipo), Vector2(ancho, 42), 18)
+		var nombre: String = "Poción" if tipo == "pocion" and columnas > 1 else datos["nombre"]
+		var nuevo := boton("%s (%d)" % [nombre, Juego.cantidad(tipo)], al_usar.bind(tipo), Vector2(ancho, 42), 18)
 		nuevo.focus_mode = Control.FOCUS_NONE
 		nuevo.disabled = Juego.cantidad(tipo) == 0 or not Juego.sirve(tipo)
 		Estilo.con_franja(nuevo, datos["color"])

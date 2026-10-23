@@ -96,7 +96,7 @@ const CONSUMIBLES := {
 	},
 	"medicina": {
 		"nombre": "Medicina", "uno": "una medicina", "precio": 12, "color": Color("#81c784"), "accion": "Tomar",
-		"resumen": "sangrado interno e infección",
+		"resumen": "sangrado interno",
 		"descripcion": "Para el sangrado por dentro y cura las infecciones leves.",
 	},
 }
@@ -273,7 +273,8 @@ static func describir(objeto: Dictionary, precio := -1) -> PackedStringArray:
 		lineas.append("Tienes %d" % int(objeto.get("cantidad", 1)))
 		lineas.append(CONSUMIBLES[objeto["ranura"]]["descripcion"])
 		lineas.append("Se usa en combate (gasta el turno) o entre combates.")
-		lineas.append("Se vende por %d de oro (de a uno)" % (objeto["precio"] if precio < 0 else precio))
+		var de_a := "de a una" if String(CONSUMIBLES[objeto["ranura"]]["uno"]).begins_with("una ") else "de a uno"
+		lineas.append("Se vende por %d de oro (%s)" % [objeto["precio"] if precio < 0 else precio, de_a])
 		return lineas
 	lineas.append("%s · nivel %d" % [nombre_calidad(objeto["calidad"]), objeto["nivel"]])
 	if objeto["ranura"] == "arma":

@@ -6,9 +6,10 @@ extends SceneTree
 ## (pelear, abrir cofres y salir por la H) -> zona de siete días -> inventario
 ## (equipar y vender) -> trabajo -> ciudad (edificios, descanso y un ataque) ->
 ## salud (pociones en el inventario, la mazmorra y el combate; enfermería y
-## descanso; un día agotado en una zona) -> un combate contra un chamán (magia
-## de los enemigos) -> seguir la partida desde el menú (también tras guardarla
-## y cargarla del disco).
+## descanso; un día agotado en una zona) -> sangrado (una venda en la
+## mazmorra, desangrarse por el camino y una venda en un combate) -> un combate
+## contra un chamán (magia de los enemigos) -> seguir la partida desde el menú
+## (también tras guardarla y cargarla del disco).
 
 const MENU := "res://escenas/menu_principal.tscn"
 const PREPARACION := "res://escenas/preparacion.tscn"
@@ -45,7 +46,7 @@ func _initialize() -> void:
 	_juego.semilla = 1
 	for paso in [_recorrer_menu_y_pestanas, _recorrer_mazmorra, _recorrer_estres_maximo, _recorrer_zona,
 			_recorrer_inventario, _recorrer_trabajo, _recorrer_ciudad, _recorrer_salud, _recorrer_agotado,
-			_recorrer_magia_enemiga, _recorrer_continuar]:
+			_recorrer_sangre, _recorrer_magia_enemiga, _recorrer_continuar]:
 		await paso.call()
 		# Tras un fallo se corta: los pasos siguientes dependen de la pantalla.
 		if not _fallos.is_empty():
@@ -633,6 +634,94 @@ func _recorrer_agotado() -> void:
 	_verificar(_juego.combate.is_empty(), "Agotado, ese día no empieza un combate")
 	_verificar(_juego.expedicion.get("agotado", false), "La salida se corta por el estrés")
 	_verificar(String(_juego.expedicion["dias"][0]["corto"]) == "Agotado", "El día queda como agotado")
+	zona.call("_al_volver")
+	await _esperar_escena(REINO)
+
+
+## Sangrado: lo que sangra sigue sangrando al caminar y una venda lo para;
+## desangrarse por el camino es como perder (vuelve al castillo y termina la
+## semana); en un combate, una venda (botón Objeto) se gasta al terminarlo.
+func _recorrer_sangre() -> void:
+	var reino := current_scene
+	_juego.estres = 0.0
+	_juego.vida_perdida = 0
+	_juego.integridad = {"muslo_der": 50.0, "cuello": 60.0}
+	_juego.fracturas = {}
+	_juego.sangre_perdida = 0.5
+	_juego.sangrados.assign([{"parte": "muslo_der", "tipo": "externo", "nivel": 2, "turnos": 3}])
+	_juego.agregar(DatosBotin.crear_consumible("venda", 3))
+	reino.call("_al_explorar", "madriguera_goblin")
+	var mazmorra := await _esperar_escena(MAZMORRA)
+	if mazmorra == null:
+		return
+	mazmorra.call("_ocultar_ayuda")
+	var plano: Dictionary = _juego.mazmorra["plano"]
+	var antes: float = _juego.sangre_perdida
+	mazmorra.call("_mover", _paso_hacia(plano, _juego.mazmorra["pos"], plano["enemigos"].keys(), true))
+	await process_frame
+	_verificar(_juego.sangre_perdida > antes, "Lo que sangra sigue sangrando al caminar")
+	var vendas: int = _juego.cantidad("venda")
+	mazmorra.call("_al_pulsar_objetos")
+	await process_frame
+	_verificar((mazmorra.get("_lista_objetos") as Control).visible, "El botón Objetos abre la lista")
+	mazmorra.call("_al_usar_objeto", "venda")
+	await process_frame
+	_verificar(_juego.cantidad("venda") == vendas - 1 and _juego.sangrados.is_empty(), "Una venda para el sangrado entre combates")
+	# Desangrarse por el camino: lo traen al castillo y termina la semana.
+	_juego.sangre_perdida = DatosHeridas.SANGRE_MAX * 0.49
+	_juego.sangrados.assign([{"parte": "cuello", "tipo": "externo", "nivel": 3, "turnos": 3}])
+	var semana: int = _juego.semana
+	plano = _juego.mazmorra["plano"]
+	mazmorra.call("_mover", _paso_hacia(plano, _juego.mazmorra["pos"], plano["enemigos"].keys(), true))
+	reino = await _esperar_escena(REINO)
+	if reino == null:
+		return
+	_verificar(_juego.semana == semana + 1 and _juego.vida_actual() == 1 and _juego.sangrados.is_empty(),
+		"Desangrarse por el camino es como perder")
+	_verificar((reino.get("_aviso") as Label).text.contains("desangraste"), "Y se cuenta al volver")
+	# En un combate: con el muslo sangrando, una venda con el botón Objeto.
+	_juego.sangre_perdida = 0.0
+	_juego.vida_perdida = 0
+	_juego.integridad = {"muslo_der": 50.0}
+	_juego.sangrados.assign([{"parte": "muslo_der", "tipo": "externo", "nivel": 2, "turnos": 3}])
+	reino.call("_al_explorar", "paso_montana")
+	if await _esperar_escena(EXPEDICION) == null:
+		return
+	_juego.combate = {"origen": "expedicion", "escena": EXPEDICION, "rival": "orco", "resultado": ""}
+	change_scene_to_file(COMBATE)
+	var escena := await _esperar_escena(COMBATE)
+	if escena == null:
+		return
+	(escena.get("_rng") as RandomNumberGenerator).seed = 12
+	for i in 600:
+		await process_frame
+		if int(escena.get("_estado")) == ACCIONES and escena.call("_entrada_libre"):
+			break
+	vendas = _juego.cantidad("venda")
+	escena.call("_al_pulsar_objeto")
+	for i in 60:
+		await process_frame
+		if escena.call("_entrada_libre"):
+			break
+	escena.call("_al_usar_objeto", "venda")
+	await process_frame
+	var jugador: Luchador = escena.get("_jugador")
+	_verificar(not jugador.sangra_por_fuera() and int(escena.call("_disponibles", "venda")) == vendas - 1,
+		"Una venda en combate para el sangrado")
+	_verificar(_juego.cantidad("venda") == vendas, "La venda se gasta al terminar el combate (no antes)")
+	escena.call("_mostrar_fin", "victoria")
+	await process_frame
+	# (Los mazazos del orco pueden hacerlo sangrar por dentro: eso no lo para una venda.)
+	_verificar(_juego.cantidad("venda") == vendas - 1 and not DatosHeridas.hay_sangrado(_juego.sangrados, "externo"),
+		"Al terminar se gasta y queda vendado")
+	for i in 240:
+		if escena.call("_entrada_libre"):
+			break
+		await process_frame
+	escena.call("_al_pulsar_menu")
+	var zona := await _esperar_escena(EXPEDICION)
+	if zona == null:
+		return
 	zona.call("_al_volver")
 	await _esperar_escena(REINO)
 

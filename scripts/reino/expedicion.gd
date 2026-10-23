@@ -81,7 +81,7 @@ func _crear_interfaz(area: Control) -> void:
 	Estilo.con_franja(_boton_objetos, Color("#ec407a"))
 	area.add_child(_boton_objetos)
 	_lista_objetos = UIReino.panel()
-	_lista_objetos.position = Vector2(30, 418)
+	_lista_objetos.position = Vector2(30, 474)
 	_lista_objetos.visible = false
 	area.add_child(_lista_objetos)
 	# Sangre, sangrados e infecciones, al lado de los objetos.
@@ -238,10 +238,7 @@ func _actualizar(inmediato := false) -> void:
 	for hijo in _lista_objetos.get_children():
 		_lista_objetos.remove_child(hijo)
 		hijo.queue_free()
-	var lista := UIReino.lista_objetos(_al_usar_objeto, 304)
-	for boton in lista.get_children():
-		(boton as Control).custom_minimum_size.y = 38
-	_lista_objetos.add_child(lista)
+	_lista_objetos.add_child(UIReino.lista_objetos(_al_usar_objeto, 150, 2))
 	_salud.text = UIReino.texto_salud()
 	var dias: Array = Juego.expedicion["dias"]
 	var cortado := _cortada()

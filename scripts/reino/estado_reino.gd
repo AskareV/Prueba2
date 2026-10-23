@@ -726,18 +726,28 @@ func usar(tipo: String) -> String:
 			return "Tomas una poción de curación."
 		"venda":
 			var parte_id := DatosHeridas.vendar(sangrados)
+			var efecto := "baja su riesgo de infección"
 			if parte_id == "":
 				parte_id = String(_riesgo_sin_limpiar()["parte"])
+			else:
+				var sigue := sangrados.any(func(sangrado: Dictionary) -> bool:
+					return sangrado["parte"] == parte_id and sangrado["tipo"] == "externo")
+				efecto = "sangra menos" if sigue else "deja de sangrar"
 			var infeccion := infeccion_de(parte_id)
 			if not infeccion.is_empty() and int(infeccion["etapa"]) == 0:
 				infeccion["limpia"] = true
-			return "Limpias y vendas %s." % DatosCuerpo.con_articulo(parte_id)
+			return "Limpias y vendas %s: %s." % [DatosCuerpo.con_articulo(parte_id), efecto]
 		"torniquete":
 			return "Pones un torniquete en %s: deja de sangrar." % DatosCuerpo.con_articulo(DatosHeridas.poner_torniquete(sangrados))
 		"medicina":
-			DatosHeridas.parar(sangrados, "interno")
+			var efectos: PackedStringArray = []
+			if DatosHeridas.parar(sangrados, "interno") > 0:
+				efectos.append("dejas de sangrar por dentro")
+			var leves := infecciones.filter(func(infeccion: Dictionary) -> bool: return int(infeccion["etapa"]) == 1).size()
+			if leves > 0:
+				efectos.append("se cura la infección leve" if leves == 1 else "se curan las infecciones leves")
 			curar_infecciones_leves()
-			return "Tomas una medicina."
+			return "Tomas una medicina: %s." % " y ".join(efectos)
 	return ""
 
 
