@@ -623,18 +623,20 @@ de los rivales, con espada y armadura de metal.
 | Nivel 10, equipo nivel 3 raro | Sin puntos | 99% | 69% | 72% | 25% | 53% |
 | | Parejo | 100% | 100% | 100% | 99% | 100% |
 
-**Una mazmorra entera**, con las heridas que duran de un combate al siguiente y
-6 pasos de cura entre combates (100 intentos; % de veces que vence a todos):
+**Una mazmorra entera**, con las heridas que duran de un combate al siguiente,
+6 pasos de cura entre combates y sin pociones (300 intentos; % de veces que
+vence a todos). Si la mano del arma queda inútil, el combate siguiente empieza
+con la otra mano:
 
 | Rey | Reparto | Madriguera goblin | Guarida de bandidos | Fortaleza orca | Ciudadela maldita |
 |---|---|---|---|---|---|
-| Nivel 1, sin armadura | Sin puntos | 16% | 0% | 0% | 0% |
-| | Parejo | 99% | 14% | 0% | 0% |
+| Nivel 1, sin armadura | Sin puntos | 13% | 0% | 0% | 0% |
+| | Parejo | 99% | 7% | 0% | 0% |
 | | Guerrero | 100% | 50% | 0% | 0% |
-| Nivel 5, equipo nivel 2 raro | Parejo | 100% | 99% | 3% | 0% |
-| | Guerrero | 100% | 99% | 57% | 10% |
-| Nivel 10, equipo nivel 3 raro | Parejo | 100% | 100% | 79% | 10% |
-| | Guerrero | 100% | 100% | 98% | 89% |
+| Nivel 5, equipo nivel 2 raro | Parejo | 100% | 96% | 1% | 0% |
+| | Guerrero | 100% | 100% | 52% | 8% |
+| Nivel 10, equipo nivel 3 raro | Parejo | 100% | 100% | 63% | 4% |
+| | Guerrero | 100% | 100% | 93% | 80% |
 
 - Antes de estos cambios, con los 15 puntos el rey "parejo" ganaba el 97% al
   verdugo con el equipo inicial; ahora, el 32%.
