@@ -10,6 +10,11 @@ const COLORES_ESTADO := {
 	"En guardia": Color("#1e88e5"),
 	"Atemorizado": Color("#6d4c41"),
 	"Ciego": Color("#37474f"),
+	"Sangra": Color("#c62828"),
+	"Sangra por dentro": Color("#8e1b2c"),
+	"Agitado": Color("#ef6c00"),
+	"Débil y confuso": Color("#ad1457"),
+	"Shock": Color("#6a1b9a"),
 }
 const COLOR_MANA := Color("#26a69a")
 
@@ -104,6 +109,15 @@ func _estados_activos() -> Array[String]:
 		lista.append("Atemorizado")
 	if _luchador.esta_ciego():
 		lista.append("Ciego")
+	# Del rival solo se ve lo que sangra por fuera; los estados por la sangre
+	# perdida (palidez, debilidad) se notan en los dos.
+	if _luchador.sangra_por_fuera():
+		lista.append("Sangra")
+	elif _luchador.es_jugador and DatosHeridas.hay_sangrado(_luchador.sangrados, "interno"):
+		lista.append("Sangra por dentro")
+	var estado := _luchador.estado_sangre()
+	if estado > 0:
+		lista.append(DatosHeridas.ESTADOS_SANGRE[estado])
 	return lista
 
 
@@ -116,7 +130,9 @@ func _texto_alertas() -> String:
 			danadas.append([valor, funcion_id])
 	danadas.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
 	var textos: PackedStringArray = []
-	for par in danadas.slice(0, 3):
+	if _luchador.sangra and _luchador.sangre_perdida() > 0.005:
+		textos.append("Sangre %d%%" % roundi(_luchador.sangre / DatosHeridas.SANGRE_MAX * 100.0))
+	for par in danadas.slice(0, 3 - textos.size()):
 		textos.append("%s %d%%" % [DatosCuerpo.NOMBRES_FUNCION[par[1]], roundi(par[0] * 100.0)])
 	return " · ".join(textos)
 

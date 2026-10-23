@@ -148,11 +148,15 @@ func prueba_el_mercado_cobra_impuestos_y_vende() -> void:
 	var juego := _juego_nuevo()
 	_ciudad_segura(juego)
 	juego.mejorar_edificio("mercado")
-	# Los objetos de su nivel y, aparte, un montón de pociones.
-	var en_venta: int = DatosCiudad.OBJETOS_MERCADO[1] + 1
+	# Los objetos de su nivel y, aparte, una pila de pociones, vendas,
+	# torniquetes y medicinas.
+	var en_venta: int = DatosCiudad.OBJETOS_MERCADO[1] + DatosBotin.ORDEN_CONSUMIBLES.size()
 	verificar_igual(juego.mercado.size(), en_venta, "Al reconstruirlo ya vende")
-	verificar(DatosBotin.es_pocion(juego.mercado[-1]), "También vende pociones")
-	verificar_igual(juego.mercado[-1]["cantidad"], DatosCiudad.POCIONES_MERCADO[1], "Las pociones de su nivel")
+	for tipo in DatosBotin.ORDEN_CONSUMIBLES:
+		var pila: Array = juego.mercado.filter(func(objeto: Dictionary) -> bool: return objeto["ranura"] == tipo)
+		verificar_igual(pila.size(), 1, "Vende una pila de %s" % tipo)
+		if pila.size() == 1:
+			verificar_igual(pila[0]["cantidad"], DatosCiudad.CONSUMIBLES_MERCADO[tipo][1], "Las de su nivel (%s)" % tipo)
 	var antes: Array[Dictionary] = juego.mercado.duplicate(true)
 	var oro := juego.oro
 	var informe := juego.semana_ciudad()

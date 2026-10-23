@@ -20,7 +20,9 @@ var _datos: Dictionary
 var _tablero: TableroMazmorra
 var _barra_estres: Barra
 var _barra_vida: Barra
-var _boton_pocion: Button
+var _boton_objetos: Button
+var _lista_objetos: PanelContainer
+var _salud: Label
 var _registro: Label
 var _ayuda: Control
 var _mensajes: PackedStringArray = []
@@ -94,12 +96,12 @@ func _crear_cabecera(area: Control) -> void:
 
 
 func _crear_lateral(area: Control) -> void:
-	# La poción va arriba, lejos de la cruceta: un toque de más no la gasta.
-	_boton_pocion = UIReino.boton("", _al_tomar_pocion, Vector2(290, 56), 20)
-	_boton_pocion.position = Vector2(970, 90)
-	_boton_pocion.focus_mode = Control.FOCUS_NONE
-	Estilo.con_franja(_boton_pocion, Color("#ec407a"))
-	area.add_child(_boton_pocion)
+	# Los objetos van arriba, lejos de la cruceta: un toque de más no gasta uno.
+	_boton_objetos = UIReino.boton("", _al_pulsar_objetos, Vector2(290, 56), 20)
+	_boton_objetos.position = Vector2(970, 90)
+	_boton_objetos.focus_mode = Control.FOCUS_NONE
+	Estilo.con_franja(_boton_objetos, Color("#ec407a"))
+	area.add_child(_boton_objetos)
 	var panel := UIReino.panel()
 	panel.position = Vector2(970, 156)
 	panel.custom_minimum_size = Vector2(290, 190)
@@ -108,6 +110,16 @@ func _crear_lateral(area: Control) -> void:
 	_registro.custom_minimum_size = Vector2(256, 170)
 	_registro.max_lines_visible = LINEAS_REGISTRO
 	panel.add_child(_registro)
+	# La lista de objetos tapa los mensajes mientras está abierta.
+	_lista_objetos = UIReino.panel()
+	_lista_objetos.position = Vector2(970, 156)
+	_lista_objetos.custom_minimum_size = Vector2(290, 190)
+	_lista_objetos.visible = false
+	area.add_child(_lista_objetos)
+	# Sangre, sangrados e infecciones, debajo de la cruceta (es solo texto).
+	_salud = UIReino.parrafo("", 290, 16, UIReino.COLOR_AVISO)
+	_salud.position = Vector2(970, 646)
+	area.add_child(_salud)
 	# Cruceta: sustituye a las flechas del teclado del juego original.
 	var cruceta := GridContainer.new()
 	cruceta.columns = 3
@@ -194,7 +206,9 @@ func _mover(direccion: Vector2i) -> void:
 	if not GeneradorMazmorra.es_suelo(plano["celdas"], destino):
 		return
 	Juego.sumar_estres(Juego.estres_de_paso(_datos["estres_por_paso"]))
-	Juego.curar_al_caminar()
+	if Juego.curar_al_caminar():
+		_salir("Te desangraste por el camino. Te llevan de vuelta al castillo.")
+		return
 	Juego.mazmorra["anterior"] = origen
 	Juego.mazmorra["pos"] = destino
 	_revelar(destino)
@@ -237,13 +251,25 @@ func _abrir_cofre(celda: Vector2i) -> void:
 		Juego.texto_xp(botin)])
 
 
-## Toma una poción entre combates.
-func _al_tomar_pocion() -> void:
-	if _saliendo or _ayuda.visible or not Juego.usar_pocion():
+## Abre o cierra la lista de objetos para usar entre combates.
+func _al_pulsar_objetos() -> void:
+	if _saliendo or _ayuda.visible:
 		return
-	_mensaje("Tomas una poción de curación.")
+	_lista_objetos.visible = not _lista_objetos.visible
 	_actualizar()
-	# Un doble toque no debe gastar otra.
+	UIReino.bloquear_toques(self, 0.35)
+
+
+func _al_usar_objeto(tipo: String) -> void:
+	if _saliendo or _ayuda.visible:
+		return
+	var texto := Juego.usar(tipo)
+	if texto == "":
+		return
+	_mensaje(texto)
+	_lista_objetos.visible = false
+	_actualizar()
+	# Un doble toque no debe gastar otro.
 	UIReino.bloquear_toques(self, 0.35)
 
 
@@ -316,9 +342,13 @@ func _mensaje(texto: String) -> void:
 func _actualizar(inmediato := false) -> void:
 	UIReino.actualizar_estres(_barra_estres, Juego.estres, inmediato)
 	UIReino.actualizar_vida(_barra_vida, inmediato)
-	var pociones := Juego.pociones()
-	_boton_pocion.text = "Tomar poción (%d)" % pociones
-	_boton_pocion.disabled = pociones == 0 or not Juego.esta_herido()
+	_boton_objetos.text = "Cerrar objetos" if _lista_objetos.visible else "Objetos (%d)" % UIReino.total_objetos()
+	_boton_objetos.disabled = UIReino.total_objetos() == 0 and not _lista_objetos.visible
+	for hijo in _lista_objetos.get_children():
+		_lista_objetos.remove_child(hijo)
+		hijo.queue_free()
+	_lista_objetos.add_child(UIReino.lista_objetos(_al_usar_objeto, 274))
+	_salud.text = UIReino.texto_salud()
 	_tablero.actualizar(Juego.mazmorra["plano"], Juego.mazmorra["visibles"], Juego.mazmorra["pos"])
 	if _mensajes.is_empty():
 		_mensaje("Entras a %s." % _datos["nombre"])

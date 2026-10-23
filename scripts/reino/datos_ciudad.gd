@@ -40,7 +40,7 @@ const EDIFICIOS := {
 	},
 	"enfermeria": {
 		"nombre": "Enfermería", "articulo": "la enfermería", "color": Color("#f48fb1"), "posicion": Vector2(0.5, 0.8),
-		"descripcion": "Cuida al rey: con más nivel, descansar en el castillo cura más sus heridas.",
+		"descripcion": "Cuida al rey: al descansar en el castillo le para el sangrado por dentro y le cura las infecciones; con más nivel, cura más sus heridas.",
 		"costos": [120, 300, 700],
 	},
 }
@@ -62,9 +62,13 @@ const EQUIPO_SOLDADOS := [1.0, 1.25, 1.5, 1.75]
 const COMIDA_GRANJA := [0, 10, 18, 28]
 ## Oro de impuestos que cobra el mercado por semana.
 const IMPUESTOS := [0, 15, 30, 50]
-## Objetos a la venta en el mercado (cambian cada semana), y además pociones.
+## Objetos a la venta en el mercado (cambian cada semana) y, además, cuántas
+## pociones, vendas, torniquetes y medicinas tiene según su nivel.
 const OBJETOS_MERCADO := [0, 3, 4, 5]
 const POCIONES_MERCADO := [0, 2, 3, 4]
+const CONSUMIBLES_MERCADO := {
+	"pocion": POCIONES_MERCADO, "venda": [0, 3, 4, 5], "torniquete": [0, 1, 2, 2], "medicina": [0, 1, 2, 3],
+}
 ## Soldados que caben en las barracas.
 const SOLDADOS_MAXIMOS := [0, 5, 10, 15]
 ## Descansar una semana en el castillo cura esta parte de la vida del rey (y ×100
@@ -137,6 +141,6 @@ static func efecto(edificio_id: String, nivel: int) -> String:
 			return "Caben %d soldados." % SOLDADOS_MAXIMOS[nivel]
 		"enfermeria":
 			var cura := roundi((CURA_DESCANSO + CURA_ENFERMERIA[nivel]) * 100.0)
-			return "Al descansar recuperas el %d%% de tu vida máxima y %d de cada parte herida (sin ella, %d%% y %d)." % [
+			return "Al descansar recuperas el %d%% de tu vida máxima y de tu sangre y %d de cada parte herida (sin ella, %d%% y %d), y te cura el sangrado por dentro y las infecciones." % [
 				cura, cura, roundi(CURA_DESCANSO * 100.0), roundi(CURA_DESCANSO * 100.0)]
 	return ""

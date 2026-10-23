@@ -520,7 +520,7 @@ func _recorrer_salud() -> void:
 	reino.call("_al_elegir_mochila", pila["id"])
 	await process_frame
 	var vida: int = _juego.vida_actual()
-	reino.call("_al_tomar_pocion")
+	reino.call("_al_usar_objeto")
 	await process_frame
 	_verificar(_juego.pociones() == pociones - 1 and _juego.vida_actual() > vida, "Tomar una poción en el inventario")
 	# La enfermería: se reconstruye y hace que descansar cure más.
@@ -557,7 +557,9 @@ func _recorrer_salud() -> void:
 	await process_frame
 	_verificar(_juego.vida_perdida < perdida, "Cada paso en la mazmorra cura un poco")
 	pociones = _juego.pociones()
-	mazmorra.call("_al_tomar_pocion")
+	mazmorra.call("_al_pulsar_objetos")
+	await process_frame
+	mazmorra.call("_al_usar_objeto", "pocion")
 	await process_frame
 	_verificar(_juego.pociones() == pociones - 1, "Tomar una poción entre combates")
 	# Hasta el primer enemigo, para tomar la última poción en el combate (con la
@@ -592,15 +594,15 @@ func _recorrer_salud() -> void:
 		if escena.call("_entrada_libre"):
 			break
 	_verificar(int(escena.get("_estado")) == OBJETO, "El botón Objeto abre los objetos")
-	escena.call("_al_tomar_pocion")
+	escena.call("_al_usar_objeto", "pocion")
 	await process_frame
-	_verificar(int(escena.call("_pociones_disponibles")) == pociones - 1, "Tomar una poción en combate")
+	_verificar(int(escena.call("_disponibles", "pocion")) == pociones - 1, "Tomar una poción en combate")
 	_verificar(_juego.pociones() == pociones, "La poción se gasta al terminar el combate (no antes)")
 	escena.call("_mostrar_fin", "victoria")
 	await process_frame
 	_verificar(_juego.pociones() == pociones - 1, "Al terminar el combate se gasta la poción")
 	var jugador: Luchador = escena.get("_jugador")
-	_verificar(_juego.vida_perdida == jugador.vida_max - jugador.vida and _juego.fracturas.has("muslo_der"),
+	_verificar(_juego.vida_perdida == jugador.vida_max_sana - jugador.vida and _juego.fracturas.has("muslo_der"),
 		"Al terminar se guarda cómo quedó el rey (con su pierna rota)")
 	_verificar(_juego.combate.get("resultado", "") == "victoria", "El resultado queda guardado en la partida")
 	for i in 240:

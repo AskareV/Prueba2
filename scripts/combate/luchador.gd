@@ -79,10 +79,26 @@ var arma_objeto: Dictionary = {}
 
 ## parte -> integridad (0 a 100).
 var integridad: Dictionary = {}
-## Golpes recibidos: {parte, tipo, danio, turno}. Base para sangrado, dolor e infecciones.
+## Golpes recibidos: {parte, tipo, danio, turno, nueva: de este combate, limpia:
+## se limpió con una venda}. Base para sangrado, dolor e infecciones.
 var heridas: Array[Dictionary] = []
 ## Partes con fractura: parte -> true.
 var fracturas: Dictionary = {}
+
+## Sangre (ver DatosHeridas): litros que le quedan y partes que sangran,
+## {"parte", "tipo": "externo" o "interno", "nivel": 1 a 3, "turnos": los que le
+## faltan a una leve para parar}. No todas las criaturas sangran.
+var sangra := true
+var sangre := DatosHeridas.SANGRE_MAX
+var sangrados: Array[Dictionary] = []
+## Murió desangrado: queda fuera de combate.
+var muerto := false
+## Vida máxima con toda la sangre: la sangre perdida baja vida_max en la misma
+## proporción.
+var vida_max_sana := 0
+## Etapa de su peor infección (ver DatosHeridas.ETAPAS); desde la grave tiene
+## fiebre. Solo el rey las arrastra de un día a otro.
+var infeccion := 0
 
 # Estadísticas para el resumen final.
 var danio_causado := 0
@@ -95,6 +111,7 @@ func _init(p_nombre: String, p_vida_max: int, p_diestro: bool, p_arma: String, p
 	nombre = p_nombre
 	vida_max = p_vida_max
 	vida = p_vida_max
+	vida_max_sana = p_vida_max
 	_vida_base = p_vida_max
 	diestro = p_diestro
 	arma = p_arma
@@ -104,7 +121,7 @@ func _init(p_nombre: String, p_vida_max: int, p_diestro: bool, p_arma: String, p
 
 
 func fuera_de_combate() -> bool:
-	return vida <= 0 or desmayado
+	return vida <= 0 or desmayado or muerto
 
 
 # --- Características ---
@@ -123,8 +140,9 @@ func puntos(sub_id: String) -> float:
 func aplicar_estadisticas(p_estadisticas: Dictionary) -> void:
 	estadisticas = p_estadisticas
 	tiene_estadisticas = true
-	vida_max = _vida_base + DatosEstadisticas.vida_extra(puntos("vitalidad"))
-	vida = vida_max
+	vida_max_sana = _vida_base + DatosEstadisticas.vida_extra(puntos("vitalidad"))
+	vida = vida_max_sana
+	ajustar_vida_max()
 	usa_mana = true
 	# Entero, aunque el Amuleto deje puntos con decimales.
 	mana_max = floorf(DatosEstadisticas.MANA_BASE + DatosEstadisticas.MANA_POR_MAGO * puntos("mago") + 0.001)
@@ -289,7 +307,7 @@ func recibir_golpe(parte_id: String, danio: int, desgaste: float, tipo_herida: S
 	vida = maxi(vida - danio, 0)
 	danio_recibido += danio
 	integridad[parte_id] = maxf(antes - desgaste, 0.0)
-	heridas.append({"parte": parte_id, "tipo": tipo_herida, "danio": danio, "turno": turno})
+	heridas.append({"parte": parte_id, "tipo": tipo_herida, "danio": danio, "turno": turno, "nueva": true})
 	return antes
 
 
@@ -304,8 +322,9 @@ func heridas_de(parte_id: String) -> Dictionary:
 
 # --- Funciones de supervivencia (B.2), de 0 a 1 ---
 
+## La fiebre de una infección grave también la baja.
 func conciencia() -> float:
-	return factor("craneo")
+	return factor("craneo") * DatosHeridas.CONCIENCIA_FIEBRE[infeccion]
 
 
 ## Sin los dos ojos (los dos inutilizados) está ciego: acierta mucho menos.
@@ -425,8 +444,60 @@ func fuerza_ataque() -> float:
 	return mov_brazo(lado_arma())
 
 
+# --- Sangre (B.1) ---
+
+## Parte de su sangre que perdió (0 a 1).
+func sangre_perdida() -> float:
+	return 1.0 - sangre / DatosHeridas.SANGRE_MAX
+
+
+## 0 normal, 1 agitado, 2 débil y confuso, 3 shock (ver DatosHeridas).
+func estado_sangre() -> int:
+	return DatosHeridas.estado_por_perdida(sangre_perdida())
+
+
+## Hace sangrar esa parte (ver DatosHeridas.sumar_sangrado). Devuelve el nivel con
+## que queda.
+func agregar_sangrado(parte_id: String, tipo: String, nivel: int) -> int:
+	return DatosHeridas.sumar_sangrado(sangrados, parte_id, tipo, nivel)
+
+
+## Sangra por fuera (se ve).
+func sangra_por_fuera() -> bool:
+	return DatosHeridas.hay_sangrado(sangrados, "externo")
+
+
+## Pierde la sangre de sus heridas durante esos turnos (las leves paran solas).
+## Devuelve los litros perdidos.
+func sangrar(turnos := 1) -> float:
+	var perdida := DatosHeridas.avanzar_sangrados(sangrados, turnos)
+	perder_sangre(perdida)
+	return perdida
+
+
+## Si llega a perder la mitad de su sangre, muere.
+func perder_sangre(litros: float) -> void:
+	if litros <= 0.0:
+		return
+	sangre = maxf(sangre - litros, 0.0)
+	ajustar_vida_max()
+	if sangre_perdida() >= DatosHeridas.MUERTE - 0.0001:
+		muerto = true
+
+
+func recuperar_sangre(litros: float) -> void:
+	sangre = minf(sangre + litros, DatosHeridas.SANGRE_MAX)
+	ajustar_vida_max()
+
+
+## La vida máxima baja con la sangre perdida (y la vida, si queda por encima).
+func ajustar_vida_max() -> void:
+	vida_max = maxi(1, roundi(vida_max_sana * sangre / DatosHeridas.SANGRE_MAX))
+	vida = mini(vida, vida_max)
+
+
 ## Cura vida y la integridad de todas las partes a la vez (una poción). Una parte
-## que se cura del todo deja de estar fracturada.
+## que se cura del todo deja de estar fracturada y de sangrar.
 func curar(cantidad_vida: int, partes: float) -> int:
 	var antes := vida
 	vida = mini(vida + cantidad_vida, vida_max)
@@ -434,6 +505,7 @@ func curar(cantidad_vida: int, partes: float) -> int:
 		integridad[parte_id] = minf(integridad[parte_id] + partes, 100.0)
 		if integridad[parte_id] >= 100.0:
 			fracturas.erase(parte_id)
+	sangrados.assign(sangrados.filter(func(sangrado: Dictionary) -> bool: return integridad[sangrado["parte"]] < 100.0))
 	return vida - antes
 
 

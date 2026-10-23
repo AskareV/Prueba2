@@ -123,8 +123,8 @@ static func bloquear_toques(padre: Control, segundos := 0.45) -> void:
 ## Botón de un objeto: franja del color de su calidad, nombre y dato principal.
 static func boton_objeto(objeto: Dictionary, al_pulsar: Callable, tamano: Vector2) -> Button:
 	var texto: String = objeto["nombre"]
-	if DatosBotin.es_pocion(objeto):
-		texto += "\n×%d · cura %d de vida" % [int(objeto.get("cantidad", 1)), DatosBotin.POCION_VIDA]
+	if DatosBotin.es_consumible(objeto):
+		texto += "\n×%d · %s" % [int(objeto.get("cantidad", 1)), DatosBotin.CONSUMIBLES[objeto["ranura"]]["resumen"]]
 	elif objeto["ranura"] == "arma":
 		texto += "\nDaño %d–%d" % [objeto["danio_min"], objeto["danio_max"]]
 	else:
@@ -135,3 +135,50 @@ static func boton_objeto(objeto: Dictionary, al_pulsar: Callable, tamano: Vector
 	nuevo.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	Estilo.con_franja(nuevo, DatosBotin.color_calidad(objeto["calidad"]))
 	return nuevo
+
+
+## Botones para usar objetos entre combates (pociones, vendas, torniquetes y
+## medicinas), con cuántos hay; los que ahora no servirían, apagados. "al_usar"
+## recibe el tipo.
+static func lista_objetos(al_usar: Callable, ancho: float) -> VBoxContainer:
+	var lista := VBoxContainer.new()
+	lista.add_theme_constant_override("separation", 6)
+	for tipo in DatosBotin.ORDEN_CONSUMIBLES:
+		var datos: Dictionary = DatosBotin.CONSUMIBLES[tipo]
+		var nuevo := boton("%s (%d)" % [datos["nombre"], Juego.cantidad(tipo)], al_usar.bind(tipo), Vector2(ancho, 42), 18)
+		nuevo.focus_mode = Control.FOCUS_NONE
+		nuevo.disabled = Juego.cantidad(tipo) == 0 or not Juego.sirve(tipo)
+		Estilo.con_franja(nuevo, datos["color"])
+		lista.add_child(nuevo)
+	return lista
+
+
+## Total de pociones, vendas, torniquetes y medicinas.
+static func total_objetos() -> int:
+	var total := 0
+	for tipo in DatosBotin.ORDEN_CONSUMIBLES:
+		total += Juego.cantidad(tipo)
+	return total
+
+
+## Una línea con la sangre, lo que sangra y las infecciones del rey ("" si está
+## bien): "Sangre 82% (agitado) · sangras · infección leve".
+static func texto_salud() -> String:
+	var partes: PackedStringArray = []
+	if Juego.sangre_perdida > 0.005:
+		var texto := "Sangre %d%%" % roundi(Juego.fraccion_sangre() * 100.0)
+		var estado := Juego.estado_sangre()
+		if estado > 0:
+			texto += " (%s)" % String(DatosHeridas.ESTADOS_SANGRE[estado]).to_lower()
+		partes.append(texto)
+	if DatosHeridas.hay_sangrado(Juego.sangrados, "externo"):
+		partes.append("sangras")
+	if DatosHeridas.hay_sangrado(Juego.sangrados, "interno"):
+		partes.append("sangras por dentro")
+	var etapa := Juego.peor_infeccion()
+	if etapa > 0:
+		partes.append(String(DatosHeridas.ETAPAS[etapa]).to_lower())
+	if partes.is_empty():
+		return ""
+	var linea := " · ".join(partes)
+	return linea[0].to_upper() + linea.substr(1)

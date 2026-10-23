@@ -71,37 +71,84 @@ const PROB_ARMA := 0.35
 const MEJORA_POR_NIVEL := 0.25
 
 ## Poción de curación: cura vida y un poco cada parte herida. Se usa en combate
-## (gasta el turno) o entre combates. Las pociones se apilan en el inventario.
+## (gasta el turno) o entre combates.
 const POCION_VIDA := 40
 const POCION_PARTES := 25.0
 const PRECIO_POCION := 10
-## Parte del botín de cofres, enemigos y zonas que sale como poción.
-const PROB_POCION := 0.25
+## Objetos que se gastan al usarlos y se apilan en el inventario: la poción y lo
+## que trata el sangrado y las infecciones (ver DatosHeridas). La "ranura" del
+## objeto es su id. "precio": lo que pagan al venderlo. Provisionales.
+const CONSUMIBLES := {
+	"pocion": {
+		"nombre": "Poción de curación", "uno": "una poción de curación", "precio": PRECIO_POCION,
+		"color": Color("#ec407a"), "accion": "Tomar", "resumen": "cura 40 de vida",
+		"descripcion": "Cura 40 de vida y 25 de cada parte herida.",
+	},
+	"venda": {
+		"nombre": "Venda", "uno": "una venda", "precio": 3, "color": Color("#b0bec5"), "accion": "Usar",
+		"resumen": "para un sangrado",
+		"descripcion": "Para el sangrado por fuera que más sangra (si es grave, solo lo baja a moderado) y limpia la herida: baja su riesgo de infección.",
+	},
+	"torniquete": {
+		"nombre": "Torniquete", "uno": "un torniquete", "precio": 6, "color": Color("#a1887f"), "accion": "Usar",
+		"resumen": "brazos y piernas",
+		"descripcion": "Para del todo el sangrado por fuera que más sangra en un brazo o una pierna.",
+	},
+	"medicina": {
+		"nombre": "Medicina", "uno": "una medicina", "precio": 12, "color": Color("#81c784"), "accion": "Tomar",
+		"resumen": "sangrado interno e infección",
+		"descripcion": "Para el sangrado por dentro y cura las infecciones leves.",
+	},
+}
+const ORDEN_CONSUMIBLES := ["pocion", "venda", "torniquete", "medicina"]
+## Parte del botín de cofres, enemigos y zonas que sale como uno de estos objetos,
+## y cuánto sale cada uno (en %: suman PROB_CONSUMIBLE).
+const PROB_CONSUMIBLE := 0.35
+const PESO_CONSUMIBLE := {"pocion": 20.0, "venda": 8.0, "torniquete": 3.5, "medicina": 3.5}
+
+
+static func crear_consumible(tipo: String, cantidad := 1) -> Dictionary:
+	var datos: Dictionary = CONSUMIBLES[tipo]
+	return {"ranura": tipo, "nombre": datos["nombre"], "calidad": "normal", "nivel": 1,
+		"precio": datos["precio"], "cantidad": cantidad}
 
 
 static func crear_pocion(cantidad := 1) -> Dictionary:
-	return {"ranura": "pocion", "nombre": "Poción de curación", "calidad": "normal", "nivel": 1,
-		"precio": PRECIO_POCION, "cantidad": cantidad}
+	return crear_consumible("pocion", cantidad)
+
+
+static func es_consumible(objeto: Dictionary) -> bool:
+	return CONSUMIBLES.has(objeto.get("ranura", ""))
 
 
 static func es_pocion(objeto: Dictionary) -> bool:
 	return objeto.get("ranura", "") == "pocion"
 
 
-## Botín de cofres, enemigos y zonas: a veces una poción y si no, un arma o una
-## pieza de armadura (ver generar).
+## Botín de cofres, enemigos y zonas: a veces una poción, una venda, un torniquete
+## o una medicina y si no, un arma o una pieza de armadura (ver generar).
 static func generar_botin(nivel: int, rng: RandomNumberGenerator, bonus_calidad := 1.0) -> Dictionary:
-	if rng.randf() < PROB_POCION:
-		var pocion := crear_pocion()
-		pocion["nivel"] = clampi(nivel, 1, 4)
-		return pocion
+	if rng.randf() < PROB_CONSUMIBLE:
+		var total := 0.0
+		for candidato in ORDEN_CONSUMIBLES:
+			total += PESO_CONSUMIBLE[candidato]
+		var tirada := rng.randf() * total
+		var tipo: String = ORDEN_CONSUMIBLES[-1]
+		for candidato in ORDEN_CONSUMIBLES:
+			tirada -= PESO_CONSUMIBLE[candidato]
+			if tirada < 0.0:
+				tipo = candidato
+				break
+		var objeto := crear_consumible(tipo)
+		objeto["nivel"] = clampi(nivel, 1, 4)
+		return objeto
 	return generar(nivel, rng, "", "", bonus_calidad)
 
 
 ## "Espada de bronce (raro)" o "una poción de curación", para contar lo que se encontró.
 static func texto_hallazgo(objeto: Dictionary) -> String:
-	if es_pocion(objeto):
-		return "una poción de curación"
+	if es_consumible(objeto):
+		return CONSUMIBLES[objeto["ranura"]]["uno"]
 	return "%s (%s)" % [objeto["nombre"], nombre_calidad(objeto["calidad"]).to_lower()]
 
 
@@ -222,11 +269,11 @@ static func porcentaje_reduccion(valor: float) -> int:
 ## pagan por él (con Negociación); -1 = su precio base.
 static func describir(objeto: Dictionary, precio := -1) -> PackedStringArray:
 	var lineas: PackedStringArray = []
-	if es_pocion(objeto):
+	if es_consumible(objeto):
 		lineas.append("Tienes %d" % int(objeto.get("cantidad", 1)))
-		lineas.append("Cura %d de vida y %d de cada parte herida." % [POCION_VIDA, roundi(POCION_PARTES)])
-		lineas.append("Se toma en combate (gasta el turno) o entre combates.")
-		lineas.append("Se vende por %d de oro (de a una)" % (objeto["precio"] if precio < 0 else precio))
+		lineas.append(CONSUMIBLES[objeto["ranura"]]["descripcion"])
+		lineas.append("Se usa en combate (gasta el turno) o entre combates.")
+		lineas.append("Se vende por %d de oro (de a uno)" % (objeto["precio"] if precio < 0 else precio))
 		return lineas
 	lineas.append("%s · nivel %d" % [nombre_calidad(objeto["calidad"]), objeto["nivel"]])
 	if objeto["ranura"] == "arma":

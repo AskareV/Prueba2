@@ -78,9 +78,10 @@ var _bloqueo := 0.0
 ## el rey pelea con su equipo y sus heridas, puede tomar pociones y al terminar
 ## vuelve a ese lugar con las heridas que le queden.
 var _modo_reino := false
-## Pociones tomadas en este combate: se sacan del inventario al terminar (si la
-## aplicación se cierra a la mitad, el combate empieza de nuevo y no se pierden).
-var _pociones_usadas := 0
+## Objetos usados en este combate, por tipo (ver DatosBotin.CONSUMIBLES): se
+## sacan del inventario al terminar (si la aplicación se cierra a la mitad, el
+## combate empieza de nuevo y no se pierden).
+var _objetos_usados := {}
 var _resultado := ""
 
 
@@ -302,7 +303,9 @@ func _iniciar_turno_jugador() -> void:
 	_ya_jugo = true
 	# La guardia dura hasta el comienzo de su propio turno, aunque lo pierda aturdido.
 	_jugador.defendiendo = false
-	_jugador.regenerar_mana()
+	if await _empezar_turno(_jugador):
+		await _siguiente_turno()
+		return
 	if _jugador.aturdido:
 		_jugador.aturdido = false
 		_estado = Estado.ESPERANDO
@@ -354,10 +357,50 @@ func _ficha_turno(texto: String, color: Color) -> PanelContainer:
 	return ficha
 
 
+## Al empezar su turno, el luchador recupera maná y pierde la sangre de sus
+## heridas (ver MotorCombate.empezar_turno). Devuelve true si ya no actúa en este
+## turno: se desangró, se desmayó o lo perdió por estar débil y confuso (quien
+## llama da el turno al siguiente).
+func _empezar_turno(luchador: Luchador) -> bool:
+	var antes := luchador.estado_sangre()
+	var inicio := MotorCombate.empezar_turno(luchador, _rng)
+	var tu := luchador.es_jugador
+	var nombre := _mayuscula(luchador.con_articulo())
+	var figura := _figura_de(luchador)
+	if inicio["muerto"] or inicio["desmayo"]:
+		if inicio["muerto"]:
+			_agregar_mensaje("Te desangras y caes." if tu else "%s se desangra y cae." % nombre)
+		else:
+			_agregar_mensaje("Pierdes el conocimiento por la sangre perdida." if tu
+				else "%s se desmaya por la sangre perdida." % nombre)
+		_texto_flotante(figura, "torax_der", "¡Desangrado!" if inicio["muerto"] else "¡Inconsciente!", COLOR_AVISO)
+		_actualizar_paneles()
+		figura.caer()
+		await _pausa(0.9)
+		return true
+	var estado := luchador.estado_sangre()
+	if estado > antes:
+		var textos := ["", "agitado", "débil y confuso", "en shock"]
+		_agregar_mensaje(("Pierdes mucha sangre: estás %s." if tu else "%s pierde mucha sangre: está %s.") % (
+			[textos[estado]] if tu else [nombre, textos[estado]]))
+	if inicio["pierde_turno"]:
+		if tu:
+			_estado = Estado.ESPERANDO
+			_etiqueta_turno.text = "Turno %d · Confuso" % _turno
+		_agregar_mensaje("Estás débil y confuso: pierdes el turno." if tu
+			else "%s está débil y confuso: pierde el turno." % nombre)
+		_texto_flotante(figura, "craneo", "Confuso", COLOR_AVISO)
+		_actualizar_paneles()
+		await _pausa(1.0)
+		return true
+	return false
+
+
 func _actuar_rival() -> void:
 	var nombre := _mayuscula(_enemigo.con_articulo())
 	_enemigo.defendiendo = false
-	_enemigo.regenerar_mana()
+	if await _empezar_turno(_enemigo):
+		return
 	if _enemigo.aturdido:
 		_enemigo.aturdido = false
 		_agregar_mensaje("%s está aturdido y pierde el turno." % nombre)
@@ -740,42 +783,116 @@ func _al_pulsar_objeto() -> void:
 		_mostrar_objetos()
 
 
-## Pociones que quedan para este combate.
-func _pociones_disponibles() -> int:
-	return Juego.pociones() - _pociones_usadas
+## Objetos de ese tipo que quedan para este combate.
+func _disponibles(tipo: String) -> int:
+	return Juego.cantidad(tipo) - int(_objetos_usados.get(tipo, 0))
+
+
+func _total_disponibles() -> int:
+	var total := 0
+	for tipo in DatosBotin.ORDEN_CONSUMIBLES:
+		total += _disponibles(tipo)
+	return total
 
 
 func _mostrar_objetos() -> void:
 	_estado = Estado.OBJETO
 	_titulo_apuntar.text = "Objetos (usar uno gasta el turno)"
 	_limpiar_opciones()
-	_opciones.columns = 1
-	var texto := "Poción de curación ×%d\nRecuperas %d de vida y %d de cada parte herida." % [
-		_pociones_disponibles(), DatosBotin.POCION_VIDA, roundi(DatosBotin.POCION_PARTES)]
-	var boton := _boton(texto, _al_tomar_pocion, Vector2(460, 96), 19)
-	boton.disabled = _pociones_disponibles() <= 0 or not _jugador.esta_herido()
-	Estilo.con_franja(boton, Color("#ec407a"))
-	_opciones.add_child(boton)
+	_opciones.columns = 2
+	for tipo in DatosBotin.ORDEN_CONSUMIBLES:
+		var datos: Dictionary = DatosBotin.CONSUMIBLES[tipo]
+		var texto := "%s ×%d\n%s" % [datos["nombre"], _disponibles(tipo), _efecto_objeto(tipo)]
+		var boton := _boton(texto, _al_usar_objeto.bind(tipo), Vector2(500, 78), 17)
+		boton.disabled = _disponibles(tipo) <= 0 or not _sirve_en_combate(tipo)
+		Estilo.con_franja(boton, datos["color"])
+		_opciones.add_child(boton)
 	_boton_volver.text = "Volver"
 	_mostrar_panel_apuntar()
 	_bloquear_entrada()
 
 
-func _al_tomar_pocion() -> void:
-	if _estado != Estado.OBJETO or not _entrada_libre() or not _jugador.esta_herido() or _pociones_disponibles() <= 0:
+## Usar ese objeto ahora haría algo.
+func _sirve_en_combate(tipo: String) -> bool:
+	match tipo:
+		"pocion":
+			return _jugador.esta_herido()
+		"venda":
+			return DatosHeridas.hay_sangrado(_jugador.sangrados, "externo")
+		"torniquete":
+			return DatosHeridas.hay_sangrado(_jugador.sangrados, "externo", true)
+		"medicina":
+			return DatosHeridas.hay_sangrado(_jugador.sangrados, "interno") or Juego.infecciones.any(
+				func(infeccion: Dictionary) -> bool: return int(infeccion["etapa"]) == 1)
+	return false
+
+
+## Qué haría ahora ese objeto, para su botón.
+func _efecto_objeto(tipo: String) -> String:
+	match tipo:
+		"pocion":
+			if not _jugador.esta_herido():
+				return "Estás sano."
+			return "Cura %d de vida y %d de cada parte herida." % [DatosBotin.POCION_VIDA, roundi(DatosBotin.POCION_PARTES)]
+		"venda":
+			var peor := DatosHeridas.peor(_jugador.sangrados, "externo")
+			if peor.is_empty():
+				return "Nada te sangra por fuera."
+			return "%s: %s." % [_mayuscula(DatosCuerpo.con_articulo(peor["parte"])),
+				"sangrará menos" if int(peor["nivel"]) == 3 else "deja de sangrar"]
+		"torniquete":
+			var peor := DatosHeridas.peor(_jugador.sangrados, "externo", true)
+			if peor.is_empty():
+				return "Ningún brazo ni pierna te sangra por fuera."
+			return "%s: deja de sangrar." % _mayuscula(DatosCuerpo.con_articulo(peor["parte"]))
+		"medicina":
+			if DatosHeridas.hay_sangrado(_jugador.sangrados, "interno"):
+				return "Dejas de sangrar por dentro."
+			if _sirve_en_combate("medicina"):
+				return "Cura tus infecciones leves."
+			return "No sangras por dentro."
+	return ""
+
+
+func _al_usar_objeto(tipo: String) -> void:
+	if _estado != Estado.OBJETO or not _entrada_libre() or _disponibles(tipo) <= 0 or not _sirve_en_combate(tipo):
 		return
-	_pociones_usadas += 1
+	_objetos_usados[tipo] = int(_objetos_usados.get(tipo, 0)) + 1
 	_estado = Estado.ESPERANDO
 	_ocultar_controles()
-	var cura := _jugador.curar(DatosBotin.POCION_VIDA, DatosBotin.POCION_PARTES)
-	if cura > 0:
-		_agregar_mensaje("Tomas una poción de curación: recuperas %d de vida y tus heridas mejoran." % cura)
-		_texto_flotante(_figura_jugador, "torax_der", "+%d" % cura, COLOR_CURA)
-	else:
-		_agregar_mensaje("Tomas una poción de curación: tus heridas mejoran.")
+	_agregar_mensaje(_usar_objeto(tipo))
 	_actualizar_paneles()
 	await _pausa(0.8)
 	await _siguiente_turno()
+
+
+## Aplica el objeto al rey y devuelve qué pasó. La medicina cura las infecciones
+## leves al terminar el combate (ver _mostrar_fin).
+func _usar_objeto(tipo: String) -> String:
+	match tipo:
+		"pocion":
+			var cura := _jugador.curar(DatosBotin.POCION_VIDA, DatosBotin.POCION_PARTES)
+			if cura > 0:
+				_texto_flotante(_figura_jugador, "torax_der", "+%d" % cura, COLOR_CURA)
+				return "Tomas una poción de curación: recuperas %d de vida y tus heridas mejoran." % cura
+			return "Tomas una poción de curación: tus heridas mejoran."
+		"venda":
+			var parte_id := DatosHeridas.vendar(_jugador.sangrados)
+			# Limpia y venda la herida: baja su riesgo de infección.
+			for herida in _jugador.heridas:
+				if herida["parte"] == parte_id:
+					herida["limpia"] = true
+			var sigue := _jugador.sangrados.any(func(sangrado: Dictionary) -> bool:
+				return sangrado["parte"] == parte_id and sangrado["tipo"] == "externo")
+			return "Vendas %s: %s." % [DatosCuerpo.con_articulo(parte_id), "sangra menos" if sigue else "deja de sangrar"]
+		"torniquete":
+			var parte_id := DatosHeridas.poner_torniquete(_jugador.sangrados)
+			return "Pones un torniquete en %s: deja de sangrar." % DatosCuerpo.con_articulo(parte_id)
+		"medicina":
+			if DatosHeridas.parar(_jugador.sangrados, "interno") > 0:
+				return "Tomas una medicina: dejas de sangrar por dentro."
+			return "Tomas una medicina."
+	return ""
 
 
 # --- Entrada: tocar el cuerpo del rival y botón "atrás" ---
@@ -918,8 +1035,8 @@ func _mostrar_acciones() -> void:
 		_boton_arma.disabled = _modo_reino
 	_boton_huir.text = "Huir\n%d%%" % roundi(MotorCombate.prob_huir(_jugador, _enemigo) * 100.0)
 	if _modo_reino:
-		_boton_objeto.text = "Objeto\n(%d)" % _pociones_disponibles()
-		_boton_objeto.disabled = _pociones_disponibles() <= 0
+		_boton_objeto.text = "Objeto\n(%d)" % _total_disponibles()
+		_boton_objeto.disabled = _total_disponibles() <= 0
 	_etiqueta_turno.text = "Turno %d · Te toca" % _turno
 	_boton_menu.disabled = false
 	_boton_estado.disabled = false
@@ -1027,6 +1144,7 @@ func _narrar(atacante: Luchador, defensor: Luchador, r: Dictionary) -> String:
 		texto = "%s te golpea en %s %s: %s %s." % [nombre, DatosCuerpo.con_articulo(parte_id),
 			_con_arma(arma_id, "su"), String(r["herida"]).to_lower(), _danio(r["danio"])]
 	var tu := defensor.es_jugador
+	texto += _texto_sangrado(r, tu)
 	if r["inutilizada"]:
 		var genero := "inutilizada" if DatosCuerpo.PARTES[parte_id]["articulo"] == "la" else "inutilizado"
 		texto += " %s queda %s." % [_mayuscula(DatosCuerpo.posesivo(parte_id, "tu" if tu else "su")), genero]
@@ -1050,10 +1168,25 @@ func _narrar(atacante: Luchador, defensor: Luchador, r: Dictionary) -> String:
 	return texto
 
 
+## Cómo sangra la herida: el sangrado por dentro del rival no se ve, y una herida
+## leve para sola, así que no se cuenta.
+func _texto_sangrado(r: Dictionary, tu: bool) -> String:
+	var nivel: int = r["sangrado"]
+	if nivel < 2:
+		return ""
+	if r["sangrado_tipo"] == "interno":
+		return " Sangras por dentro." if tu else ""
+	if nivel == 3:
+		return " ¡Tu herida sangra mucho!" if tu else " ¡La herida sangra mucho!"
+	return " Tu herida sangra." if tu else " La herida sangra."
+
+
 func _avisos(r: Dictionary) -> Array[String]:
 	var avisos: Array[String] = []
 	if r["critico"]:
 		avisos.append("¡Crítico!")
+	if r["sangrado"] == 3 and r["sangrado_tipo"] == "externo":
+		avisos.append("¡Sangra mucho!")
 	if r["empujon"]:
 		avisos.append("¡Empujado!")
 	if r["fractura"]:
@@ -1144,8 +1277,11 @@ func _mostrar_estado() -> void:
 		+ "la esquiva y la huida; el brazo del arma, el daño. La mano del arma puede soltarla; el cráneo puede "
 		+ "aturdir o desmayar. Una fractura hace rendir 30% menos esa parte; sin los dos ojos se queda ciego; "
 		+ "con poca respiración se es más lento. La velocidad decide quién actúa: arriba se ven los próximos "
-		+ "turnos, y el más rápido puede actuar dos veces seguidas. En el reino las heridas siguen en el "
-		+ "próximo combate. El sangrado, el dolor y las infecciones vendrán después.", 16, Estilo.TEXTO_SUAVE)
+		+ "turnos, y el más rápido puede actuar dos veces seguidas. Los cortes y las perforaciones sangran "
+		+ "por fuera, y los golpes contundentes en la cabeza y el torso, por dentro: en cada turno se pierde "
+		+ "la sangre de todas las heridas y baja la vida máxima; con mucha sangre perdida se acierta y se pega "
+		+ "menos, y con la mitad se muere. En el reino las heridas siguen en el próximo combate. El dolor "
+		+ "vendrá después.", 16, Estilo.TEXTO_SUAVE)
 	reglas.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	reglas.custom_minimum_size = Vector2(1100, 0)
 	columna.add_child(reglas)
@@ -1178,6 +1314,12 @@ func _columna_estado(luchador: Luchador, titulo: String) -> VBoxContainer:
 	for funcion_id in DatosCuerpo.FUNCIONES:
 		columna.add_child(_fila_barra(DatosCuerpo.NOMBRES_FUNCION[funcion_id], luchador.funcion(funcion_id)))
 	columna.add_child(_fila_barra("Cobertura", luchador.cobertura() / Luchador.cobertura_maxima()))
+	if luchador.sangra:
+		columna.add_child(_fila_barra("Sangre", luchador.sangre / DatosHeridas.SANGRE_MAX))
+		var estado := luchador.estado_sangre()
+		if estado > 0:
+			columna.add_child(_etiqueta_simple("%s: %s" % [DatosHeridas.ESTADOS_SANGRE[estado], _efecto_sangre(estado)],
+				16, COLOR_AVISO))
 	columna.add_child(_etiqueta_simple("Partes heridas", 20, Color("#ffe082")))
 	var lista := VBoxContainer.new()
 	lista.add_theme_constant_override("separation", 2)
@@ -1202,22 +1344,47 @@ func _columna_estado(luchador: Luchador, titulo: String) -> VBoxContainer:
 		var texto := "• %s: %s" % [DatosCuerpo.PARTES[parte_id]["nombre"], luchador.estado(parte_id).to_lower()]
 		if not tipos.is_empty():
 			texto += " (%s)" % ", ".join(tipos)
+		texto += _sangrado_de(luchador, parte_id)
 		lista.add_child(_etiqueta_simple(texto, 17, Barra.color_para(1.0 - nivel / 4.0)))
 	if not alguna:
 		lista.add_child(_etiqueta_simple("Sin heridas.", 17, Estilo.TEXTO_SUAVE))
 	return columna
 
 
+## " · sangra (grave)" para la ventana de estado. Del rival solo se ve lo que
+## sangra por fuera.
+func _sangrado_de(luchador: Luchador, parte_id: String) -> String:
+	var textos: PackedStringArray = []
+	for sangrado in luchador.sangrados:
+		if sangrado["parte"] != parte_id or (sangrado["tipo"] == "interno" and not luchador.es_jugador):
+			continue
+		var nivel: String = DatosHeridas.NIVELES[sangrado["nivel"]]
+		textos.append("sangra por dentro (%s)" % nivel if sangrado["tipo"] == "interno" else "sangra (%s)" % nivel)
+	return "" if textos.is_empty() else " · " + ", ".join(textos)
+
+
+func _efecto_sangre(estado: int) -> String:
+	match estado:
+		1:
+			return "acierta un poco menos."
+		2:
+			return "acierta y pega menos, y a veces pierde el turno."
+	return "acierta y pega menos, y puede desmayarse."
+
+
 func _mostrar_fin(resultado: String) -> void:
 	_estado = Estado.FIN
 	_resultado = resultado
 	if _modo_reino:
-		# Las heridas siguen en el próximo combate, las pociones tomadas se gastan
+		# Las heridas siguen en el próximo combate, los objetos usados se gastan
 		# y, si se cierra la aplicación ahora, la partida guardada ya tiene el resultado.
 		Juego.guardar_salud(_jugador)
-		for i in _pociones_usadas:
-			Juego.gastar_pocion()
-		_pociones_usadas = 0
+		for tipo in _objetos_usados:
+			for i in int(_objetos_usados[tipo]):
+				Juego.gastar(tipo)
+		if _objetos_usados.has("medicina"):
+			Juego.curar_infecciones_leves()
+		_objetos_usados = {}
 		Juego.combate["resultado"] = resultado
 	_ocultar_controles()
 	_boton_menu.disabled = false
@@ -1228,12 +1395,20 @@ func _mostrar_fin(resultado: String) -> void:
 		"victoria":
 			titulo = "¡Victoria!"
 			color = Color("#ffd54f")
-			motivo = "%s quedó inconsciente." if _enemigo.desmayado else "%s ya no puede seguir."
+			motivo = "%s ya no puede seguir."
+			if _enemigo.muerto:
+				motivo = "%s se desangró."
+			elif _enemigo.desmayado:
+				motivo = "%s quedó inconsciente."
 			motivo = motivo % _mayuscula(_enemigo.con_articulo())
 		"derrota":
 			titulo = "Derrota"
 			color = Color("#ef5350")
-			motivo = "Perdiste el conocimiento." if _jugador.desmayado else "Te quedaste sin vida."
+			motivo = "Te quedaste sin vida."
+			if _jugador.muerto:
+				motivo = "Te desangraste."
+			elif _jugador.desmayado:
+				motivo = "Perdiste el conocimiento."
 		_:
 			titulo = "Escapaste"
 			color = Color("#90caf9")

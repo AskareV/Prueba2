@@ -75,6 +75,16 @@ var heridas: Array[Dictionary] = []
 ## Decimales de vida curada que todavía no llegan a un punto (al caminar se cura
 ## poco a poco: así Recuperación también se nota ahí).
 var resto_vida := 0.0
+## Sangre que le falta (litros) y partes que siguen sangrando (ver
+## Luchador.sangrados). Infecciones: [{"parte", "etapa": 0 a 3 (ver
+## DatosHeridas.ETAPAS), "limpia": la limpió y vendó pronto, "sucia": la herida
+## se hizo en una mazmorra}].
+var sangre_perdida := 0.0
+var sangrados: Array[Dictionary] = []
+var infecciones: Array[Dictionary] = []
+## Días de esta semana que ya pasaron para las infecciones (en una zona, uno por
+## día de marcha); al pasar la semana pasan los que faltan.
+var dias_semana := 0
 
 ## Solo la partida del autoload se guarda sola (las de las pruebas, no).
 var _guardado_automatico := false
@@ -138,6 +148,10 @@ func nueva_partida(p_diestro: bool) -> void:
 	fracturas = {}
 	heridas = []
 	resto_vida = 0.0
+	sangre_perdida = 0.0
+	sangrados = []
+	infecciones = []
+	dias_semana = 0
 	aviso = "Reparte tus %d puntos iniciales en la pestaña Rey." % DatosEstadisticas.PUNTOS_INICIALES
 
 
@@ -155,6 +169,8 @@ func datos_guardado() -> Dictionary:
 		"peligro": peligro, "mercado": mercado, "informe_ciudad": informe_ciudad,
 		"vida_perdida": vida_perdida, "mana_perdido": mana_perdido, "integridad": integridad,
 		"fracturas": fracturas, "heridas": heridas, "resto_vida": resto_vida,
+		"sangre_perdida": sangre_perdida, "sangrados": sangrados, "infecciones": infecciones,
+		"dias_semana": dias_semana,
 	}
 
 
@@ -170,6 +186,7 @@ const TIPOS_GUARDADO := {
 	"peligro": TYPE_FLOAT, "mercado": TYPE_ARRAY, "informe_ciudad": TYPE_DICTIONARY,
 	"vida_perdida": TYPE_INT, "mana_perdido": TYPE_FLOAT, "integridad": TYPE_DICTIONARY,
 	"fracturas": TYPE_DICTIONARY, "heridas": TYPE_ARRAY, "resto_vida": TYPE_FLOAT,
+	"sangre_perdida": TYPE_FLOAT, "sangrados": TYPE_ARRAY, "infecciones": TYPE_ARRAY, "dias_semana": TYPE_INT,
 }
 
 
@@ -184,7 +201,7 @@ static func _guardado_valido(datos: Dictionary) -> bool:
 		var numero := esperado in [TYPE_INT, TYPE_FLOAT] and tipo in [TYPE_INT, TYPE_FLOAT]
 		if tipo != esperado and not numero:
 			return false
-	for clave in ["inventario", "mercado", "heridas"]:
+	for clave in ["inventario", "mercado", "heridas", "sangrados", "infecciones"]:
 		for elemento in datos.get(clave, []):
 			if not (elemento is Dictionary):
 				return false
@@ -252,6 +269,10 @@ func cargar(ruta := ARCHIVO) -> bool:
 	fracturas = datos.get("fracturas", {})
 	heridas.assign(datos.get("heridas", []))
 	resto_vida = float(datos.get("resto_vida", 0.0))
+	sangre_perdida = float(datos.get("sangre_perdida", 0.0))
+	sangrados.assign(datos.get("sangrados", []))
+	infecciones.assign(datos.get("infecciones", []))
+	dias_semana = int(datos.get("dias_semana", 0))
 	_ultimo_guardado = var_to_str(datos_guardado())
 	return true
 
@@ -262,9 +283,16 @@ func cargar(ruta := ARCHIVO) -> bool:
 
 ## Termina la semana: la ciudad vive su semana (ver semana_ciudad), las
 ## mazmorras se reinician, el rey recupera todo su maná y empieza la siguiente.
-## Las heridas no se curan solas: hay que descansar (o caminar, o una poción).
+## Las heridas no se curan solas: hay que descansar (o caminar, o una poción). En
+## el castillo le vendan las heridas (dejan de sangrar por fuera) y pasan los
+## días que faltan de la semana para las infecciones.
 func pasar_semana() -> void:
 	semana_ciudad()
+	DatosHeridas.parar(sangrados, "externo")
+	var salud := avanzar_dias(DatosHeridas.DIAS_POR_SEMANA - dias_semana)
+	if salud["texto"] != "":
+		informe_ciudad["salud"] = salud["texto"]
+	dias_semana = 0
 	semana += 1
 	mazmorra = {}
 	expedicion = {}
@@ -272,11 +300,17 @@ func pasar_semana() -> void:
 	mana_perdido = 0.0
 
 
-## Descansa una semana en el castillo: baja el estrés y cura las heridas (más
-## con la enfermería y con Recuperación).
+## Descansa una semana en el castillo: baja el estrés, recupera sangre y cura
+## las heridas (más con la enfermería y con Recuperación). La enfermería además
+## para el sangrado por dentro y cura las infecciones.
 func descansar() -> void:
 	sumar_estres(-ESTRES_DESCANSO)
-	curar_fraccion(cura_al_descansar())
+	var fraccion := cura_al_descansar()
+	recuperar_sangre(DatosHeridas.SANGRE_MAX * fraccion * multiplicador_curacion())
+	if nivel_edificio("enfermeria") > 0:
+		DatosHeridas.parar(sangrados, "interno")
+		infecciones = []
+	curar_fraccion(fraccion)
 	pasar_semana()
 
 
@@ -293,12 +327,13 @@ func _con_id(objeto: Dictionary) -> Dictionary:
 	return objeto
 
 
-## Guarda un objeto nuevo en el inventario y lo devuelve con su id. Las pociones
-## se apilan: si ya hay, suma a la cantidad y devuelve esa.
+## Guarda un objeto nuevo en el inventario y lo devuelve con su id. Las pociones,
+## vendas, torniquetes y medicinas se apilan: si ya hay de ese tipo, suma a la
+## cantidad y devuelve esa pila.
 func agregar(objeto: Dictionary) -> Dictionary:
-	if DatosBotin.es_pocion(objeto):
+	if DatosBotin.es_consumible(objeto):
 		for guardado in inventario:
-			if DatosBotin.es_pocion(guardado):
+			if guardado["ranura"] == objeto["ranura"]:
 				guardado["cantidad"] = int(guardado.get("cantidad", 1)) + int(objeto.get("cantidad", 1))
 				return guardado
 	var guardado := _con_id(objeto)
@@ -313,15 +348,15 @@ func _indice(id: int) -> int:
 	return -1
 
 
-## Vende un objeto del inventario (de las pociones, una). Devuelve el oro ganado
-## (0 si no estaba).
+## Vende un objeto del inventario (de una pila, uno). Devuelve el oro ganado (0
+## si no estaba).
 func vender(id: int) -> int:
 	var i := _indice(id)
 	if i < 0:
 		return 0
 	var objeto: Dictionary = inventario[i]
 	var precio := precio_venta(objeto)
-	if DatosBotin.es_pocion(objeto) and int(objeto.get("cantidad", 1)) > 1:
+	if DatosBotin.es_consumible(objeto) and int(objeto.get("cantidad", 1)) > 1:
 		objeto["cantidad"] = int(objeto["cantidad"]) - 1
 	else:
 		inventario.remove_at(i)
@@ -332,7 +367,7 @@ func vender(id: int) -> int:
 ## Equipa un objeto del inventario; lo que había en esa ranura vuelve al inventario.
 func equipar(id: int) -> bool:
 	var i := _indice(id)
-	if i < 0 or DatosBotin.es_pocion(inventario[i]):
+	if i < 0 or DatosBotin.es_consumible(inventario[i]):
 		return false
 	var objeto: Dictionary = inventario[i]
 	inventario.remove_at(i)
@@ -375,7 +410,11 @@ func crear_rey() -> Luchador:
 	var rey := DatosRivales.crear_rey(diestro, arma.get("base", "espada"), estadisticas())
 	rey.arma_objeto = arma
 	rey.armadura = armadura_por_zona()
-	rey.vida = clampi(rey.vida_max - vida_perdida, 1, rey.vida_max)
+	rey.sangre = DatosHeridas.SANGRE_MAX - sangre_perdida
+	rey.sangrados.assign(sangrados.duplicate(true))
+	rey.infeccion = peor_infeccion()
+	rey.ajustar_vida_max()
+	rey.vida = clampi(rey.vida_max_sana - vida_perdida, 1, rey.vida_max)
 	rey.mana = clampf(rey.mana_max - mana_perdido, 0.0, rey.mana_max)
 	for parte_id in integridad:
 		rey.integridad[parte_id] = float(integridad[parte_id])
@@ -390,10 +429,14 @@ func crear_rey() -> Luchador:
 # --- Salud del rey: las heridas duran entre combates ---
 
 ## Guarda cómo quedó el rey al terminar un combate. Aunque pierda, lo traen con
-## 1 de vida y despierto (el cráneo justo por encima del desmayo).
+## 1 de vida y despierto (el cráneo justo por encima del desmayo); si se desangró,
+## además le paran el sangrado. Las heridas abiertas nuevas quedan en riesgo de
+## infección.
 func guardar_salud(rey: Luchador) -> void:
-	vida_perdida = mini(rey.vida_max - rey.vida, rey.vida_max - 1)
+	vida_perdida = mini(rey.vida_max_sana - rey.vida, rey.vida_max_sana - 1)
 	mana_perdido = rey.mana_max - rey.mana
+	sangre_perdida = DatosHeridas.SANGRE_MAX - rey.sangre
+	sangrados.assign([] if rey.muerto else rey.sangrados.duplicate(true))
 	integridad = {}
 	for parte_id in rey.integridad:
 		if rey.integridad[parte_id] < 100.0:
@@ -405,21 +448,132 @@ func guardar_salud(rey: Luchador) -> void:
 	for parte_id in rey.fracturas:
 		if integridad.has(parte_id):
 			fracturas[parte_id] = true
+	_sumar_riesgos(rey.heridas)
 	heridas.assign(rey.heridas.filter(func(herida: Dictionary) -> bool: return integridad.has(herida["parte"])))
+	for herida in heridas:
+		herida.erase("nueva")
+		herida.erase("limpia")
 
 
-func vida_maxima() -> int:
+## Las heridas abiertas nuevas (cortes y perforaciones) y las del abdomen quedan
+## en riesgo de infección; las que se hicieron en una mazmorra, más. Una parte
+## queda limpia solo si todas sus heridas nuevas se limpiaron con una venda.
+func _sumar_riesgos(golpes: Array[Dictionary]) -> void:
+	var sucia: bool = combate.get("origen", "") == "mazmorra"
+	for herida in golpes:
+		if not herida.get("nueva", false) or not DatosHeridas.abre_riesgo(herida):
+			continue
+		var limpia: bool = herida.get("limpia", false)
+		var infeccion := infeccion_de(herida["parte"])
+		if infeccion.is_empty():
+			infecciones.append({"parte": herida["parte"], "etapa": 0, "limpia": limpia, "sucia": sucia})
+		elif int(infeccion["etapa"]) == 0:
+			infeccion["limpia"] = infeccion["limpia"] and limpia
+			infeccion["sucia"] = infeccion["sucia"] or sucia
+
+
+## Vida máxima con toda la sangre.
+func vida_maxima_sana() -> int:
 	return DatosEstadisticas.VIDA_BASE + DatosEstadisticas.vida_extra(puntos_de("vitalidad"))
+
+
+## Vida máxima ahora: la sangre perdida la baja en la misma proporción.
+func vida_maxima() -> int:
+	return maxi(1, roundi(vida_maxima_sana() * fraccion_sangre()))
+
+
+## Parte de la sangre que le queda (0 a 1).
+func fraccion_sangre() -> float:
+	return 1.0 - sangre_perdida / DatosHeridas.SANGRE_MAX
+
+
+## 0 normal, 1 agitado, 2 débil y confuso, 3 shock (ver DatosHeridas).
+func estado_sangre() -> int:
+	return DatosHeridas.estado_por_perdida(sangre_perdida / DatosHeridas.SANGRE_MAX)
 
 
 ## Vida que tiene ahora (al menos 1: aunque pierda un combate, lo traen vivo).
 func vida_actual() -> int:
-	return clampi(vida_maxima() - vida_perdida, 1, vida_maxima())
+	return clampi(vida_maxima_sana() - vida_perdida, 1, vida_maxima())
 
 
-## Le falta vida o tiene alguna parte herida.
+## Le falta vida (de la que puede tener ahora) o tiene alguna parte herida.
 func esta_herido() -> bool:
-	return vida_perdida > 0 or not integridad.is_empty()
+	return vida_actual() < vida_maxima() or not integridad.is_empty()
+
+
+## La vida no puede pasar de la máxima de ahora (baja con la sangre perdida).
+func _limitar_vida() -> void:
+	vida_perdida = maxi(vida_perdida, vida_maxima_sana() - vida_maxima())
+
+
+## Pierde sangre fuera del combate. Devuelve true si se desangró (ver morir).
+func perder_sangre(litros: float) -> bool:
+	sangre_perdida = minf(sangre_perdida + maxf(litros, 0.0), DatosHeridas.SANGRE_MAX)
+	_limitar_vida()
+	return sangre_perdida >= DatosHeridas.SANGRE_MAX * DatosHeridas.MUERTE - 0.0001
+
+
+func recuperar_sangre(litros: float) -> void:
+	sangre_perdida = maxf(sangre_perdida - maxf(litros, 0.0), 0.0)
+
+
+## Murió desangrado o de una infección: como al perder un combate, lo traen al
+## castillo con 1 de vida y +50 de estrés, le paran el sangrado y le curan las
+## infecciones.
+func morir() -> void:
+	vida_perdida = vida_maxima_sana() - 1
+	sangrados = []
+	infecciones = []
+	sumar_estres(estres_mental(DatosAventura.ESTRES_DERROTA))
+
+
+# --- Infecciones (B.4) ---
+
+func infeccion_de(parte_id: String) -> Dictionary:
+	for infeccion in infecciones:
+		if infeccion["parte"] == parte_id:
+			return infeccion
+	return {}
+
+
+## Etapa de la peor infección (0 si no hay ninguna o solo hay riesgo).
+func peor_infeccion() -> int:
+	var peor := 0
+	for infeccion in infecciones:
+		peor = maxi(peor, int(infeccion["etapa"]))
+	return peor
+
+
+## Pasan esos días para las infecciones (ver DatosHeridas): una herida en riesgo
+## puede infectarse y una infección sin tratar, empeorar; la generalizada puede
+## matarlo (ver morir). Devuelve {"texto": qué pasó, para contarlo ("" si nada),
+## "muerte": si murió}.
+func avanzar_dias(dias: int) -> Dictionary:
+	var antes := {}
+	for infeccion in infecciones:
+		antes[infeccion["parte"]] = int(infeccion["etapa"])
+	for dia in maxi(dias, 0):
+		for infeccion in infecciones:
+			var etapa := int(infeccion["etapa"])
+			if etapa >= 3:
+				if rng.randf() < DatosHeridas.MUERTE_POR_DIA:
+					morir()
+					return {"texto": "La infección casi te mata: te salvaron en el castillo.", "muerte": true}
+			elif rng.randf() < DatosHeridas.prob_avance(infeccion):
+				infeccion["etapa"] = etapa + 1
+	var textos: PackedStringArray = []
+	for infeccion in infecciones:
+		var etapa := int(infeccion["etapa"])
+		if etapa > int(antes.get(infeccion["parte"], 0)):
+			textos.append(DatosHeridas.texto_avance(infeccion["parte"], etapa))
+	return {"texto": " ".join(textos), "muerte": false}
+
+
+## Un día de marcha en una zona también cuenta para las infecciones.
+func pasar_dia() -> Dictionary:
+	dias_semana += 1
+	return avanzar_dias(1)
 
 
 ## Cuánto más se cura el rey gracias a Recuperación.
@@ -427,18 +581,26 @@ func multiplicador_curacion() -> float:
 	return DatosEstadisticas.aumento(puntos_de("recuperacion"), DatosEstadisticas.CURA_POR_RECUPERACION)
 
 
-## Cura "vida" puntos de vida y "partes" de integridad a cada parte herida. Una
-## parte que se cura del todo deja de estar fracturada y olvida sus golpes.
+## Cura "vida" puntos de vida (sin pasar de la vida máxima de ahora) y "partes"
+## de integridad a cada parte herida (la mitad si está infectada). Una parte que
+## se cura del todo deja de estar fracturada, olvida sus golpes, deja de sangrar
+## y, si solo estaba en riesgo, de poder infectarse.
 func curar(vida: int, partes: float) -> void:
 	vida_perdida = maxi(vida_perdida - vida, 0)
+	_limitar_vida()
 	for parte_id in integridad.keys():
-		var valor := float(integridad[parte_id]) + partes
+		var infeccion := infeccion_de(parte_id)
+		var infectada := not infeccion.is_empty() and int(infeccion["etapa"]) > 0
+		var valor := float(integridad[parte_id]) + partes * (DatosHeridas.CURA_INFECTADA if infectada else 1.0)
 		if valor >= 100.0:
 			integridad.erase(parte_id)
 			fracturas.erase(parte_id)
 		else:
 			integridad[parte_id] = valor
 	heridas.assign(heridas.filter(func(herida: Dictionary) -> bool: return integridad.has(herida["parte"])))
+	sangrados.assign(sangrados.filter(func(sangrado: Dictionary) -> bool: return integridad.has(sangrado["parte"])))
+	infecciones.assign(infecciones.filter(func(infeccion: Dictionary) -> bool:
+		return int(infeccion["etapa"]) > 0 or integridad.has(infeccion["parte"])))
 
 
 ## Cura esa parte de la vida máxima y esos puntos ×100 de cada parte (0,05 = 5%
@@ -458,7 +620,7 @@ func vida_curada(fraccion: float) -> int:
 
 
 func _vida_exacta(fraccion: float) -> float:
-	return vida_maxima() * fraccion * multiplicador_curacion() + resto_vida
+	return vida_maxima_sana() * fraccion * multiplicador_curacion() + resto_vida
 
 
 ## Integridad que cura curar_fraccion a cada parte herida (con Recuperación).
@@ -468,10 +630,35 @@ func partes_curadas(fraccion: float) -> float:
 
 ## Al caminar el rey se va curando: cada paso de la mazmorra (y cada día de una
 ## zona, que cuenta como varios pasos) cura un poco la vida, todas las partes a
-## la vez y el maná.
-func curar_al_caminar(pasos := 1.0) -> void:
+## la vez, el maná y la sangre. Antes pierde la sangre de las heridas que siguen
+## sangrando (las leves paran solas). Devuelve true si se desangró por el camino:
+## entonces muere (ver morir).
+func curar_al_caminar(pasos := 1.0) -> bool:
+	if perder_sangre(DatosHeridas.avanzar_sangrados(sangrados, roundi(pasos))):
+		morir()
+		return true
+	recuperar_sangre(DatosHeridas.SANGRE_MAX * DatosHeridas.SANGRE_POR_PASO * pasos * multiplicador_curacion())
 	curar_fraccion(DatosAventura.CURA_POR_PASO * pasos)
 	mana_perdido = maxf(mana_perdido - DatosAventura.MANA_POR_PASO * pasos, 0.0)
+	return false
+
+
+## Lo que curaría descansar una semana ahora: {"vida": puntos (como mucho hasta
+## la vida máxima que tendrá con la sangre recuperada), "partes": puntos de cada
+## parte herida, "sangre": litros, "trata": la enfermería para el sangrado por
+## dentro y cura las infecciones}.
+func prevision_descanso() -> Dictionary:
+	var fraccion := cura_al_descansar()
+	var sangre := minf(DatosHeridas.SANGRE_MAX * fraccion * multiplicador_curacion(), sangre_perdida)
+	var maxima := maxi(1, roundi(vida_maxima_sana() * (1.0 - (sangre_perdida - sangre) / DatosHeridas.SANGRE_MAX)))
+	var trata := nivel_edificio("enfermeria") > 0 and (DatosHeridas.hay_sangrado(sangrados, "interno") or not infecciones.is_empty())
+	return {"vida": clampi(vida_curada(fraccion), 0, maxi(maxima - vida_actual(), 0)), "partes": partes_curadas(fraccion),
+		"sangre": sangre, "trata": trata}
+
+
+## Le falta vida o sangre, o tiene alguna parte herida o una infección.
+func necesita_curarse() -> bool:
+	return esta_herido() or sangre_perdida > 0.005 or not infecciones.is_empty() or not sangrados.is_empty()
 
 
 ## Parte de la vida (y de cada parte herida) que cura descansar una semana en el
@@ -480,19 +667,25 @@ func cura_al_descansar() -> float:
 	return DatosCiudad.CURA_DESCANSO + DatosCiudad.CURA_ENFERMERIA[nivel_edificio("enfermeria")]
 
 
-func pociones() -> int:
+## Cuántos objetos de ese tipo (ver DatosBotin.CONSUMIBLES) tiene.
+func cantidad(tipo: String) -> int:
 	var total := 0
 	for objeto in inventario:
-		if DatosBotin.es_pocion(objeto):
+		if objeto["ranura"] == tipo:
 			total += int(objeto.get("cantidad", 1))
 	return total
 
 
-## Saca una poción del inventario (para tomarla en combate). false si no hay.
-func gastar_pocion() -> bool:
+func pociones() -> int:
+	return cantidad("pocion")
+
+
+## Saca uno de esos objetos del inventario (los que se usan en combate se gastan
+## al terminarlo). false si no hay.
+func gastar(tipo: String) -> bool:
 	for i in inventario.size():
 		var objeto: Dictionary = inventario[i]
-		if not DatosBotin.es_pocion(objeto):
+		if objeto["ranura"] != tipo:
 			continue
 		if int(objeto.get("cantidad", 1)) > 1:
 			objeto["cantidad"] = int(objeto["cantidad"]) - 1
@@ -502,12 +695,71 @@ func gastar_pocion() -> bool:
 	return false
 
 
+func gastar_pocion() -> bool:
+	return gastar("pocion")
+
+
+## Usar ese objeto ahora (fuera del combate) haría algo.
+func sirve(tipo: String) -> bool:
+	match tipo:
+		"pocion":
+			return esta_herido()
+		"venda":
+			return DatosHeridas.hay_sangrado(sangrados, "externo") or not _riesgo_sin_limpiar().is_empty()
+		"torniquete":
+			return DatosHeridas.hay_sangrado(sangrados, "externo", true)
+		"medicina":
+			return DatosHeridas.hay_sangrado(sangrados, "interno") or infecciones.any(
+				func(infeccion: Dictionary) -> bool: return int(infeccion["etapa"]) == 1)
+	return false
+
+
+## Usa uno de esos objetos fuera del combate. Devuelve qué hizo ("" si no tenía o
+## no servía: entonces no lo gasta).
+func usar(tipo: String) -> String:
+	if cantidad(tipo) <= 0 or not sirve(tipo):
+		return ""
+	gastar(tipo)
+	match tipo:
+		"pocion":
+			curar(DatosBotin.POCION_VIDA, DatosBotin.POCION_PARTES)
+			return "Tomas una poción de curación."
+		"venda":
+			var parte_id := DatosHeridas.vendar(sangrados)
+			if parte_id == "":
+				parte_id = String(_riesgo_sin_limpiar()["parte"])
+			var infeccion := infeccion_de(parte_id)
+			if not infeccion.is_empty() and int(infeccion["etapa"]) == 0:
+				infeccion["limpia"] = true
+			return "Limpias y vendas %s." % DatosCuerpo.con_articulo(parte_id)
+		"torniquete":
+			return "Pones un torniquete en %s: deja de sangrar." % DatosCuerpo.con_articulo(DatosHeridas.poner_torniquete(sangrados))
+		"medicina":
+			DatosHeridas.parar(sangrados, "interno")
+			curar_infecciones_leves()
+			return "Tomas una medicina."
+	return ""
+
+
+## Herida en riesgo de infección que todavía no se limpió (la de más riesgo), o
+## vacío.
+func _riesgo_sin_limpiar() -> Dictionary:
+	var elegida := {}
+	for infeccion in infecciones:
+		if int(infeccion["etapa"]) == 0 and not infeccion["limpia"] \
+				and (elegida.is_empty() or DatosHeridas.prob_avance(infeccion) > DatosHeridas.prob_avance(elegida)):
+			elegida = infeccion
+	return elegida
+
+
+## La medicina cura las infecciones leves.
+func curar_infecciones_leves() -> void:
+	infecciones.assign(infecciones.filter(func(infeccion: Dictionary) -> bool: return int(infeccion["etapa"]) != 1))
+
+
 ## Toma una poción fuera del combate. false si no hay o si el rey está sano.
 func usar_pocion() -> bool:
-	if not esta_herido() or not gastar_pocion():
-		return false
-	curar(DatosBotin.POCION_VIDA, DatosBotin.POCION_PARTES)
-	return true
+	return usar("pocion") != ""
 
 
 # --- Características, experiencia y niveles ---
@@ -623,9 +875,10 @@ func texto_xp(resultado_xp: Dictionary) -> String:
 # --- Efectos de las características fuera del combate ---
 
 ## Estrés de caminar: un paso en la mazmorra o un día de marcha en una zona
-## (Cardio lo baja).
+## (Cardio lo baja; la fiebre de una infección grave lo sube).
 func estres_de_paso(base: float) -> float:
-	return base * DatosEstadisticas.reduccion(puntos_de("cardio"), DatosEstadisticas.PASO_POR_CARDIO)
+	return base * DatosEstadisticas.reduccion(puntos_de("cardio"), DatosEstadisticas.PASO_POR_CARDIO) \
+		* DatosHeridas.ESTRES_FIEBRE[peor_infeccion()]
 
 
 ## Estrés de combates, trampas y trabajos (Compostura lo baja).
@@ -877,9 +1130,12 @@ func _ataque_ciudad() -> Dictionary:
 
 
 ## Una línea con lo importante de una semana de la ciudad ("" si no pasó nada
-## grave): ataques y soldados que se fueron por falta de comida.
+## grave): ataques, soldados que se fueron por falta de comida y lo que pasó con
+## las infecciones del rey.
 func texto_informe(informe: Dictionary) -> String:
 	var partes: PackedStringArray = []
+	if informe.get("salud", "") != "":
+		partes.append(informe["salud"])
 	if informe.has("ataque"):
 		var ataque: Dictionary = informe["ataque"]
 		var bajas := int(ataque["bajas"])
@@ -918,15 +1174,17 @@ static func _cantidad(n: int, singular: String, plural: String) -> String:
 	return "%d %s" % [n, singular if n == 1 else plural]
 
 
-## Lo que vende el mercado esta semana: objetos al azar y unas pociones.
+## Lo que vende el mercado esta semana: objetos al azar y unas pilas de
+## pociones, vendas, torniquetes y medicinas.
 func _renovar_mercado() -> void:
 	mercado = []
 	var nivel_mercado := nivel_edificio("mercado")
 	for i in DatosCiudad.OBJETOS_MERCADO[nivel_mercado]:
 		mercado.append(DatosBotin.generar(nivel_mercado, rng))
-	var pociones_venta: int = DatosCiudad.POCIONES_MERCADO[nivel_mercado]
-	if pociones_venta > 0:
-		mercado.append(DatosBotin.crear_pocion(pociones_venta))
+	for tipo in DatosBotin.ORDEN_CONSUMIBLES:
+		var en_venta: int = DatosCiudad.CONSUMIBLES_MERCADO[tipo][nivel_mercado]
+		if en_venta > 0:
+			mercado.append(DatosBotin.crear_consumible(tipo, en_venta))
 
 
 ## Lo que cuesta comprar un objeto en el mercado (Negociación lo baja; por
@@ -936,8 +1194,8 @@ func precio_compra(objeto: Dictionary) -> int:
 	return maxi(roundi(int(objeto["precio"]) * DatosCiudad.MARGEN_MERCADO * rebaja), precio_venta(objeto) + 1)
 
 
-## Compra el objeto "indice" del mercado (de las pociones, una) y lo guarda en
-## el inventario.
+## Compra el objeto "indice" del mercado (de una pila, uno) y lo guarda en el
+## inventario.
 func comprar(indice: int) -> bool:
 	if indice < 0 or indice >= mercado.size():
 		return false
@@ -946,9 +1204,9 @@ func comprar(indice: int) -> bool:
 	if oro < precio:
 		return false
 	oro -= precio
-	if DatosBotin.es_pocion(objeto) and int(objeto.get("cantidad", 1)) > 1:
+	if DatosBotin.es_consumible(objeto) and int(objeto.get("cantidad", 1)) > 1:
 		objeto["cantidad"] = int(objeto["cantidad"]) - 1
-		agregar(DatosBotin.crear_pocion())
+		agregar(DatosBotin.crear_consumible(objeto["ranura"]))
 	else:
 		agregar(objeto)
 		mercado.remove_at(indice)

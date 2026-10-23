@@ -171,27 +171,36 @@ func prueba_en_combate_la_pocion_cura_al_luchador() -> void:
 
 func prueba_las_pociones_salen_en_el_botin_y_en_el_mercado() -> void:
 	var rng := rng_fijo(8)
-	var pociones := 0
-	for i in 400:
+	var cuantos := {}
+	for i in 2000:
 		var objeto := DatosBotin.generar_botin(2, rng)
-		if DatosBotin.es_pocion(objeto):
-			pociones += 1
+		if DatosBotin.es_consumible(objeto):
+			cuantos[objeto["ranura"]] = int(cuantos.get(objeto["ranura"], 0)) + 1
 			verificar_igual(objeto["nivel"], 2, "Del nivel del lugar")
-	verificar(pociones > 60 and pociones < 140, "Más o menos una de cada cuatro (%d de 400)" % pociones)
+	for tipo in DatosBotin.ORDEN_CONSUMIBLES:
+		var esperado: float = 2000.0 * DatosBotin.PESO_CONSUMIBLE[tipo] / 100.0
+		var salieron := int(cuantos.get(tipo, 0))
+		verificar(salieron > esperado * 0.7 and salieron < esperado * 1.3, "%s: unos %d de 2000 (salieron %d)" % [tipo, roundi(esperado), salieron])
 	var juego := _juego_nuevo()
 	juego.oro = 100000
 	juego.mejorar_edificio("mercado")
-	var indice := juego.mercado.size() - 1
+	var indice := -1
+	for i in juego.mercado.size():
+		if DatosBotin.es_pocion(juego.mercado[i]):
+			indice = i
+	verificar(indice >= 0, "El mercado vende pociones")
+	if indice < 0:
+		juego.free()
+		return
 	var pila: Dictionary = juego.mercado[indice]
-	verificar(DatosBotin.es_pocion(pila), "El mercado vende pociones")
 	var cantidad := int(pila["cantidad"])
 	verificar(juego.comprar(indice), "Se compra una")
 	verificar_igual(juego.pociones(), 1, "Va al inventario")
 	verificar_igual(int(juego.mercado[indice]["cantidad"]), cantidad - 1, "Quedan menos a la venta")
 	for i in cantidad - 1:
-		verificar(juego.comprar(juego.mercado.size() - 1), "Se compran todas")
+		verificar(juego.comprar(indice), "Se compran todas")
 	verificar_igual(juego.pociones(), cantidad, "Todas en un pila")
-	verificar(juego.mercado.is_empty() or not DatosBotin.es_pocion(juego.mercado[-1]), "Ya no quedan a la venta")
+	verificar(not juego.mercado.any(DatosBotin.es_pocion), "Ya no quedan a la venta")
 	juego.free()
 
 

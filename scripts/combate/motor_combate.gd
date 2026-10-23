@@ -49,6 +49,9 @@ static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: Strin
 	prob -= DatosEstadisticas.ESQUIVA_POR_REFLEJOS * defensor.puntos("reflejos")
 	if atacante.atemorizado:
 		prob *= ATEMORIZADO_ACIERTO
+	# Con mucha sangre perdida (agitado o peor) acierta un poco menos.
+	if atacante.estado_sangre() >= 1:
+		prob *= DatosHeridas.ACIERTO_AGITADO
 	return clampf(prob, ACIERTO_MIN, ACIERTO_MAX)
 
 
@@ -91,6 +94,9 @@ static func multiplicador_golpe(atacante: Luchador, defensor: Luchador, parte_id
 		mult *= DatosEstadisticas.aumento(atacante.puntos("fuerza_maxima"), DatosEstadisticas.DANIO_POR_FUERZA)
 	if atacante.atemorizado:
 		mult *= ATEMORIZADO_DANIO
+	# Débil y confuso por la sangre perdida: pega más flojo.
+	if atacante.estado_sangre() >= 2:
+		mult *= DatosHeridas.DANIO_DEBIL
 	if defensor.defendiendo:
 		mult *= factor_guardia(atacante, defensor)
 	return mult
@@ -204,6 +210,7 @@ static func _resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: S
 		"parte": parte_id, "arma": arma_id, "acierto": false, "danio": 0, "herida": "",
 		"fractura": false, "inutilizada": false, "expuesto": false, "desarme": false,
 		"aturdido": false, "desmayo": false, "critico": false, "empujon": false,
+		"sangrado": 0, "sangrado_tipo": "",
 	}
 	atacante.ataques += 1
 	if rng.randf() >= prob_acierto(atacante, defensor, parte_id):
@@ -238,6 +245,8 @@ static func _resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: S
 		resultado["fractura"] = true
 		resultado["herida"] = "Fractura"
 
+	_causar_sangrado(atacante, defensor, parte_id, base, resultado)
+
 	if antes >= Luchador.INUTILIZADA and despues < Luchador.INUTILIZADA:
 		resultado["inutilizada"] = true
 
@@ -267,6 +276,51 @@ static func _resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: S
 	var prob_empujon := prob_empujar(atacante, defensor)
 	if prob_empujon > 0.0 and rng.randf() < prob_empujon:
 		resultado["empujon"] = true
+	return resultado
+
+
+## Un golpe acertado puede hacer sangrar esa parte (ver DatosHeridas): por fuera
+## los cortes y las perforaciones; por dentro los golpes contundentes en el cráneo,
+## el tórax o el abdomen, y la fractura de un muslo. El nivel depende de la fuerza
+## del golpe (con armadura y todo) y de cuánto sangra la parte. Anota en
+## "resultado" el nivel con que queda la parte ("sangrado") y el tipo.
+static func _causar_sangrado(atacante: Luchador, defensor: Luchador, parte_id: String, base: float,
+		resultado: Dictionary) -> void:
+	var herida: String = resultado["herida"]
+	if not defensor.sangra or not DatosHeridas.SANGRADO_POR_HERIDA.has(herida):
+		return
+	var datos: Dictionary = DatosHeridas.SANGRADO_POR_HERIDA[herida]
+	var parte: Dictionary = DatosCuerpo.PARTES[parte_id]
+	var tipo: String = datos["tipo"]
+	var nivel := 0
+	if tipo == "externo" or parte.get("interno", false):
+		var fuerza := base * multiplicador_golpe(atacante, defensor, parte_id) * float(parte["sangrado"]) * float(datos["factor"])
+		nivel = DatosHeridas.nivel_por_fuerza(fuerza)
+	if herida == "Fractura" and DatosCuerpo.base_de(parte_id) == "muslo":
+		nivel = maxi(nivel, DatosHeridas.NIVEL_FRACTURA_MUSLO)
+	if nivel == 0:
+		return
+	resultado["sangrado"] = defensor.agregar_sangrado(parte_id, tipo, nivel)
+	resultado["sangrado_tipo"] = tipo
+
+
+## Lo que pasa al empezar el turno de un luchador, antes de actuar: recupera
+## maná y pierde la sangre de sus heridas. Si muere desangrado, queda fuera de
+## combate; en shock puede desmayarse, y débil y confuso puede perder el turno.
+## Devuelve {"sangre": litros perdidos, "muerto", "desmayo", "pierde_turno"}.
+static func empezar_turno(luchador: Luchador, rng: RandomNumberGenerator) -> Dictionary:
+	luchador.regenerar_mana()
+	var resultado := {"sangre": 0.0, "muerto": false, "desmayo": false, "pierde_turno": false}
+	resultado["sangre"] = luchador.sangrar()
+	if luchador.muerto:
+		resultado["muerto"] = true
+		return resultado
+	var estado := luchador.estado_sangre()
+	if estado >= 3 and rng.randf() < DatosHeridas.PROB_DESMAYO_SHOCK:
+		luchador.desmayado = true
+		resultado["desmayo"] = true
+	elif estado >= 2 and rng.randf() < DatosHeridas.PROB_PERDER_TURNO:
+		resultado["pierde_turno"] = true
 	return resultado
 
 

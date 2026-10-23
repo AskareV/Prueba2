@@ -15,7 +15,9 @@ const ESPERA_ATRAS_MS := 800
 var _datos: Dictionary
 var _barra_estres: Barra
 var _barra_vida: Barra
-var _boton_pocion: Button
+var _boton_objetos: Button
+var _lista_objetos: PanelContainer
+var _salud: Label
 var _botones_dia: Array[Button] = []
 var _descripcion: Label
 var _boton_volver: Button
@@ -73,11 +75,19 @@ func _crear_interfaz(area: Control) -> void:
 	_boton_volver = UIReino.boton("Volver a casa", _al_volver, Vector2(320, 76), 24)
 	_boton_volver.position = Vector2(930, 600)
 	area.add_child(_boton_volver)
-	# La poción va a la izquierda, lejos de "Volver a casa" (que termina la semana).
-	_boton_pocion = UIReino.boton("", _al_tomar_pocion, Vector2(320, 76), 22)
-	_boton_pocion.position = Vector2(30, 600)
-	Estilo.con_franja(_boton_pocion, Color("#ec407a"))
-	area.add_child(_boton_pocion)
+	# Los objetos van a la izquierda, lejos de "Volver a casa" (que termina la semana).
+	_boton_objetos = UIReino.boton("", _al_pulsar_objetos, Vector2(320, 76), 22)
+	_boton_objetos.position = Vector2(30, 600)
+	Estilo.con_franja(_boton_objetos, Color("#ec407a"))
+	area.add_child(_boton_objetos)
+	_lista_objetos = UIReino.panel()
+	_lista_objetos.position = Vector2(30, 418)
+	_lista_objetos.visible = false
+	area.add_child(_lista_objetos)
+	# Sangre, sangrados e infecciones, al lado de los objetos.
+	_salud = UIReino.parrafo("", 540, 17, UIReino.COLOR_AVISO)
+	_salud.position = Vector2(370, 614)
+	area.add_child(_salud)
 
 
 ## "Atrás" solo termina una salida que ya terminó (como la mazmorra, una salida
@@ -97,7 +107,20 @@ func _al_pulsar_dia(indice: int) -> void:
 	if _saliendo or indice != dias.size() or _terminada():
 		return
 	Juego.sumar_estres(Juego.estres_de_paso(DatosAventura.ESTRES_POR_DIA))
-	Juego.curar_al_caminar(DatosAventura.PASOS_POR_DIA)
+	_lista_objetos.visible = false
+	if Juego.curar_al_caminar(DatosAventura.PASOS_POR_DIA):
+		_registrar("Desangrado", "Te desangras por el camino.")
+		Juego.expedicion["derrota"] = true
+		_actualizar()
+		return
+	var salud := Juego.pasar_dia()
+	if salud["muerte"]:
+		_registrar("Infección", salud["texto"])
+		Juego.expedicion["derrota"] = true
+		_actualizar()
+		return
+	# Lo que pasó con las infecciones se cuenta junto con el suceso del día.
+	Juego.expedicion["noticia_salud"] = salud["texto"]
 	# Con el estrés al máximo se vuelve a casa: ese día ya no pasa nada (ni un combate).
 	if Juego.estres >= DatosAventura.ESTRES_MAXIMO:
 		_registrar("Agotado", "Un día entero de marcha te deja agotado.")
@@ -120,7 +143,7 @@ func _al_pulsar_dia(indice: int) -> void:
 			_registrar("+%d de oro" % oro, "Encuentras una bolsa olvidada con %d de oro." % oro)
 		"objeto":
 			var objeto := Juego.agregar(DatosBotin.generar_botin(nivel, Juego.rng))
-			_registrar("Poción" if DatosBotin.es_pocion(objeto) else String(objeto["nombre"]),
+			_registrar(String(objeto["nombre"]).get_slice(" ", 0) if DatosBotin.es_consumible(objeto) else String(objeto["nombre"]),
 				"Encuentras %s." % DatosBotin.texto_hallazgo(objeto))
 		"descanso":
 			Juego.sumar_estres(-10.0)
@@ -135,17 +158,35 @@ func _al_pulsar_dia(indice: int) -> void:
 	_actualizar()
 
 
-## Toma una poción entre combates.
-func _al_tomar_pocion() -> void:
-	if _saliendo or not Juego.usar_pocion():
+## Abre o cierra la lista de objetos para usar entre combates.
+func _al_pulsar_objetos() -> void:
+	if _saliendo:
 		return
+	_lista_objetos.visible = not _lista_objetos.visible
 	_actualizar()
-	# Un doble toque no debe gastar otra.
 	UIReino.bloquear_toques(self, 0.35)
 
 
-## Guarda el suceso del día: un texto corto para la casilla y uno largo.
+func _al_usar_objeto(tipo: String) -> void:
+	if _saliendo:
+		return
+	var texto := Juego.usar(tipo)
+	if texto == "":
+		return
+	_lista_objetos.visible = false
+	_actualizar()
+	_descripcion.text = texto
+	# Un doble toque no debe gastar otro.
+	UIReino.bloquear_toques(self, 0.35)
+
+
+## Guarda el suceso del día: un texto corto para la casilla y uno largo (con lo
+## que pasó con las infecciones ese día, si pasó algo).
 func _registrar(corto: String, largo: String) -> void:
+	var noticia := String(Juego.expedicion.get("noticia_salud", ""))
+	Juego.expedicion.erase("noticia_salud")
+	if noticia != "":
+		largo += " " + noticia
 	Juego.expedicion["dias"].append({"corto": corto, "largo": largo})
 
 
@@ -192,9 +233,16 @@ func _procesar_combate() -> void:
 func _actualizar(inmediato := false) -> void:
 	UIReino.actualizar_estres(_barra_estres, Juego.estres, inmediato)
 	UIReino.actualizar_vida(_barra_vida, inmediato)
-	var pociones := Juego.pociones()
-	_boton_pocion.text = "Tomar poción (%d)" % pociones
-	_boton_pocion.disabled = pociones == 0 or not Juego.esta_herido()
+	_boton_objetos.text = "Cerrar objetos" if _lista_objetos.visible else "Objetos (%d)" % UIReino.total_objetos()
+	_boton_objetos.disabled = UIReino.total_objetos() == 0 and not _lista_objetos.visible
+	for hijo in _lista_objetos.get_children():
+		_lista_objetos.remove_child(hijo)
+		hijo.queue_free()
+	var lista := UIReino.lista_objetos(_al_usar_objeto, 304)
+	for boton in lista.get_children():
+		(boton as Control).custom_minimum_size.y = 38
+	_lista_objetos.add_child(lista)
+	_salud.text = UIReino.texto_salud()
 	var dias: Array = Juego.expedicion["dias"]
 	var cortado := _cortada()
 	for i in _botones_dia.size():

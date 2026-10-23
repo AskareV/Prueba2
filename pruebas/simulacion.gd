@@ -32,6 +32,8 @@ static func combatir(arma_id: String, rival_id: String, estrategia: String, dies
 		"victorias": 1 if rival.fuera_de_combate() and not rey.fuera_de_combate() else 0,
 		"turnos": turno,
 		"desmayos": 1 if rey.desmayado or rival.desmayado else 0,
+		"desangrados": 1 if rey.muerto or rival.muerto else 0,
+		"sangre_rey": rey.sangre_perdida(), "sangre_rival": rival.sangre_perdida(),
 		"vida_rey": rey.vida,
 		"ataques_rey": rey.ataques, "aciertos_rey": rey.aciertos,
 		"ataques_rival": rival.ataques, "aciertos_rival": rival.aciertos,
@@ -49,13 +51,17 @@ static func pelear(rey: Luchador, rival: Luchador, estrategia: String, rng: Rand
 	var acciones := 0
 	while turno < MAX_TURNOS and acciones < MAX_TURNOS * 4:
 		acciones += 1
-		if orden.siguiente() == rey:
+		var actor := orden.siguiente()
+		var es_rey := actor == rey
+		if es_rey:
 			turno += 1
-			rey.regenerar_mana()
-			_actuar_contando(rey, rival, rng, turno, estrategia, racha["rey"], orden)
-		else:
-			rival.regenerar_mana()
-			_actuar_contando(rival, rey, rng, turno, "ia", racha["rival"], orden)
+		# Recupera maná y sangra; débil y confuso puede perder el turno.
+		var inicio := MotorCombate.empezar_turno(actor, rng)
+		if inicio["pierde_turno"]:
+			actor.defendiendo = false
+		elif not actor.fuera_de_combate():
+			_actuar_contando(actor, rival if es_rey else rey, rng, turno, estrategia if es_rey else "ia",
+				racha["rey" if es_rey else "rival"], orden)
 		if rey.fuera_de_combate() or rival.fuera_de_combate():
 			break
 	return turno
