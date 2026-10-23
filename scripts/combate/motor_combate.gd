@@ -5,6 +5,11 @@ extends RefCounted
 
 const ACIERTO_MIN := 0.05
 const ACIERTO_MAX := 0.95
+## Para fallar menos: el acierto sube hasta ×1,35 (el tórax de un rival sano, de
+## 48% a 65%); menos en las partes chicas. Para que los combates duren lo mismo,
+## cada golpe quita menos vida, desgasta menos la parte y sangra menos, en la
+## misma proporción (ver compensacion): en promedio cada ataque hace lo mismo.
+const FACTOR_ACIERTO := 1.35
 ## Si la conciencia baja de este valor, el luchador se desmaya.
 const UMBRAL_DESMAYO := 0.2
 ## Integridad bajo la cual un golpe contundente fractura un hueso.
@@ -34,6 +39,19 @@ const FACTOR_CIEGO := 1.0 / 3.0
 
 
 static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
+	return _aciertos(atacante, defensor, parte_id).y
+
+
+## Cuánto quita cada golpe en esa parte respecto de lo normal: lo que FACTOR_ACIERTO
+## subió el acierto ahí, al revés (con el tórax de un rival sano, 48 / 65).
+static func compensacion(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
+	var aciertos := _aciertos(atacante, defensor, parte_id)
+	return aciertos.x / aciertos.y
+
+
+## Acierto sin el aumento de FACTOR_ACIERTO (x) y con él (y). El aumento es mayor
+## cuanto más grande es la parte: en el tórax es todo; en un ojo, un tercio.
+static func _aciertos(atacante: Luchador, defensor: Luchador, parte_id: String) -> Vector2:
 	var arma: Dictionary = atacante.datos_arma()
 	var tipo: Dictionary = DatosArmas.tipo(arma["tipo"])
 	var tamano: float = DatosCuerpo.PARTES[parte_id]["tamano"]
@@ -45,14 +63,17 @@ static func prob_acierto(atacante: Luchador, defensor: Luchador, parte_id: Strin
 		prob *= atacante.penalizacion_mano_torpe(PENALIZACION_MANO_TORPE_PRECISION)
 	prob *= 1.0 - defensor.defensa(DatosCuerpo.zona_de(parte_id))
 	# Precisión y Reflejos: un poco en todas las partes.
-	prob += DatosEstadisticas.ACIERTO_POR_PRECISION * atacante.puntos("precision")
-	prob -= DatosEstadisticas.ESQUIVA_POR_REFLEJOS * defensor.puntos("reflejos")
+	var extra := DatosEstadisticas.ACIERTO_POR_PRECISION * atacante.puntos("precision") \
+		- DatosEstadisticas.ESQUIVA_POR_REFLEJOS * defensor.puntos("reflejos")
+	var factor := 1.0
 	if atacante.atemorizado:
-		prob *= ATEMORIZADO_ACIERTO
+		factor *= ATEMORIZADO_ACIERTO
 	# Con mucha sangre perdida (agitado o peor) acierta un poco menos.
 	if atacante.estado_sangre() >= 1:
-		prob *= DatosHeridas.ACIERTO_AGITADO
-	return clampf(prob, ACIERTO_MIN, ACIERTO_MAX)
+		factor *= DatosHeridas.ACIERTO_AGITADO
+	var aumento := 1.0 + (FACTOR_ACIERTO - 1.0) * tamano
+	return Vector2(clampf((prob + extra) * factor, ACIERTO_MIN, ACIERTO_MAX),
+		clampf((prob * aumento + extra) * factor, ACIERTO_MIN, ACIERTO_MAX))
 
 
 ## Golpea con el arma (no con un hechizo) y sostiene un arma: cuentan el brazo y
@@ -117,13 +138,13 @@ static func factor_guardia(atacante: Luchador, defensor: Luchador) -> float:
 ## Vida que quita cada punto de daño del arma en esa parte.
 static func multiplicador_danio(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
 	var danio_parte: float = DatosCuerpo.PARTES[parte_id]["danio"]
-	return danio_parte * multiplicador_golpe(atacante, defensor, parte_id)
+	return danio_parte * multiplicador_golpe(atacante, defensor, parte_id) * compensacion(atacante, defensor, parte_id)
 
 
 ## Integridad que pierde la parte por cada punto de daño del arma.
 static func multiplicador_desgaste(atacante: Luchador, defensor: Luchador, parte_id: String) -> float:
 	var fragilidad: float = DatosCuerpo.PARTES[parte_id]["fragilidad"]
-	return fragilidad * multiplicador_golpe(atacante, defensor, parte_id)
+	return fragilidad * multiplicador_golpe(atacante, defensor, parte_id) * compensacion(atacante, defensor, parte_id)
 
 
 ## Golpes acertados que faltan para inutilizar esa parte o, en brazos y piernas,
@@ -162,8 +183,13 @@ static func _umbral_inutilizar(defensor: Luchador, extremidad: bool, fracturada:
 static func _golpes_hasta(atacante: Luchador, defensor: Luchador, parte_id: String, extremidad: bool,
 		danio_arma: float, en_guardia: int) -> int:
 	var primero := danio_arma * multiplicador_desgaste(atacante, defensor, parte_id)
-	# La guardia protege hasta el próximo turno del defensor.
-	var siguientes := primero / factor_guardia(atacante, defensor) if defensor.defendiendo else primero
+	# La guardia protege hasta el próximo turno del defensor: después cada golpe
+	# desgasta como sin ella (también cuenta que acertarle es más fácil).
+	var siguientes := primero
+	if defensor.defendiendo:
+		defensor.defendiendo = false
+		siguientes = danio_arma * multiplicador_desgaste(atacante, defensor, parte_id)
+		defensor.defendiendo = true
 	var puede_fracturar: bool = atacante.datos_arma()["tipo"] == "contundente" and DatosCuerpo.PARTES[parte_id]["hueso"]
 	var umbral_fractura := UMBRAL_FRACTURA + DatosEstadisticas.FRACTURA_POR_EXPLOSIVA * atacante.puntos("fuerza_explosiva")
 	var fracturada := defensor.fracturas.has(parte_id)
@@ -294,7 +320,8 @@ static func _causar_sangrado(atacante: Luchador, defensor: Luchador, parte_id: S
 	var tipo: String = datos["tipo"]
 	var nivel := 0
 	if tipo == "externo" or parte.get("interno", false):
-		var fuerza := base * multiplicador_golpe(atacante, defensor, parte_id) * float(parte["sangrado"]) * float(datos["factor"])
+		var fuerza := base * multiplicador_golpe(atacante, defensor, parte_id) * compensacion(atacante, defensor, parte_id) \
+			* float(parte["sangrado"]) * float(datos["factor"])
 		nivel = DatosHeridas.nivel_por_fuerza(fuerza)
 	if herida == "Fractura" and DatosCuerpo.base_de(parte_id) == "muslo":
 		nivel = maxi(nivel, DatosHeridas.NIVEL_FRACTURA_MUSLO)

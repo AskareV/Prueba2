@@ -14,7 +14,7 @@ const PREFERENCIAS := {
 const PROB_IMPROVISAR := 0.25
 ## Acierto mínimo para ir directo a la cabeza o el torso; si es menor, primero
 ## inutiliza el brazo del arma del rival para abrir su defensa.
-const ACIERTO_PARA_IR_AL_CUERPO := 0.4
+const ACIERTO_PARA_IR_AL_CUERPO := 0.5
 ## Con esta parte de su vida o menos, se defiende 1 de cada 4 turnos.
 const VIDA_PARA_DEFENDER := 0.5
 const PROB_DEFENDER := 0.25

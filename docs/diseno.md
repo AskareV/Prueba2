@@ -80,9 +80,32 @@ médica de hemorragias):
 
 - Los enemigos usan el mismo sistema. Su sangrado externo se ve; el interno, no.
 - No todas las criaturas sangran (por ejemplo, esqueletos o gólems).
-- **Pendiente:** cómo se integra con la **vida** (el héroe tiene 100). No debe ser
-  un simple "−1 de vida por turno".
-- **Pendiente:** si la sangre perdida se recupera sola al terminar el combate.
+
+**Cómo funciona ahora** (todos los números son **provisionales**):
+
+- **Sangre y vida, las dos cosas:** la sangre es un contador aparte, con los
+  estados de la tabla, y además la sangre perdida baja la **vida máxima** en la
+  misma proporción (con el 30% perdido, la vida máxima baja un 30%; si la vida
+  quedaba por encima, baja con ella). Al recuperar sangre vuelve la vida máxima,
+  pero la vida sube solo curándose.
+- **Qué sangra:** los cortes (espada) y las perforaciones (lanza) sangran por
+  fuera; los golpes contundentes (maza, puños, patadas) sangran por dentro en el
+  cráneo, el tórax y el abdomen, y la fractura de un muslo sangra por dentro (al
+  menos moderado). Las quemaduras de la magia no sangran.
+- **Cuánto:** cada parte que sangra es **leve**, **moderada** o **grave** según la
+  fuerza del golpe (con la armadura, que también la frena) por lo que sangra esa
+  parte: el cuello (×1,8), los muslos (×1,6), los brazos y el tórax izquierdo
+  (×1,2) mucho; las manos, los pies y los ojos poco (×0,5–0,6). Una perforación
+  cuenta ×0,9 y un golpe por dentro ×0,6. Leve desde 8, moderada desde 16 y grave
+  desde 26. Si una parte que ya sangra moderado vuelve a sangrar moderado, queda
+  grave.
+- **Pérdida:** al empezar cada turno propio se pierde la suma de todas: leve
+  0,01 L, moderada 0,03 L y grave 0,08 L. Una leve para sola después de 3 turnos.
+- **Estados:** agitado (15%): acierta ×0,92. Débil y confuso (30%): además pega
+  ×0,85 y pierde el turno el 15% de las veces. Shock (40%): además, en cada turno
+  se desmaya el 20% de las veces. Con el 50% perdido **muere**.
+- **En el reino** la sangre perdida y lo que sangra siguen de un combate al
+  siguiente y mientras se camina (ver 7.12).
 
 ### B.2 Órganos y funciones de supervivencia
 
@@ -132,6 +155,26 @@ Descartados: sistema digestivo, habla y audición.
 - **Tratamiento:** limpiar y vendar pronto; hierbas o medicinas para la leve; la
   enfermería de la ciudad para la grave.
 
+**Cómo funciona ahora** (provisional; solo el rey, porque los enemigos no pasan
+días):
+
+- **Riesgo:** al terminar un combate, cada corte o perforación nueva, y cualquier
+  herida nueva en el abdomen (menos una quemadura), deja esa parte **en riesgo**.
+  Si la herida se hizo en una **mazmorra** queda sucia (×2 de riesgo); el abdomen,
+  ×1,5; limpiarla con una venda, ×0,3. Una parte que se cura del todo deja de
+  estar en riesgo.
+- **Días:** cuenta cada día de marcha en una zona y, al pasar la semana, los días
+  que faltan hasta 7. Cada día, una herida en riesgo se infecta con 4% (por los
+  multiplicadores de arriba), y una infección sin tratar empeora con 10%.
+- **Efectos:** leve, esa parte se cura a la mitad. Grave (fiebre), la conciencia
+  ×0,85 y caminar cansa ×1,5. Generalizada, conciencia ×0,7, caminar ×2 y cada día
+  un 10% de morir.
+- **Morir** de una infección (o desangrado) es **como perder un combate**: lo
+  traen al castillo con 1 de vida y +50 de estrés, le paran el sangrado y le
+  curan las infecciones.
+- **Tratamiento:** la **medicina** cura las infecciones leves; la **enfermería**
+  (al descansar en el castillo) cura todas. El dolor (B.3) todavía no existe.
+
 ## 6. Sistema de batalla (provisional)
 
 Reglas **provisionales** para probar el sistema de cuerpo; se usan igual en la
@@ -152,8 +195,9 @@ definamos armas y daño.
   Sin arma se pelea con los **puños** (4–5, contundente) y, sin brazos útiles, a
   **patadas** (9–11, contundente).
 - **Acciones:** Atacar (zona → parte), Defender (se defiende mejor y recibe la
-  mitad de daño), Magia (ver 8.4), **Objeto** (en el reino: tomar una poción,
-  gasta el turno), cambiar o recoger el arma, y Huir.
+  mitad de daño), Magia (ver 8.4), **Objeto** (en el reino: una poción, una venda,
+  un torniquete o una medicina; gasta el turno), cambiar o recoger el arma, y
+  Huir.
 - **Orden de turnos por velocidad** (como la barra de *Champions of Chaos*):
   cada luchador avanza según su rapidez y actúa el que llega primero. Con la
   misma rapidez se alternan; el bastante más rápido actúa **dos veces seguidas**
@@ -224,15 +268,16 @@ y después se va a la cabeza o el torso.
   desmayo; el cuello o el tórax rotos bajan la respiración.
 - **Respiración baja** (cuello o tórax heridos): más lento en la barra de turnos,
   hasta un 30% menos.
-- Las heridas se registran por tipo (corte, contusión, perforación, fractura) para
-  conectarlas después con el sangrado, el dolor y las infecciones.
+- Las heridas se registran por tipo (corte, contusión, perforación, fractura y
+  quemadura): de ahí salen el **sangrado** (B.1) y el riesgo de **infección**
+  (B.4). Falta conectarlas con el dolor (B.3).
 
 ### 6.4 Rivales
 
 Cada rival sigue un plan según su personalidad y a veces improvisa (25%):
 
 - **Bandido (astuto):** va por la mano de tu arma para desarmarte.
-- **Orco (bruto):** quiere tu cráneo. Si su acierto ahí es menor de 40%,
+- **Orco (bruto):** quiere tu cráneo. Si su acierto ahí es menor de 50%,
   primero ataca tu brazo del arma para abrir tu guardia.
 - **Lancero (preciso):** igual, pero quiere tu cuello.
 
@@ -280,7 +325,7 @@ combate* (la demo anterior). La pantalla del reino tiene pestañas arriba:
 | Pestaña | Contenido |
 |---|---|
 | **Rey** | Nivel, experiencia y las 7 características del rey (ver sección 8); los puntos se reparten con +, Confirmar y Deshacer. |
-| **Inventario** | Equipo puesto, mochila con el botín y las pociones, equipar, tomar una poción y vender. |
+| **Inventario** | Equipo puesto, mochila con el botín, las pociones, las vendas, los torniquetes y las medicinas; equipar, usarlos y vender. |
 | **Ciudad** | Seis edificios fijos que se reconstruyen y mejoran, y el peligro de la ciudad (ver 7.11). En el castillo se descansa. |
 | **Aventura** | Mapa con 4 mazmorras y 3 zonas. |
 | **Trabajo** | Trabajos dignos de un rey. |
@@ -324,8 +369,11 @@ Como en *My Pet Protector*, adaptado al celular:
   vecina** (en computadora, también con las flechas del teclado).
 - Cada paso suma estrés, **descubre las cuatro casillas vecinas** y cura un
   poco al rey (ver 7.12). La que sigue negra después de descubrirla es un
-  **muro**. Arriba se ven el estrés y la vida; abajo a la derecha, *Tomar
-  poción*.
+  **muro**. Arriba se ven el estrés y la vida; a la derecha, *Objetos* (abre
+  la lista de pociones, vendas, torniquetes y medicinas), y debajo de la cruceta,
+  la sangre, lo que sangra y las infecciones.
+- Si el rey se **desangra** por el camino, es como perder: lo traen al castillo
+  (ver 7.12).
 - **Espadas cruzadas** = enemigo: empieza un combate. **Cofre** = oro y un
   objeto. **H** = salida: al volver a pisarla se sale de la mazmorra.
 - Ganar un combate: +3 de estrés. Perder: +50 y el rey vuelve al castillo.
@@ -348,13 +396,16 @@ rey vuelve a casa.
 | Combate | 30% | Un enemigo de la zona |
 | Nada | 25% | Día tranquilo |
 | Oro | 20% | 5 a 15 de oro × nivel de la zona |
-| Objeto | 10% | Un objeto de botín (a veces una poción) |
+| Objeto | 10% | Un objeto de botín (a veces una poción, una venda, un torniquete o una medicina) |
 | Descanso | 10% | −10 de estrés |
 | Trampa | 5% | +10 de estrés |
 
 *Volver a casa* termina la salida (y la semana) en cualquier momento; el botón
 "atrás" del celular no la termina mientras sigue en curso, para no perder la
-semana sin querer. Perder un combate o llegar a 70 de estrés también la termina.
+semana sin querer. Perder un combate, desangrarse, morir de una infección o
+llegar a 70 de estrés también la termina. Cada día de marcha también cuenta para
+las infecciones (B.4), y lo que pasa con ellas se cuenta en el suceso del día.
+Abajo a la izquierda, *Objetos*.
 
 ### 7.5 Botín y calidades
 
@@ -363,7 +414,8 @@ semana sin querer. Perder un combate o llegar a 70 de estrés también la termin
   lugar donde se encontró (de ahí salen su calidad y su material), y el oro de un
   enemigo se ajusta a ese nivel (un matón, de nivel 2, da la mitad más en un
   lugar de nivel 3).
-- Un 25% del botín es una **poción de curación** (ver 7.12). El resto: 35%
+- Un 35% del botín es un objeto para curarse (ver 7.12): **poción de curación**
+  20%, **venda** 8%, **torniquete** 3,5% y **medicina** 3,5%. El resto: 35%
   **arma** (espada, maza, lanza o bastón) y 65% **armadura** (casco, peto,
   brazales o grebas).
 - El material depende del nivel del lugar: bronce, hierro, acero, obsidiana.
@@ -455,9 +507,9 @@ tener más nivel que el castillo.
 | Castillo | (empieza en 1) / 400 / 1000 | Murallas: +4 / +8 / +12 de defensa. Aquí descansa el rey (y se cura) y se ve el estado de la ciudad. |
 | Herrería | 150 / 400 / 900 | Sube una calidad tu arma o armadura puesta, hasta rara / épica / legendaria (cuesta 3 veces el precio de venta base del objeto con la calidad nueva). Los soldados defienden ×1,25 / ×1,5 / ×1,75. |
 | Granja | 100 / 300 / 700 | 10 / 18 / 28 de comida por semana. |
-| Mercado | 120 / 350 / 800 | 15 / 30 / 50 de oro de impuestos por semana; vende 3 / 4 / 5 objetos de nivel 1 / 2 / 3 que cambian cada semana, y 2 / 3 / 4 pociones (se compran de a una). Precio: 4 veces el de venta base; Negociación lo baja hasta un 40% menos, y nunca por debajo de lo que te pagarían al venderlo. |
+| Mercado | 120 / 350 / 800 | 15 / 30 / 50 de oro de impuestos por semana; vende 3 / 4 / 5 objetos de nivel 1 / 2 / 3 que cambian cada semana, y pilas de pociones (2 / 3 / 4), vendas (3 / 4 / 5), torniquetes (1 / 2 / 2) y medicinas (1 / 2 / 3), que se compran de a una. Precio: 4 veces el de venta base; Negociación lo baja hasta un 40% menos, y nunca por debajo de lo que te pagarían al venderlo. |
 | Barracas | 150 / 400 / 900 | Caben 5 / 10 / 15 soldados (40 de oro cada uno). Cada soldado come 2 de comida por semana. |
-| Enfermería | 120 / 300 / 700 | Al descansar en el castillo recuperas el 60% / 80% / 100% de tu vida máxima y 60 / 80 / 100 puntos de cada parte herida (sin ella, 40% y 40). |
+| Enfermería | 120 / 300 / 700 | Al descansar en el castillo recuperas el 60% / 80% / 100% de tu vida máxima y de tu sangre y 60 / 80 / 100 puntos de cada parte herida (sin ella, 40% y 40), y te para el sangrado por dentro y te cura las infecciones. |
 
 **La semana de la ciudad** (al pasar la semana):
 1. La granja produce y los soldados comen. Sin comida suficiente, se van
@@ -487,30 +539,55 @@ por semana, menos de 1.
 
 Todos los números son **provisionales**.
 
-- La vida, el maná, las partes heridas y las fracturas **siguen de un combate al
-  siguiente**. Después de un combate no se recupera nada.
+- La vida, el maná, la sangre, las partes heridas, las fracturas y lo que
+  sangra **siguen de un combate al siguiente**. Después de un combate no se
+  recupera nada.
 - **Al caminar** el rey se va curando, todas las partes a la vez: cada paso de
-  la mazmorra cura el 1% de la vida máxima, 1 punto de cada parte herida y 0,5 de
-  maná. Un día de marcha en una zona cura como 4 pasos. Los decimales de vida se
-  juntan de un paso al siguiente.
+  la mazmorra cura el 1% de la vida máxima, 1 punto de cada parte herida, 0,5 de
+  maná y el 0,5% de la sangre. Antes pierde la sangre de lo que sigue sangrando
+  (como en un turno de combate): una herida moderada sin vendar sangra más de lo
+  que se recupera. Un día de marcha en una zona cuenta como 4 pasos. Los
+  decimales de vida se juntan de un paso al siguiente.
+- **Al volver al castillo** (al pasar la semana) le vendan lo que sangra por
+  fuera; el sangrado por dentro sigue hasta tomar una medicina o descansar con la
+  enfermería.
 - **Descansar una semana en el castillo** (sin trabajar) recupera el 40% de la
-  vida máxima y 40 puntos de cada parte herida; con la enfermería, más (60% /
-  80% / 100%). Trabajar no cura. El botón de descanso dice cuánto vas a curar.
-- **Recuperación** multiplica toda la curación (+5% por punto).
-- Una parte que se cura del todo deja de estar fracturada.
+  vida máxima y de la sangre, y 40 puntos de cada parte herida; con la enfermería,
+  más (60% / 80% / 100%), y además para el sangrado por dentro y cura las
+  infecciones. Trabajar no cura. El botón de descanso dice cuánto vas a curar.
+- **Recuperación** multiplica toda la curación (+5% por punto), también la de la
+  sangre.
+- Una parte que se cura del todo deja de estar fracturada, deja de sangrar y, si
+  solo estaba en riesgo, ya no se infecta. Una parte infectada se cura a la mitad.
+- **Desangrarse** (perder la mitad de la sangre) o **morir de una infección** es
+  como perder un combate: lo traen al castillo con 1 de vida y +50 de estrés, le
+  paran el sangrado y le curan las infecciones.
 - El maná se llena al pasar la semana.
 - Si pierde un combate, lo traen de vuelta con 1 de vida y despierto (aunque se
   haya desmayado).
 - Si la mano del arma quedó inútil, el combate siguiente empieza con el arma en
   la otra mano (mano torpe) o, si ninguna sirve, sin arma.
-- **Poción de curación:** recupera 40 de vida y 25 puntos de cada parte herida.
-  Sale en cofres, enemigos y zonas (25% del botín) y en el mercado (venta: 10 de
-  oro). Se apilan en el inventario. Se toman en el combate (botón **Objeto**,
-  gasta el turno), entre combates en la mazmorra o la zona (*Tomar poción*) y en
-  el Inventario. Las que se toman en un combate se gastan al terminarlo: si la
-  aplicación se cierra a la mitad, el combate empieza de nuevo y no se pierden.
+- **Objetos para curarse** (salen en cofres, enemigos y zonas, y se compran en el
+  mercado; se apilan en el inventario):
+
+| Objeto | Qué hace | Se vende por |
+|---|---|---|
+| Poción de curación | Recupera 40 de vida y 25 puntos de cada parte herida. | 10 de oro |
+| Venda | Para el sangrado por fuera que más sangra (si es grave, lo baja a moderado) y limpia la herida: baja su riesgo de infección. Sin nada que sangre, limpia la herida con más riesgo. | 3 de oro |
+| Torniquete | Para del todo el sangrado por fuera que más sangra en un brazo o una pierna. | 6 de oro |
+| Medicina | Para el sangrado por dentro y cura las infecciones leves (en un combate, las infecciones se curan al terminarlo). | 12 de oro |
+
+  Se usan en el combate (botón **Objeto**, gasta el turno), entre combates en la
+  mazmorra o la zona (*Objetos*) y en el Inventario. Solo se pueden usar si
+  servirían para algo. Los que se usan en un combate se gastan al terminarlo: si
+  la aplicación se cierra a la mitad, el combate empieza de nuevo y no se
+  pierden.
 - La vida se ve en la pestaña Rey, en la ventana de cada lugar del mapa y arriba
-  en la mazmorra y la zona.
+  en la mazmorra y la zona; la sangre, lo que sangra y las infecciones, en la
+  pestaña Rey, en el Inventario, en la ventana de cada lugar, en la enfermería y
+  en la mazmorra y la zona. En el combate, el panel de cada luchador muestra la
+  sangre que le queda, si sangra (del rival solo lo que sangra por fuera) y su
+  estado.
 
 ## 8. Características del rey
 
@@ -549,7 +626,7 @@ números son **provisionales**.
 | | Velocidad | +0,2 de rapidez en la barra de turnos (la base del rey es 13) y +2% de huir |
 | Aguante | Vitalidad | +5 de vida máxima (100 en la base) |
 | | Cardio | −4% de estrés por cada paso en la mazmorra y cada día de marcha en una zona |
-| | Recuperación | +5% de toda la curación: al caminar y al descansar (ver 7.12) |
+| | Recuperación | +5% de toda la curación: al caminar y al descansar, también de la sangre (ver 7.12) |
 | Resiliencia | Compostura | −4% de estrés por combates (ganar o perder), trampas y trabajos |
 | | Resistencia | +3% de armadura y resistencia mágica del equipo; −3% de cualquier estado en contra (aturdir, desarmar, empujón) |
 | | Firmeza | −6% de quedar aturdido, −8% de ser empujado y aguanta más antes de desmayarse |
@@ -644,13 +721,15 @@ con la otra mano:
   Destreza y Aguante: con el tope, los puntos de más no sirven.
 - Las heridas que duran hacen que la dificultad real sea la mazmorra entera,
   no un combate suelto: al empezar, solo la madriguera goblin se puede limpiar.
-- Los enemigos todavía no se hacen más fuertes con las semanas.
+- Los enemigos no se hacen más fuertes con las semanas ni con el nivel del rey
+  (decidido): la dificultad sale de elegir a qué lugar ir.
 
 ## 9. Pendientes
 
 - Armas, armaduras y daño definitivos.
-- Sangrado (B.1) y cómo se une con la vida; infecciones (B.4).
-- Dolor (B.3): falta decidir si se quita.
+- Dolor (B.3): se decide más adelante si se hace o se quita.
+- El curandero (B.1): por ahora el sangrado por dentro lo tratan la medicina y la
+  enfermería.
 - Estrés o cansancio dentro del combate.
 - Escudos (el agarre ya mejora el bloqueo con el arma).
 - Cómo funciona Liderazgo (hoy, provisional: +3% de moral de los soldados).

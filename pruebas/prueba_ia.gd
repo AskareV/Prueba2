@@ -52,19 +52,19 @@ func prueba_con_la_guardia_cerrada_abre_el_brazo_del_arma() -> void:
 
 
 ## Con el brazo del arma útil, va directo al cuerpo solo si su objetivo llega al
-## 40% de acierto; si no, abre la guardia.
+## 50% de acierto; si no, abre la guardia.
 func prueba_umbral_para_ir_al_cuerpo() -> void:
 	var rng := rng_fijo(36)
 	var orco := DatosRivales.crear_rival("orco")
 	var rey := DatosRivales.crear_rey(true, "espada")
-	# Brazo izquierdo (sin arma) y piernas inutilizados: su cráneo queda sobre el 40%.
+	# Brazo izquierdo (sin arma) y piernas inutilizados: su cráneo queda sobre el 50%.
 	rey.integridad["mano_izq"] = 5.0
 	rey.integridad["pie_der"] = 5.0
 	rey.integridad["pie_izq"] = 5.0
 	verificar(MotorCombate.prob_acierto(orco, rey, "craneo") >= IAEnemigo.ACIERTO_PARA_IR_AL_CUERPO,
 		"El cráneo del rey quedó sobre el umbral")
 	verificar(_veces(orco, rey, ["craneo"], rng) > 600, "Con el cráneo al alcance, el orco va directo a él")
-	# Con las piernas sanas el cráneo vuelve a quedar bajo el 40%: primero el brazo del arma.
+	# Con las piernas sanas el cráneo vuelve a quedar bajo el 50%: primero el brazo del arma.
 	rey.integridad["pie_der"] = 100.0
 	rey.integridad["pie_izq"] = 100.0
 	verificar(MotorCombate.prob_acierto(orco, rey, "craneo") < IAEnemigo.ACIERTO_PARA_IR_AL_CUERPO,

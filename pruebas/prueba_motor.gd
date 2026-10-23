@@ -210,9 +210,11 @@ func prueba_brazos_mas_faciles_que_torso_y_cabeza() -> void:
 func prueba_piernas_mantienen_su_acierto() -> void:
 	var rey := DatosRivales.crear_rey(true, "espada")
 	var bandido := DatosRivales.crear_rival("bandido")
-	verificar_cerca(MotorCombate.prob_acierto(rey, bandido, "muslo_der"), 0.85 * 0.85 * (1.0 - 0.17), "Muslo con espada")
-	verificar_cerca(MotorCombate.prob_acierto(rey, bandido, "espinilla_izq"), 0.85 * 0.75 * (1.0 - 0.17), "Espinilla con espada")
-	verificar_cerca(MotorCombate.prob_acierto(rey, bandido, "pie_der"), 0.85 * 0.6 * (1.0 - 0.17), "Pie con espada")
+	for par in [["muslo_der", 0.85, "Muslo"], ["espinilla_izq", 0.75, "Espinilla"], ["pie_der", 0.6, "Pie"]]:
+		var tamano: float = par[1]
+		# Esquiva con las piernas; el aumento para fallar menos crece con el tamaño.
+		var aumento := 1.0 + (MotorCombate.FACTOR_ACIERTO - 1.0) * tamano
+		verificar_cerca(MotorCombate.prob_acierto(rey, bandido, par[0]), 0.85 * tamano * (1.0 - 0.17) * aumento, "%s con espada" % par[2])
 
 
 func prueba_inutilizar_un_brazo_expone_cabeza_y_torso() -> void:
