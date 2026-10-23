@@ -78,6 +78,9 @@ var _bloqueo := 0.0
 ## el rey pelea con su equipo y sus heridas, puede tomar pociones y al terminar
 ## vuelve a ese lugar con las heridas que le queden.
 var _modo_reino := false
+## Pociones tomadas en este combate: se sacan del inventario al terminar (si la
+## aplicación se cierra a la mitad, el combate empieza de nuevo y no se pierden).
+var _pociones_usadas := 0
 var _resultado := ""
 
 
@@ -191,7 +194,7 @@ func _crear_interfaz() -> void:
 	_boton_defender = _boton("Defender", _al_pulsar_defender, Vector2(ancho, 88), 24)
 	_boton_magia = _boton("Magia", _al_pulsar_magia, Vector2(ancho, 88), 24)
 	_boton_objeto = _boton("Objeto", _al_pulsar_objeto, Vector2(ancho, 88), 22)
-	_boton_arma = _boton("Cambiar arma", _al_pulsar_arma, Vector2(ancho, 88), 21)
+	_boton_arma = _boton("Cambiar arma", _al_pulsar_arma, Vector2(ancho, 88), 20)
 	_boton_huir = _boton("Huir", _al_pulsar_huir, Vector2(ancho, 88), 22)
 	Estilo.con_franja(_boton_atacar, Color("#ef5350"))
 	Estilo.con_franja(_boton_defender, Color("#42a5f5"))
@@ -393,8 +396,7 @@ func _hechizo_del_rival(decision: Dictionary) -> void:
 	var datos := DatosHechizos.hechizo(hechizo_id)
 	if datos["objetivo"] == "parte":
 		var parte_id: String = decision["parte"]
-		_enemigo.mana -= float(datos["coste"])
-		_enemigo.hechizo = DatosHechizos.como_arma(hechizo_id, _enemigo)
+		MotorCombate.preparar_hechizo(_enemigo, hechizo_id)
 		_agregar_mensaje("%s lanza %s." % [nombre, datos["nombre"]])
 		_actualizar_paneles()
 		_figura_jugador.marcar_objetivo(parte_id)
@@ -738,15 +740,20 @@ func _al_pulsar_objeto() -> void:
 		_mostrar_objetos()
 
 
+## Pociones que quedan para este combate.
+func _pociones_disponibles() -> int:
+	return Juego.pociones() - _pociones_usadas
+
+
 func _mostrar_objetos() -> void:
 	_estado = Estado.OBJETO
 	_titulo_apuntar.text = "Objetos (usar uno gasta el turno)"
 	_limpiar_opciones()
 	_opciones.columns = 1
 	var texto := "Poción de curación ×%d\nRecuperas %d de vida y %d de cada parte herida." % [
-		Juego.pociones(), DatosBotin.POCION_VIDA, roundi(DatosBotin.POCION_PARTES)]
+		_pociones_disponibles(), DatosBotin.POCION_VIDA, roundi(DatosBotin.POCION_PARTES)]
 	var boton := _boton(texto, _al_tomar_pocion, Vector2(460, 96), 19)
-	boton.disabled = Juego.pociones() == 0 or not _jugador.esta_herido()
+	boton.disabled = _pociones_disponibles() <= 0 or not _jugador.esta_herido()
 	Estilo.con_franja(boton, Color("#ec407a"))
 	_opciones.add_child(boton)
 	_boton_volver.text = "Volver"
@@ -755,13 +762,17 @@ func _mostrar_objetos() -> void:
 
 
 func _al_tomar_pocion() -> void:
-	if _estado != Estado.OBJETO or not _entrada_libre() or not _jugador.esta_herido() or not Juego.gastar_pocion():
+	if _estado != Estado.OBJETO or not _entrada_libre() or not _jugador.esta_herido() or _pociones_disponibles() <= 0:
 		return
+	_pociones_usadas += 1
 	_estado = Estado.ESPERANDO
 	_ocultar_controles()
 	var cura := _jugador.curar(DatosBotin.POCION_VIDA, DatosBotin.POCION_PARTES)
-	_agregar_mensaje("Tomas una poción de curación: recuperas %d de vida y tus heridas mejoran." % cura)
-	_texto_flotante(_figura_jugador, "torax_der", "+%d" % cura, COLOR_CURA)
+	if cura > 0:
+		_agregar_mensaje("Tomas una poción de curación: recuperas %d de vida y tus heridas mejoran." % cura)
+		_texto_flotante(_figura_jugador, "torax_der", "+%d" % cura, COLOR_CURA)
+	else:
+		_agregar_mensaje("Tomas una poción de curación: tus heridas mejoran.")
 	_actualizar_paneles()
 	await _pausa(0.8)
 	await _siguiente_turno()
@@ -907,8 +918,8 @@ func _mostrar_acciones() -> void:
 		_boton_arma.disabled = _modo_reino
 	_boton_huir.text = "Huir\n%d%%" % roundi(MotorCombate.prob_huir(_jugador, _enemigo) * 100.0)
 	if _modo_reino:
-		_boton_objeto.text = "Objeto\n(%d)" % Juego.pociones()
-		_boton_objeto.disabled = Juego.pociones() == 0
+		_boton_objeto.text = "Objeto\n(%d)" % _pociones_disponibles()
+		_boton_objeto.disabled = _pociones_disponibles() <= 0
 	_etiqueta_turno.text = "Turno %d · Te toca" % _turno
 	_boton_menu.disabled = false
 	_boton_estado.disabled = false
@@ -1201,9 +1212,12 @@ func _mostrar_fin(resultado: String) -> void:
 	_estado = Estado.FIN
 	_resultado = resultado
 	if _modo_reino:
-		# Las heridas siguen en el próximo combate; y si se cierra la aplicación
-		# ahora, la partida guardada ya tiene el resultado.
+		# Las heridas siguen en el próximo combate, las pociones tomadas se gastan
+		# y, si se cierra la aplicación ahora, la partida guardada ya tiene el resultado.
 		Juego.guardar_salud(_jugador)
+		for i in _pociones_usadas:
+			Juego.gastar_pocion()
+		_pociones_usadas = 0
 		Juego.combate["resultado"] = resultado
 	_ocultar_controles()
 	_boton_menu.disabled = false

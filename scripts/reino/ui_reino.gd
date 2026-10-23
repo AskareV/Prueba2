@@ -89,19 +89,25 @@ static func barra_vida() -> Barra:
 	return nueva
 
 
-static func actualizar_vida(barra: Barra) -> void:
+## "inmediato": sin animar (al abrir una pantalla).
+static func actualizar_vida(barra: Barra, inmediato := false) -> void:
 	var vida := Juego.vida_actual()
 	var maxima := Juego.vida_maxima()
 	barra.valor = float(vida) / maxima
 	barra.texto = "%d / %d" % [vida, maxima]
+	if inmediato:
+		barra._mostrado = barra.valor
 
 
 ## Muestra el estrés en la barra: llena al llegar al límite de 70.
-static func actualizar_estres(barra: Barra, estres: float) -> void:
+## "inmediato": sin animar (al abrir una pantalla).
+static func actualizar_estres(barra: Barra, estres: float, inmediato := false) -> void:
 	barra.valor = estres / DatosAventura.ESTRES_MAXIMO
 	barra.color_fijo = color_estres(estres)
 	# Hacia abajo: la barra no debe mostrar 70 mientras el rey sigue por debajo.
 	barra.texto = "%d / %d" % [floori(estres), roundi(DatosAventura.ESTRES_MAXIMO)]
+	if inmediato:
+		barra._mostrado = barra.valor
 
 
 ## Ignora los toques un momento al entrar a una pantalla: un doble toque en la
@@ -118,7 +124,7 @@ static func bloquear_toques(padre: Control, segundos := 0.45) -> void:
 static func boton_objeto(objeto: Dictionary, al_pulsar: Callable, tamano: Vector2) -> Button:
 	var texto: String = objeto["nombre"]
 	if DatosBotin.es_pocion(objeto):
-		texto += " ×%d\nCura %d de vida" % [int(objeto.get("cantidad", 1)), DatosBotin.POCION_VIDA]
+		texto += "\n×%d · cura %d de vida" % [int(objeto.get("cantidad", 1)), DatosBotin.POCION_VIDA]
 	elif objeto["ranura"] == "arma":
 		texto += "\nDaño %d–%d" % [objeto["danio_min"], objeto["danio_max"]]
 	else:

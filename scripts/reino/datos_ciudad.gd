@@ -122,7 +122,7 @@ static func costo_mejora(edificio_id: String, nivel: int) -> int:
 ## Qué hace el edificio con ese nivel, en una línea.
 static func efecto(edificio_id: String, nivel: int) -> String:
 	if nivel <= 0:
-		return "En ruinas: no hace nada hasta reconstruirlo."
+		return "En ruinas: no hace nada hasta que se reconstruya."
 	match edificio_id:
 		"castillo":
 			return "Murallas: +%d de defensa. Los demás edificios llegan hasta nivel %d." % [MURALLAS[nivel], nivel]
@@ -136,6 +136,7 @@ static func efecto(edificio_id: String, nivel: int) -> String:
 		"barracas":
 			return "Caben %d soldados." % SOLDADOS_MAXIMOS[nivel]
 		"enfermeria":
-			return "Descansar en el castillo cura el %d%% (sin ella, el %d%%)." % [
-				roundi((CURA_DESCANSO + CURA_ENFERMERIA[nivel]) * 100.0), roundi(CURA_DESCANSO * 100.0)]
+			var cura := roundi((CURA_DESCANSO + CURA_ENFERMERIA[nivel]) * 100.0)
+			return "Al descansar recuperas el %d%% de tu vida máxima y %d de cada parte herida (sin ella, %d%% y %d)." % [
+				cura, cura, roundi(CURA_DESCANSO * 100.0), roundi(CURA_DESCANSO * 100.0)]
 	return ""

@@ -36,7 +36,7 @@ func _ready() -> void:
 	var area := UIReino.area_centrada(self)
 	_crear_interfaz(area)
 	_procesar_combate()
-	_actualizar()
+	_actualizar(true)
 	UIReino.bloquear_toques(self)
 
 
@@ -73,8 +73,9 @@ func _crear_interfaz(area: Control) -> void:
 	_boton_volver = UIReino.boton("Volver a casa", _al_volver, Vector2(320, 76), 24)
 	_boton_volver.position = Vector2(930, 600)
 	area.add_child(_boton_volver)
+	# La poción va a la izquierda, lejos de "Volver a casa" (que termina la semana).
 	_boton_pocion = UIReino.boton("", _al_tomar_pocion, Vector2(320, 76), 22)
-	_boton_pocion.position = Vector2(590, 600)
+	_boton_pocion.position = Vector2(30, 600)
 	Estilo.con_franja(_boton_pocion, Color("#ec407a"))
 	area.add_child(_boton_pocion)
 
@@ -139,6 +140,8 @@ func _al_tomar_pocion() -> void:
 	if _saliendo or not Juego.usar_pocion():
 		return
 	_actualizar()
+	# Un doble toque no debe gastar otra.
+	UIReino.bloquear_toques(self, 0.35)
 
 
 ## Guarda el suceso del día: un texto corto para la casilla y uno largo.
@@ -185,9 +188,10 @@ func _procesar_combate() -> void:
 	_comprobar_estres()
 
 
-func _actualizar() -> void:
-	UIReino.actualizar_estres(_barra_estres, Juego.estres)
-	UIReino.actualizar_vida(_barra_vida)
+## "inmediato": al abrir la pantalla las barras no se animan desde llenas.
+func _actualizar(inmediato := false) -> void:
+	UIReino.actualizar_estres(_barra_estres, Juego.estres, inmediato)
+	UIReino.actualizar_vida(_barra_vida, inmediato)
 	var pociones := Juego.pociones()
 	_boton_pocion.text = "Tomar poción (%d)" % pociones
 	_boton_pocion.disabled = pociones == 0 or not Juego.esta_herido()

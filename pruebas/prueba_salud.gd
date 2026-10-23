@@ -244,3 +244,89 @@ func prueba_la_partida_se_guarda_y_se_carga() -> void:
 	juego.free()
 	cargado.free()
 	viejo.free()
+
+
+func prueba_con_la_mano_del_arma_inutil_empieza_con_la_otra() -> void:
+	var juego := _juego_nuevo()
+	var rey := juego.crear_rey()
+	rey.integridad["mano_der"] = 5.0
+	rey.desarmado = true
+	juego.guardar_salud(rey)
+	var siguiente := juego.crear_rey()
+	verificar(not siguiente.desarmado and siguiente.mano_torpe, "Con la mano derecha inútil, toma el arma con la izquierda")
+	var otro := juego.crear_rey()
+	otro.integridad["mano_der"] = 5.0
+	otro.integridad["mano_izq"] = 5.0
+	juego.guardar_salud(otro)
+	var sin_manos := juego.crear_rey()
+	verificar(sin_manos.desarmado, "Sin manos útiles empieza sin el arma")
+	verificar_igual(sin_manos.arma_actual(), "patadas", "Y pelea a patadas")
+	juego.free()
+
+
+func prueba_tras_perder_vuelve_con_1_de_vida_y_despierto() -> void:
+	var juego := _juego_nuevo()
+	var rey := juego.crear_rey()
+	rey.vida = 0
+	rey.integridad["craneo"] = 10.0
+	rey.desmayado = true
+	juego.guardar_salud(rey)
+	verificar_igual(juego.vida_actual(), 1, "Vuelve con 1 de vida")
+	verificar_igual(juego.vida_perdida, juego.vida_maxima() - 1, "Sin un punto perdido de más")
+	var siguiente := juego.crear_rey()
+	verificar(siguiente.conciencia() >= MotorCombate.umbral_desmayo(siguiente), "Despierto: no se desmaya con el primer golpe")
+	verificar(siguiente.integridad["craneo"] < 100.0, "Aunque el cráneo sigue herido")
+	# Con el cráneo roto también despierta.
+	var roto := juego.crear_rey()
+	roto.integridad["craneo"] = 10.0
+	roto.fracturas["craneo"] = true
+	roto.desmayado = true
+	juego.guardar_salud(roto)
+	var despierto := juego.crear_rey()
+	verificar(despierto.conciencia() >= MotorCombate.umbral_desmayo(despierto), "Con el cráneo roto, también despierto")
+	juego.agregar(DatosBotin.crear_pocion())
+	juego.vida_perdida = juego.vida_maxima() - 1
+	juego.usar_pocion()
+	verificar_igual(juego.vida_actual(), 1 + DatosBotin.POCION_VIDA, "La poción cura desde 1")
+	juego.free()
+
+
+func prueba_recuperacion_tambien_se_nota_al_caminar() -> void:
+	var normal := _juego_nuevo()
+	var poco := _juego_nuevo()
+	poco.extra["recuperacion"] = 2
+	for juego in [normal, poco]:
+		juego.vida_perdida = 50
+		for i in 20:
+			juego.curar_al_caminar()
+	verificar_igual(normal.vida_perdida, 30, "Sin Recuperación, 1 de vida por paso")
+	verificar_igual(poco.vida_perdida, 28, "Con 2 puntos (+10%), 22 en 20 pasos: los decimales se juntan")
+	poco.vida_perdida = 0
+	poco.curar_al_caminar()
+	verificar_cerca(poco.resto_vida, 0.0, "Sano, los decimales no se guardan")
+	normal.free()
+	poco.free()
+
+
+func prueba_un_archivo_danado_no_carga_a_medias() -> void:
+	var juego := _juego_nuevo()
+	juego.oro = 777
+	juego.semana = 9
+	juego.guardar(ARCHIVO_PRUEBA)
+	var datos: Dictionary = str_to_var(FileAccess.get_file_as_string(ARCHIVO_PRUEBA))
+	datos["equipo"] = []
+	var archivo := FileAccess.open(ARCHIVO_PRUEBA, FileAccess.WRITE)
+	archivo.store_string(var_to_str(datos))
+	archivo.close()
+	var cargado := EstadoReino.new()
+	verificar(not cargado.cargar(ARCHIVO_PRUEBA), "Un dato con otro tipo: no se carga")
+	verificar(not cargado.en_curso, "Y no queda una partida a medias")
+	datos["equipo"] = {}
+	datos["inventario"] = [5]
+	archivo = FileAccess.open(ARCHIVO_PRUEBA, FileAccess.WRITE)
+	archivo.store_string(var_to_str(datos))
+	archivo.close()
+	verificar(not cargado.cargar(ARCHIVO_PRUEBA), "Un objeto que no es un objeto: tampoco")
+	DirAccess.remove_absolute(ARCHIVO_PRUEBA)
+	juego.free()
+	cargado.free()

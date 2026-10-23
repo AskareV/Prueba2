@@ -106,10 +106,11 @@ func _crear_franja() -> void:
 	_aviso.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_aviso.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	franja.add_child(_aviso)
-	_actualizar_franja()
+	_actualizar_franja(true)
 
 
-func _actualizar_franja() -> void:
+## "inmediato": la barra de estrés no se anima (al abrir la pantalla).
+func _actualizar_franja(inmediato := false) -> void:
 	_etiqueta_semana.text = "Semana %d" % Juego.semana
 	# Aviso en la pestaña Rey cuando hay puntos por repartir.
 	var por_repartir := Juego.puntos_principales + Juego.total_puntos_sub() > 0
@@ -117,7 +118,7 @@ func _actualizar_franja() -> void:
 	_etiqueta_oro.text = "Oro: %d" % Juego.oro
 	_etiqueta_peligro.text = "Peligro %d%%" % roundi(Juego.peligro)
 	_etiqueta_peligro.add_theme_color_override("font_color", _color_peligro(Juego.peligro))
-	UIReino.actualizar_estres(_barra_estres, Juego.estres)
+	UIReino.actualizar_estres(_barra_estres, Juego.estres, inmediato)
 
 
 func _avisar(texto: String) -> void:
@@ -223,10 +224,11 @@ func _crear_resumen_rey() -> void:
 	barra.texto = "Experiencia %d / %d" % [Juego.xp, Juego.xp_para_subir()]
 	columna.add_child(barra)
 	var rey := Juego.crear_rey()
-	columna.add_child(UIReino.etiqueta("Vida %d / %d · Maná %d" % [rey.vida, rey.vida_max, roundi(rey.mana_max)], 17, Estilo.TEXTO_SUAVE))
+	columna.add_child(UIReino.etiqueta("Vida %d / %d" % [rey.vida, rey.vida_max], 17, Estilo.TEXTO_SUAVE))
 	if Juego.esta_herido():
 		columna.add_child(UIReino.parrafo(_texto_heridas(), 228, 15, UIReino.COLOR_AVISO))
-	columna.add_child(UIReino.etiqueta("Rapidez %s" % _formato(rey.rapidez), 17, Estilo.TEXTO_SUAVE))
+	columna.add_child(UIReino.etiqueta("Maná %d / %d · Rapidez %s" % [floori(rey.mana), roundi(rey.mana_max), _formato(rey.rapidez)],
+		17, Estilo.TEXTO_SUAVE))
 	var principales := _puntos_principales_libres()
 	var de_partes := 0
 	for car_id in DatosEstadisticas.ORDEN:
@@ -759,22 +761,28 @@ func _detalle_castillo(columna: VBoxContainer) -> void:
 	if not Juego.informe_ciudad.is_empty():
 		columna.add_child(UIReino.etiqueta("Semana %d" % Juego.informe_ciudad["semana"], 20, UIReino.COLOR_TITULO))
 		columna.add_child(UIReino.parrafo(_resumen_semana(Juego.informe_ciudad), 540, 17))
-	var descansar := UIReino.boton("Descansar una semana\n−%d de estrés · cura el %d%% de tus heridas" % [
-		roundi(EstadoReino.ESTRES_DESCANSO), _porcentaje_descanso()], _al_descansar, Vector2(540, 74), 20)
-	columna.add_child(descansar)
+	var texto := "Descansar una semana\n−%d de estrés" % roundi(EstadoReino.ESTRES_DESCANSO)
+	if Juego.esta_herido():
+		texto += " · " + _texto_cura_descanso()
+	columna.add_child(UIReino.boton(texto, _al_descansar, Vector2(540, 74), 19))
 
 
-## Parte de la vida y de cada parte herida que cura descansar ahora (en %).
-func _porcentaje_descanso() -> int:
-	return mini(roundi(Juego.cura_al_descansar() * Juego.multiplicador_curacion() * 100.0), 100)
+## "+39 de vida y +44 por parte herida": lo que cura descansar ahora (de vida,
+## como mucho la que falta).
+func _texto_cura_descanso() -> String:
+	var fraccion := Juego.cura_al_descansar()
+	return "+%d de vida y +%d por parte herida" % [mini(Juego.vida_curada(fraccion), Juego.vida_perdida),
+		roundi(Juego.partes_curadas(fraccion))]
 
 
 func _detalle_enfermeria(columna: VBoxContainer, nivel: int) -> void:
 	columna.add_child(UIReino.etiqueta("Salud del rey", 24, UIReino.COLOR_TITULO))
 	var estado := _texto_heridas() if Juego.esta_herido() else "Estás sano."
 	columna.add_child(UIReino.parrafo("Vida %d / %d. %s" % [Juego.vida_actual(), Juego.vida_maxima(), estado], 540, 18, Estilo.TEXTO))
-	columna.add_child(UIReino.parrafo("Descansar una semana en el castillo cura el %d%% de la vida y de cada parte herida (Recuperación ×%s)." % [
-		_porcentaje_descanso(), _multiplicador(Juego.multiplicador_curacion())], 540, 17))
+	var fraccion := Juego.cura_al_descansar()
+	columna.add_child(UIReino.parrafo("Descansar una semana en el castillo: recuperas hasta %d de vida (el %d%% de tu vida máxima) y %d puntos de cada parte herida. Ya cuenta Recuperación (×%s)." % [
+		Juego.vida_curada(fraccion), roundi(fraccion * Juego.multiplicador_curacion() * 100.0),
+		roundi(Juego.partes_curadas(fraccion)), _multiplicador(Juego.multiplicador_curacion())], 540, 17))
 	if nivel <= 0:
 		columna.add_child(UIReino.parrafo("Reconstrúyela para que descansar cure más.", 540, 17))
 	columna.add_child(UIReino.parrafo("Al caminar por una mazmorra o una zona también te curas poco a poco. Las pociones curan en el momento (se compran en el mercado).", 540, 17))

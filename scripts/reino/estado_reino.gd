@@ -72,6 +72,9 @@ var mana_perdido := 0.0
 var integridad: Dictionary = {}
 var fracturas: Dictionary = {}
 var heridas: Array[Dictionary] = []
+## Decimales de vida curada que todavía no llegan a un punto (al caminar se cura
+## poco a poco: así Recuperación también se nota ahí).
+var resto_vida := 0.0
 
 ## Solo la partida del autoload se guarda sola (las de las pruebas, no).
 var _guardado_automatico := false
@@ -134,6 +137,7 @@ func nueva_partida(p_diestro: bool) -> void:
 	integridad = {}
 	fracturas = {}
 	heridas = []
+	resto_vida = 0.0
 	aviso = "Reparte tus %d puntos iniciales en la pestaña Rey." % DatosEstadisticas.PUNTOS_INICIALES
 
 
@@ -150,8 +154,41 @@ func datos_guardado() -> Dictionary:
 		"veces": veces, "extra": extra, "edificios": edificios, "comida": comida, "soldados": soldados,
 		"peligro": peligro, "mercado": mercado, "informe_ciudad": informe_ciudad,
 		"vida_perdida": vida_perdida, "mana_perdido": mana_perdido, "integridad": integridad,
-		"fracturas": fracturas, "heridas": heridas,
+		"fracturas": fracturas, "heridas": heridas, "resto_vida": resto_vida,
 	}
+
+
+## Tipo de cada dato guardado (los números pueden venir como enteros o decimales).
+const TIPOS_GUARDADO := {
+	"semana": TYPE_INT, "oro": TYPE_INT, "estres": TYPE_FLOAT, "diestro": TYPE_BOOL,
+	"inventario": TYPE_ARRAY, "equipo": TYPE_DICTIONARY, "dominio": TYPE_DICTIONARY,
+	"mazmorra": TYPE_DICTIONARY, "expedicion": TYPE_DICTIONARY, "combate": TYPE_DICTIONARY,
+	"aviso": TYPE_STRING, "pestana": TYPE_STRING, "semilla": TYPE_INT, "siguiente_id": TYPE_INT,
+	"rng_semilla": TYPE_INT, "rng_estado": TYPE_INT, "nivel": TYPE_INT, "xp": TYPE_INT,
+	"puntos_principales": TYPE_INT, "puntos_sub": TYPE_DICTIONARY, "veces": TYPE_DICTIONARY,
+	"extra": TYPE_DICTIONARY, "edificios": TYPE_DICTIONARY, "comida": TYPE_INT, "soldados": TYPE_INT,
+	"peligro": TYPE_FLOAT, "mercado": TYPE_ARRAY, "informe_ciudad": TYPE_DICTIONARY,
+	"vida_perdida": TYPE_INT, "mana_perdido": TYPE_FLOAT, "integridad": TYPE_DICTIONARY,
+	"fracturas": TYPE_DICTIONARY, "heridas": TYPE_ARRAY, "resto_vida": TYPE_FLOAT,
+}
+
+
+## Los datos guardados tienen el tipo que se espera (así un archivo dañado no deja
+## la partida a medio cargar).
+static func _guardado_valido(datos: Dictionary) -> bool:
+	for clave in TIPOS_GUARDADO:
+		if not datos.has(clave):
+			continue
+		var tipo := typeof(datos[clave])
+		var esperado: int = TIPOS_GUARDADO[clave]
+		var numero := esperado in [TYPE_INT, TYPE_FLOAT] and tipo in [TYPE_INT, TYPE_FLOAT]
+		if tipo != esperado and not numero:
+			return false
+	for clave in ["inventario", "mercado", "heridas"]:
+		for elemento in datos.get(clave, []):
+			if not (elemento is Dictionary):
+				return false
+	return true
 
 
 ## Guarda la partida si cambió algo desde la última vez. Escribe primero en un
@@ -179,7 +216,7 @@ func cargar(ruta := ARCHIVO) -> bool:
 	if not FileAccess.file_exists(ruta):
 		return false
 	var datos: Variant = str_to_var(FileAccess.get_file_as_string(ruta))
-	if not (datos is Dictionary) or int(datos.get("version", 0)) != VERSION_GUARDADO:
+	if not (datos is Dictionary) or int(datos.get("version", 0)) != VERSION_GUARDADO or not _guardado_valido(datos):
 		return false
 	nueva_partida(bool(datos.get("diestro", true)))
 	semana = int(datos.get("semana", semana))
@@ -214,6 +251,7 @@ func cargar(ruta := ARCHIVO) -> bool:
 	integridad = datos.get("integridad", {})
 	fracturas = datos.get("fracturas", {})
 	heridas.assign(datos.get("heridas", []))
+	resto_vida = float(datos.get("resto_vida", 0.0))
 	_ultimo_guardado = var_to_str(datos_guardado())
 	return true
 
@@ -343,19 +381,26 @@ func crear_rey() -> Luchador:
 		rey.integridad[parte_id] = float(integridad[parte_id])
 	rey.fracturas = fracturas.duplicate()
 	rey.heridas.assign(heridas.duplicate(true))
+	# Si la mano del arma quedó inútil, toma el arma con la otra (o pelea sin ella).
+	if not rey.empunar():
+		rey.desarmado = true
 	return rey
 
 
 # --- Salud del rey: las heridas duran entre combates ---
 
-## Guarda cómo quedó el rey al terminar un combate.
+## Guarda cómo quedó el rey al terminar un combate. Aunque pierda, lo traen con
+## 1 de vida y despierto (el cráneo justo por encima del desmayo).
 func guardar_salud(rey: Luchador) -> void:
-	vida_perdida = rey.vida_max - rey.vida
+	vida_perdida = mini(rey.vida_max - rey.vida, rey.vida_max - 1)
 	mana_perdido = rey.mana_max - rey.mana
 	integridad = {}
 	for parte_id in rey.integridad:
 		if rey.integridad[parte_id] < 100.0:
 			integridad[parte_id] = rey.integridad[parte_id]
+	if rey.desmayado:
+		var despierto := MotorCombate.umbral_desmayo(rey) * 100.0 / rey.factor_fractura("craneo") + 1.0
+		integridad["craneo"] = minf(maxf(float(integridad.get("craneo", 100.0)), despierto), 99.0)
 	fracturas = {}
 	for parte_id in rey.fracturas:
 		if integridad.has(parte_id):
@@ -396,11 +441,29 @@ func curar(vida: int, partes: float) -> void:
 	heridas.assign(heridas.filter(func(herida: Dictionary) -> bool: return integridad.has(herida["parte"])))
 
 
-## Cura esa parte de la vida máxima (al menos 1) y esos puntos ×100 de cada
-## parte (0,05 = 5% de la vida y 5 de integridad), aumentado por Recuperación.
+## Cura esa parte de la vida máxima y esos puntos ×100 de cada parte (0,05 = 5%
+## de la vida y 5 de integridad), aumentado por Recuperación. Los decimales de
+## vida se guardan para la próxima vez (sano, no se acumulan).
 func curar_fraccion(fraccion: float) -> void:
-	var mult := multiplicador_curacion()
-	curar(maxi(roundi(vida_maxima() * fraccion * mult), 1), 100.0 * fraccion * mult)
+	var exacta := _vida_exacta(fraccion)
+	var entera := vida_curada(fraccion)
+	resto_vida = exacta - entera if vida_perdida > entera else 0.0
+	curar(entera, partes_curadas(fraccion))
+
+
+## Vida que cura curar_fraccion ahora (con Recuperación y los decimales guardados).
+func vida_curada(fraccion: float) -> int:
+	# Un poco de margen: 100 × 0,01 debe dar 1, no 0,9999…
+	return floori(_vida_exacta(fraccion) + 0.0001)
+
+
+func _vida_exacta(fraccion: float) -> float:
+	return vida_maxima() * fraccion * multiplicador_curacion() + resto_vida
+
+
+## Integridad que cura curar_fraccion a cada parte herida (con Recuperación).
+func partes_curadas(fraccion: float) -> float:
+	return 100.0 * fraccion * multiplicador_curacion()
 
 
 ## Al caminar el rey se va curando: cada paso de la mazmorra (y cada día de una

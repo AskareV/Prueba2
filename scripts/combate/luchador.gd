@@ -252,8 +252,7 @@ func factor(parte_id: String) -> float:
 	return valor
 
 
-## Rinde menos por una fractura: el umbral de integridad bajo el que la parte ya
-## no sirve para moverse (ver extremidad_util) sube.
+## Lo que rinde una parte por estar (o no) fracturada: 0,7 o 1.
 func factor_fractura(parte_id: String) -> float:
 	return FACTOR_FRACTURA if fracturas.has(parte_id) else 1.0
 

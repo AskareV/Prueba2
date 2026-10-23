@@ -11,7 +11,7 @@ const ESCENA_COMBATE := "res://escenas/combate.tscn"
 const ESCENA_PROPIA := "res://escenas/mazmorra.tscn"
 const DIRECCIONES := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 ## Líneas que caben en el panel de mensajes (se ven las últimas).
-const LINEAS_REGISTRO := 9
+const LINEAS_REGISTRO := 7
 
 ## La ayuda se muestra sola la primera vez que se entra a una mazmorra.
 static var ayuda_vista := false
@@ -49,7 +49,7 @@ func _ready() -> void:
 	# Una derrota (o el estrés) saca al rey de la mazmorra: no hay plano que mostrar.
 	if _saliendo:
 		return
-	_actualizar()
+	_actualizar(true)
 	if not ayuda_vista:
 		ayuda_vista = true
 		_mostrar_ayuda()
@@ -94,12 +94,18 @@ func _crear_cabecera(area: Control) -> void:
 
 
 func _crear_lateral(area: Control) -> void:
+	# La poción va arriba, lejos de la cruceta: un toque de más no la gasta.
+	_boton_pocion = UIReino.boton("", _al_tomar_pocion, Vector2(290, 56), 20)
+	_boton_pocion.position = Vector2(970, 90)
+	_boton_pocion.focus_mode = Control.FOCUS_NONE
+	Estilo.con_franja(_boton_pocion, Color("#ec407a"))
+	area.add_child(_boton_pocion)
 	var panel := UIReino.panel()
-	panel.position = Vector2(970, 90)
-	panel.custom_minimum_size = Vector2(290, 250)
+	panel.position = Vector2(970, 156)
+	panel.custom_minimum_size = Vector2(290, 190)
 	area.add_child(panel)
 	_registro = UIReino.parrafo("", 256, 17, Estilo.TEXTO)
-	_registro.custom_minimum_size = Vector2(256, 230)
+	_registro.custom_minimum_size = Vector2(256, 170)
 	_registro.max_lines_visible = LINEAS_REGISTRO
 	panel.add_child(_registro)
 	# Cruceta: sustituye a las flechas del teclado del juego original.
@@ -124,11 +130,6 @@ func _crear_lateral(area: Control) -> void:
 		flecha.set_anchors_preset(Control.PRESET_FULL_RECT)
 		boton.add_child(flecha)
 		cruceta.add_child(boton)
-	_boton_pocion = UIReino.boton("", _al_tomar_pocion, Vector2(290, 60), 20)
-	_boton_pocion.position = Vector2(970, 650)
-	_boton_pocion.focus_mode = Control.FOCUS_NONE
-	Estilo.con_franja(_boton_pocion, Color("#ec407a"))
-	area.add_child(_boton_pocion)
 
 
 func _crear_ayuda(area: Control) -> void:
@@ -242,6 +243,8 @@ func _al_tomar_pocion() -> void:
 		return
 	_mensaje("Tomas una poción de curación.")
 	_actualizar()
+	# Un doble toque no debe gastar otra.
+	UIReino.bloquear_toques(self, 0.35)
 
 
 # --- Combate ---
@@ -309,9 +312,10 @@ func _mensaje(texto: String) -> void:
 		_registro.lines_skipped = maxi(_registro.get_line_count() - LINEAS_REGISTRO, 0)
 
 
-func _actualizar() -> void:
-	UIReino.actualizar_estres(_barra_estres, Juego.estres)
-	UIReino.actualizar_vida(_barra_vida)
+## "inmediato": al abrir la pantalla las barras no se animan desde llenas.
+func _actualizar(inmediato := false) -> void:
+	UIReino.actualizar_estres(_barra_estres, Juego.estres, inmediato)
+	UIReino.actualizar_vida(_barra_vida, inmediato)
 	var pociones := Juego.pociones()
 	_boton_pocion.text = "Tomar poción (%d)" % pociones
 	_boton_pocion.disabled = pociones == 0 or not Juego.esta_herido()

@@ -6,9 +6,14 @@ extends SceneTree
 ## (pelear, abrir cofres y salir por la H) -> zona de siete días -> inventario
 ## (equipar y vender) -> trabajo -> ciudad (edificios, descanso y un ataque) ->
 ## salud (pociones en el inventario, la mazmorra y el combate; enfermería y
-## descanso; un día agotado en una zona) -> seguir la partida desde el menú.
+## descanso; un día agotado en una zona) -> un combate contra un chamán (magia
+## de los enemigos) -> seguir la partida desde el menú (también tras guardarla
+## y cargarla del disco).
 
 const MENU := "res://escenas/menu_principal.tscn"
+const PREPARACION := "res://escenas/preparacion.tscn"
+## Archivo de prueba: el recorrido no toca la partida guardada de verdad.
+const ARCHIVO_PRUEBA := "user://recorrido.save"
 const REINO := "res://escenas/reino.tscn"
 const MAZMORRA := "res://escenas/mazmorra.tscn"
 const EXPEDICION := "res://escenas/expedicion.tscn"
@@ -32,11 +37,15 @@ func _initialize() -> void:
 	Engine.time_scale = 30.0
 	await process_frame
 	_juego = root.get_node("Juego") as EstadoReino
+	# Sin guardado automático: el recorrido no debe pisar la partida guardada.
+	_juego.set("_guardado_automatico", false)
 	_juego.nueva_partida(true)
 	_juego.rng.seed = 5
+	# Mazmorras fijas: el recorrido es siempre igual.
+	_juego.semilla = 1
 	for paso in [_recorrer_menu_y_pestanas, _recorrer_mazmorra, _recorrer_estres_maximo, _recorrer_zona,
 			_recorrer_inventario, _recorrer_trabajo, _recorrer_ciudad, _recorrer_salud, _recorrer_agotado,
-			_recorrer_continuar]:
+			_recorrer_magia_enemiga, _recorrer_continuar]:
 		await paso.call()
 		# Tras un fallo se corta: los pasos siguientes dependen de la pantalla.
 		if not _fallos.is_empty():
@@ -551,8 +560,11 @@ func _recorrer_salud() -> void:
 	mazmorra.call("_al_tomar_pocion")
 	await process_frame
 	_verificar(_juego.pociones() == pociones - 1, "Tomar una poción entre combates")
-	# Hasta el primer enemigo, para tomar la última poción en el combate.
+	# Hasta el primer enemigo, para tomar la última poción en el combate (con la
+	# pierna rota otra vez: así sigue rota al terminar).
 	_juego.vida_perdida = 60
+	_juego.integridad = {"muslo_der": 40.0}
+	_juego.fracturas = {"muslo_der": true}
 	for pasos in 200:
 		if not _juego.combate.is_empty() or _juego.mazmorra.is_empty():
 			break
@@ -572,7 +584,9 @@ func _recorrer_salud() -> void:
 			break
 	_verificar((escena.get("_jugador") as Luchador).vida < (escena.get("_jugador") as Luchador).vida_max,
 		"El rey entra herido al combate")
-	escena.call("_al_pulsar_objeto")
+	var boton_objeto: Button = escena.get("_boton_objeto")
+	_verificar(boton_objeto.visible and not boton_objeto.disabled, "En el reino se ve el botón Objeto")
+	boton_objeto.pressed.emit()
 	for i in 60:
 		await process_frame
 		if escena.call("_entrada_libre"):
@@ -580,9 +594,11 @@ func _recorrer_salud() -> void:
 	_verificar(int(escena.get("_estado")) == OBJETO, "El botón Objeto abre los objetos")
 	escena.call("_al_tomar_pocion")
 	await process_frame
-	_verificar(_juego.pociones() == pociones - 1, "Tomar una poción en combate")
+	_verificar(int(escena.call("_pociones_disponibles")) == pociones - 1, "Tomar una poción en combate")
+	_verificar(_juego.pociones() == pociones, "La poción se gasta al terminar el combate (no antes)")
 	escena.call("_mostrar_fin", "victoria")
 	await process_frame
+	_verificar(_juego.pociones() == pociones - 1, "Al terminar el combate se gasta la poción")
 	var jugador: Luchador = escena.get("_jugador")
 	_verificar(_juego.vida_perdida == jugador.vida_max - jugador.vida and _juego.fracturas.has("muslo_der"),
 		"Al terminar se guarda cómo quedó el rey (con su pierna rota)")
@@ -619,11 +635,71 @@ func _recorrer_agotado() -> void:
 	await _esperar_escena(REINO)
 
 
-## Desde el menú, "Continuar" sigue la partida donde quedó: en una mazmorra o en
-## un combate pendiente (que empieza de nuevo). "Atrás" pregunta antes de salir.
+## Un combate de verdad contra un chamán orco, que sabe magia: lanza hechizos.
+func _recorrer_magia_enemiga() -> void:
+	var reino := current_scene
+	_juego.estres = 0.0
+	_juego.vida_perdida = 0
+	_juego.integridad = {}
+	_juego.fracturas = {}
+	reino.call("_al_explorar", "paso_montana")
+	if await _esperar_escena(EXPEDICION) == null:
+		return
+	_juego.combate = {"origen": "expedicion", "escena": EXPEDICION, "rival": "chaman_orco", "resultado": ""}
+	change_scene_to_file(COMBATE)
+	var escena := await _esperar_escena(COMBATE)
+	if escena == null:
+		return
+	(escena.get("_rng") as RandomNumberGenerator).seed = 11
+	var hechizos := 0
+	var vistos := {}
+	var cuadros := 0
+	while int(escena.get("_estado")) != FIN and cuadros < MAX_CUADROS:
+		await process_frame
+		cuadros += 1
+		for mensaje in escena.get("_mensajes"):
+			if String(mensaje).begins_with("El Chamán orco lanza") and not vistos.has(mensaje):
+				vistos[mensaje] = true
+				hechizos += 1
+		if not escena.call("_entrada_libre"):
+			continue
+		match int(escena.get("_estado")):
+			ACCIONES:
+				escena.call("_al_pulsar_atacar")
+			ZONA:
+				escena.call("_al_elegir_zona", "torso")
+			PARTE:
+				escena.call("_al_elegir_parte", "abdomen")
+	_verificar(int(escena.get("_estado")) == FIN, "El combate contra el chamán termina")
+	_verificar(hechizos > 0, "El chamán orco lanza hechizos")
+	for i in 240:
+		if escena.get("_resultado") != "" and escena.call("_entrada_libre"):
+			break
+		await process_frame
+	escena.call("_al_pulsar_menu")
+	var zona := await _esperar_escena(EXPEDICION)
+	if zona == null:
+		return
+	_verificar(_juego.expedicion["dias"].size() == 1, "El combate cuenta como un día de la salida")
+	zona.call("_al_volver")
+	await _esperar_escena(REINO)
+
+
+## Desde el menú, "Continuar" sigue la partida donde quedó: en una mazmorra
+## (también tras guardar y cargar la partida del disco), en un combate pendiente
+## (que empieza de nuevo) o en uno ya terminado. La demo no toca el combate
+## pendiente. "Atrás" pregunta antes de salir.
 func _recorrer_continuar() -> void:
 	_juego.estres = 0.0
 	_juego.mazmorra = {"id": "madriguera_goblin"}
+	# Guardar, borrar todo de la memoria y cargar del disco: Continuar sigue igual.
+	var oro := _juego.oro
+	_verificar(_juego.guardar(ARCHIVO_PRUEBA), "Se guarda la partida")
+	_juego.nueva_partida(false)
+	_verificar(_juego.cargar(ARCHIVO_PRUEBA), "Se carga la partida")
+	DirAccess.remove_absolute(ARCHIVO_PRUEBA)
+	_verificar(_juego.oro == oro and _juego.mazmorra.get("id", "") == "madriguera_goblin" and _juego.diestro,
+		"La partida cargada es la misma")
 	change_scene_to_file(MENU)
 	var menu := await _esperar_escena(MENU)
 	if menu == null:
@@ -656,5 +732,54 @@ func _recorrer_continuar() -> void:
 	if mazmorra == null:
 		return
 	_verificar(not _juego.mazmorra["plano"]["enemigos"].has(celda), "Y la mazmorra cuenta la victoria")
+	# Un combate ya terminado (se cerró antes de tocar Continuar): vuelve a la
+	# mazmorra y la mazmorra cuenta el resultado.
+	plano = _juego.mazmorra["plano"]
+	celda = plano["enemigos"].keys()[0]
+	_juego.combate = {"origen": "mazmorra", "escena": MAZMORRA, "rival": plano["enemigos"][celda], "celda": celda,
+		"resultado": "victoria"}
+	change_scene_to_file(MENU)
+	menu = await _esperar_escena(MENU)
+	if menu == null:
+		return
+	menu.call("_al_continuar")
+	mazmorra = await _esperar_escena(MAZMORRA)
+	if mazmorra == null:
+		return
+	_verificar(_juego.combate.is_empty() and not _juego.mazmorra["plano"]["enemigos"].has(celda),
+		"Un combate ya terminado se cuenta al volver")
+	# La demo con un combate pendiente: no es del reino y no lo toca.
+	celda = _juego.mazmorra["plano"]["enemigos"].keys()[0]
+	var pendiente := {"origen": "mazmorra", "escena": MAZMORRA, "rival": _juego.mazmorra["plano"]["enemigos"][celda],
+		"celda": celda, "resultado": ""}
+	_juego.combate = pendiente.duplicate()
+	change_scene_to_file(MENU)
+	menu = await _esperar_escena(MENU)
+	if menu == null:
+		return
+	menu.call("_al_pulsar_demo")
+	var preparacion := await _esperar_escena(PREPARACION)
+	if preparacion == null:
+		return
+	preparacion.call("_al_combatir")
+	escena = await _esperar_escena(COMBATE)
+	if escena == null:
+		return
+	_verificar(not escena.get("_modo_reino") and not (escena.get("_boton_objeto") as Button).visible,
+		"La demo no es un combate del reino (sin Objeto)")
+	_verificar(_juego.combate == pendiente, "La demo no toca el combate pendiente")
+	change_scene_to_file(MENU)
+	menu = await _esperar_escena(MENU)
+	if menu == null:
+		return
+	menu.call("_al_continuar")
+	escena = await _esperar_escena(COMBATE)
+	if escena == null:
+		return
+	_verificar(escena.get("_modo_reino"), "Después, Continuar vuelve al combate pendiente del reino")
+	await _pelear(false)
+	mazmorra = await _esperar_escena(MAZMORRA)
+	if mazmorra == null:
+		return
 	mazmorra.call("_salir", "Prueba.")
 	await _esperar_escena(REINO)

@@ -457,7 +457,7 @@ tener más nivel que el castillo.
 | Granja | 100 / 300 / 700 | 10 / 18 / 28 de comida por semana. |
 | Mercado | 120 / 350 / 800 | 15 / 30 / 50 de oro de impuestos por semana; vende 3 / 4 / 5 objetos de nivel 1 / 2 / 3 que cambian cada semana, y 2 / 3 / 4 pociones (se compran de a una). Precio: 4 veces el de venta base; Negociación lo baja hasta un 40% menos, y nunca por debajo de lo que te pagarían al venderlo. |
 | Barracas | 150 / 400 / 900 | Caben 5 / 10 / 15 soldados (40 de oro cada uno). Cada soldado come 2 de comida por semana. |
-| Enfermería | 120 / 300 / 700 | Descansar en el castillo cura el 60% / 80% / 100% de la vida y de cada parte herida (sin ella, el 40%). |
+| Enfermería | 120 / 300 / 700 | Al descansar en el castillo recuperas el 60% / 80% / 100% de tu vida máxima y 60 / 80 / 100 puntos de cada parte herida (sin ella, 40% y 40). |
 
 **La semana de la ciudad** (al pasar la semana):
 1. La granja produce y los soldados comen. Sin comida suficiente, se van
@@ -491,19 +491,24 @@ Todos los números son **provisionales**.
   siguiente**. Después de un combate no se recupera nada.
 - **Al caminar** el rey se va curando, todas las partes a la vez: cada paso de
   la mazmorra cura el 1% de la vida máxima, 1 punto de cada parte herida y 0,5 de
-  maná. Un día de marcha en una zona cura como 4 pasos.
-- **Descansar una semana en el castillo** (sin trabajar) cura el 40% de la vida y
-  40 puntos de cada parte herida; con la enfermería, más (60% / 80% / 100%).
-  Trabajar no cura.
+  maná. Un día de marcha en una zona cura como 4 pasos. Los decimales de vida se
+  juntan de un paso al siguiente.
+- **Descansar una semana en el castillo** (sin trabajar) recupera el 40% de la
+  vida máxima y 40 puntos de cada parte herida; con la enfermería, más (60% /
+  80% / 100%). Trabajar no cura. El botón de descanso dice cuánto vas a curar.
 - **Recuperación** multiplica toda la curación (+5% por punto).
 - Una parte que se cura del todo deja de estar fracturada.
 - El maná se llena al pasar la semana.
-- Si pierde un combate, lo traen de vuelta con al menos 1 de vida.
+- Si pierde un combate, lo traen de vuelta con 1 de vida y despierto (aunque se
+  haya desmayado).
+- Si la mano del arma quedó inútil, el combate siguiente empieza con el arma en
+  la otra mano (mano torpe) o, si ninguna sirve, sin arma.
 - **Poción de curación:** recupera 40 de vida y 25 puntos de cada parte herida.
   Sale en cofres, enemigos y zonas (25% del botín) y en el mercado (venta: 10 de
   oro). Se apilan en el inventario. Se toman en el combate (botón **Objeto**,
   gasta el turno), entre combates en la mazmorra o la zona (*Tomar poción*) y en
-  el Inventario.
+  el Inventario. Las que se toman en un combate se gastan al terminarlo: si la
+  aplicación se cierra a la mitad, el combate empieza de nuevo y no se pierden.
 - La vida se ve en la pestaña Rey, en la ventana de cada lugar del mapa y arriba
   en la mazmorra y la zona.
 

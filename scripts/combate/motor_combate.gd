@@ -347,12 +347,18 @@ static func lanzar_hechizo(lanzador: Luchador, hechizo_id: String) -> Dictionary
 	return {}
 
 
+## Paga el maná de un hechizo contra una parte (Llamarada) y lo deja listo para
+## resolverlo como un ataque (después hay que quitarlo: hechizo = {}).
+static func preparar_hechizo(lanzador: Luchador, hechizo_id: String) -> void:
+	lanzador.mana -= float(DatosHechizos.hechizo(hechizo_id)["coste"])
+	lanzador.hechizo = DatosHechizos.como_arma(hechizo_id, lanzador)
+
+
 ## Lanza un hechizo contra una parte (Llamarada): paga el maná y se resuelve como
 ## un ataque con los datos del hechizo.
 static func lanzar_hechizo_a(lanzador: Luchador, defensor: Luchador, hechizo_id: String, parte_id: String,
 		rng: RandomNumberGenerator, turno: int) -> Dictionary:
-	lanzador.mana -= float(DatosHechizos.hechizo(hechizo_id)["coste"])
-	lanzador.hechizo = DatosHechizos.como_arma(hechizo_id, lanzador)
+	preparar_hechizo(lanzador, hechizo_id)
 	var resultado := resolver_ataque(lanzador, defensor, parte_id, rng, turno)
 	lanzador.hechizo = {}
 	return resultado
