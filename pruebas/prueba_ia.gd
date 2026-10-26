@@ -51,25 +51,50 @@ func prueba_con_la_guardia_cerrada_abre_el_brazo_del_arma() -> void:
 				"El %s primero ataca tu brazo del arma si tu cabeza y torso están cubiertos" % rival_id)
 
 
-## Con el brazo del arma útil, va directo al cuerpo solo si su objetivo llega al
-## 50% de acierto; si no, abre la guardia.
-func prueba_umbral_para_ir_al_cuerpo() -> void:
+## Abrir la guardia del rey (inutilizar su brazo del arma) contra ir directo a su
+## cráneo: turnos que tardaría el orco de cada forma.
+func _turnos(orco: Luchador, rey: Luchador) -> Vector2:
+	var brazo := IAEnemigo.parte_para_inutilizar(orco, rey, "brazo_" + rey.lado_arma())
+	return Vector2(IAEnemigo.turnos_abriendo_guardia(orco, rey, brazo), IAEnemigo.turnos_para_tumbar(orco, rey, "craneo", rey.vida))
+
+
+## Con el brazo del arma útil, primero lo inutiliza si así tumba al rey en menos
+## turnos (sin ese brazo la cabeza y el torso quedan menos cubiertos); si no, va
+## directo.
+func prueba_abre_la_guardia_si_tumba_antes() -> void:
 	var rng := rng_fijo(36)
 	var orco := DatosRivales.crear_rival("orco")
 	var rey := DatosRivales.crear_rey(true, "espada")
-	# Brazo izquierdo (sin arma) y piernas inutilizados: su cráneo queda sobre el 50%.
+	verificar(_turnos(orco, rey).x < _turnos(orco, rey).y, "Contra el rey sano, abrir la guardia tarda menos")
+	verificar(_veces(orco, rey, DatosCuerpo.partes_de("brazo_der"), rng) > 600, "Entonces abre la guardia")
+	# Brazo izquierdo (sin arma) y piernas inutilizados: el cráneo queda tan expuesto que ir directo tarda menos.
 	rey.integridad["mano_izq"] = 5.0
 	rey.integridad["pie_der"] = 5.0
 	rey.integridad["pie_izq"] = 5.0
-	verificar(MotorCombate.prob_acierto(orco, rey, "craneo") >= IAEnemigo.ACIERTO_PARA_IR_AL_CUERPO,
-		"El cráneo del rey quedó sobre el umbral")
-	verificar(_veces(orco, rey, ["craneo"], rng) > 600, "Con el cráneo al alcance, el orco va directo a él")
-	# Con las piernas sanas el cráneo vuelve a quedar bajo el 50%: primero el brazo del arma.
-	rey.integridad["pie_der"] = 100.0
-	rey.integridad["pie_izq"] = 100.0
-	verificar(MotorCombate.prob_acierto(orco, rey, "craneo") < IAEnemigo.ACIERTO_PARA_IR_AL_CUERPO,
-		"El cráneo del rey quedó bajo el umbral")
-	verificar(_veces(orco, rey, DatosCuerpo.partes_de("brazo_der"), rng) > 600, "Bajo el umbral, abre la guardia")
+	verificar(_turnos(orco, rey).y < _turnos(orco, rey).x, "Con el cráneo expuesto, ir directo tarda menos")
+	verificar(_veces(orco, rey, ["craneo"], rng) > 600, "Entonces va directo al cráneo")
+	for parte_id in DatosCuerpo.partes_de("brazo_der"):
+		verificar_igual(rey.integridad[parte_id], 100.0, "Calcular los turnos no cambia al rey (%s)" % parte_id)
+	# Al rey casi vencido lo remata directo.
+	var herido := DatosRivales.crear_rey(true, "espada")
+	herido.vida = 20
+	verificar(_veces(orco, herido, ["craneo"], rng) > 600, "Con 20 de vida, el orco va directo a rematarlo")
+
+
+## Con más Reflejos el orco guerrero no cambia de plan: sigue abriendo primero la
+## guardia (antes, con +10, dejaba de hacerlo por un umbral fijo de acierto).
+func prueba_con_reflejos_el_orco_sigue_su_plan() -> void:
+	for p in [0, 5, 10, 15, 20]:
+		var juego := EstadoReino.new()
+		juego.nueva_partida(true)
+		juego.extra["reflejos"] = p
+		var rey := juego.crear_rey()
+		juego.free()
+		var orco := DatosRivales.crear_rival("orco_guerrero")
+		var objetivo := IAEnemigo.mejor_parte(orco, rey, DatosCuerpo.partes_de("cabeza") + DatosCuerpo.partes_de("torso"))
+		var brazo := IAEnemigo.parte_para_inutilizar(orco, rey, "brazo_" + rey.lado_arma())
+		verificar(IAEnemigo.turnos_abriendo_guardia(orco, rey, brazo) < IAEnemigo.turnos_para_tumbar(orco, rey, objetivo, rey.vida),
+			"Con Reflejos +%d abre primero la guardia" % p)
 
 
 func prueba_con_la_guardia_abierta_sigue_su_personalidad() -> void:

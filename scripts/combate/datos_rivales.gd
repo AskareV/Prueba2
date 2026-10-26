@@ -54,7 +54,7 @@ const RIVALES := {
 	},
 	"lancero": {
 		"nombre": "Lancero", "articulo": "el", "vida": 95, "diestro": true, "arma": "lanza",
-		"rapidez": 13, "coraje": 5, "personalidad": "preciso",
+		"rapidez": 13, "coraje": 5, "personalidad": "preciso", "danio": [10, 14],
 		"aspecto": {
 			"piel": Color("#c68642"), "torso": Color("#2c6e6a"), "hombros": Color("#b0b7c3"),
 			"brazos": Color("#7d8696"), "antebrazos": Color("#b0b7c3"), "manos": Color("#5b4636"),

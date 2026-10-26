@@ -12,9 +12,6 @@ const PREFERENCIAS := {
 }
 ## Probabilidad de improvisar (atacar otra parte) en vez de seguir su plan.
 const PROB_IMPROVISAR := 0.25
-## Acierto mínimo para ir directo a la cabeza o el torso; si es menor, primero
-## inutiliza el brazo del arma del rival para abrir su defensa.
-const ACIERTO_PARA_IR_AL_CUERPO := 0.5
 ## Con esta parte de su vida o menos, se defiende 1 de cada 4 turnos.
 const VIDA_PARA_DEFENDER := 0.5
 const PROB_DEFENDER := 0.25
@@ -63,7 +60,8 @@ static func _puede(yo: Luchador, hechizo_id: String) -> bool:
 ## Plan por personalidad: el astuto va por la mano del arma del rival hasta
 ## desarmarlo. Los demás buscan la parte de la cabeza o el torso que más vida
 ## quita, con su preferencia (el bruto el cráneo, el preciso cuello y ojos);
-## si está muy cubierta, primero inutilizan el brazo del arma del rival.
+## primero inutilizan el brazo del arma del rival si así lo tumban en menos
+## turnos (sin ese brazo, la cabeza y el torso quedan menos cubiertos).
 static func elegir_parte(yo: Luchador, rival: Luchador, rng: RandomNumberGenerator) -> String:
 	if rng.randf() < PROB_IMPROVISAR:
 		return parte_al_azar(yo, rival, rng)
@@ -71,10 +69,40 @@ static func elegir_parte(yo: Luchador, rival: Luchador, rng: RandomNumberGenerat
 		return rival.mano_arma()
 	var objetivo := mejor_parte(yo, rival, DatosCuerpo.partes_de("cabeza") + DatosCuerpo.partes_de("torso"))
 	var brazo_arma := "brazo_" + rival.lado_arma()
-	if MotorCombate.prob_acierto(yo, rival, objetivo) < ACIERTO_PARA_IR_AL_CUERPO \
-			and not rival.desarmado and rival.extremidad_util(brazo_arma):
-		return parte_para_inutilizar(yo, rival, brazo_arma)
+	if not rival.desarmado and rival.extremidad_util(brazo_arma):
+		var parte := parte_para_inutilizar(yo, rival, brazo_arma)
+		if turnos_abriendo_guardia(yo, rival, parte) < turnos_para_tumbar(yo, rival, objetivo, rival.vida):
+			return parte
 	return objetivo
+
+
+## Vida que quita de media cada ataque a esa parte: acierto × daño medio del
+## golpe (con los críticos).
+static func danio_por_ataque(yo: Luchador, rival: Luchador, parte_id: String) -> float:
+	var arma: Dictionary = yo.datos_arma()
+	var base := (float(arma["danio_min"]) + float(arma["danio_max"])) / 2.0
+	base *= 1.0 + clampf(yo.prob_critico(), 0.0, 1.0) * (MotorCombate.MULTIPLICADOR_CRITICO - 1.0)
+	return MotorCombate.prob_acierto(yo, rival, parte_id) * base * MotorCombate.multiplicador_danio(yo, rival, parte_id)
+
+
+## Turnos que tardaría en quitarle esa vida atacando siempre esa parte.
+static func turnos_para_tumbar(yo: Luchador, rival: Luchador, parte_id: String, vida: float) -> float:
+	return maxf(vida, 0.0) / maxf(danio_por_ataque(yo, rival, parte_id), 0.01)
+
+
+## Turnos que tardaría en tumbar al rival si primero inutiliza su brazo del arma
+## golpeando esa parte y después va a la cabeza o el torso, ya menos cubiertos.
+## Lo de después se calcula como si esa parte ya estuviera inutilizada.
+static func turnos_abriendo_guardia(yo: Luchador, rival: Luchador, parte_id: String) -> float:
+	var golpes := MotorCombate.golpes_para_inutilizar(yo, rival, parte_id)
+	var turnos := maxf((golpes.x + golpes.y) / 2.0, 1.0) / MotorCombate.prob_acierto(yo, rival, parte_id)
+	var vida := float(rival.vida) - turnos * danio_por_ataque(yo, rival, parte_id)
+	var integridad: float = rival.integridad[parte_id]
+	rival.integridad[parte_id] = 0.0
+	var objetivo := mejor_parte(yo, rival, DatosCuerpo.partes_de("cabeza") + DatosCuerpo.partes_de("torso"))
+	var despues := turnos_para_tumbar(yo, rival, objetivo, vida)
+	rival.integridad[parte_id] = integridad
+	return turnos + despues
 
 
 ## Valor de atacar una parte: acierto × vida que quita × preferencia. Vale menos

@@ -182,7 +182,8 @@ demo de combate y en las mazmorras y zonas del reino. Se ajustarán cuando
 definamos armas y daño.
 
 - **Vida:** el rey tiene **100** (más con Vitalidad). Rivales de la demo:
-  Bandido 80, Orco 105 y Lancero 95.
+  Bandido 80, Orco 105 y Lancero 95. La lanza del lancero pega 10–14 (la del
+  rey, 12–16).
 - **Tipos de arma:**
 
 | Tipo | Arma | Fuerza del golpe | Más daño en | Menos daño en | Otros efectos |
@@ -285,8 +286,11 @@ y después se va a la cabeza o el torso.
 Cada rival sigue un plan según su personalidad y a veces improvisa (25%):
 
 - **Bandido (astuto):** va por la mano de tu arma para desarmarte.
-- **Orco (bruto):** quiere tu cráneo. Si su acierto ahí es menor de 50%,
-  primero ataca tu brazo del arma para abrir tu guardia.
+- **Orco (bruto):** quiere tu cráneo. Primero ataca tu brazo del arma para
+  abrir tu guardia si así te tumba en menos turnos: compara los turnos que
+  tardaría yendo directo con los que tardaría inutilizando primero ese brazo
+  (sin él, tu cabeza y tu torso quedan menos cubiertos) y después yendo a su
+  objetivo. Si ya estás muy expuesto o te queda poca vida, va directo.
 - **Lancero (preciso):** igual, pero quiere tu cuello.
 
 Con la mitad de su vida o menos, cualquier rival se pone en guardia 1 de cada 4
