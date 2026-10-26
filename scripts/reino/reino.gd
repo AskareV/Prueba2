@@ -1127,9 +1127,8 @@ func _crear_trabajo() -> void:
 	var grupo := ButtonGroup.new()
 	for oficio_id in DatosTrabajos.ORDEN:
 		var oficio: Dictionary = DatosTrabajos.OFICIOS[oficio_id]
-		var dominio: float = Juego.dominio.get(oficio_id, 0.0)
-		var pago := DatosTrabajos.pago_dia(oficio_id, Juego.multiplicador_pago())
-		var boton := UIReino.boton("%s\n%d oro por día · dominio %d%%" % [oficio["nombre"], pago, roundi(dominio)],
+		var boton := UIReino.boton("%s\n%d oro por día · ×%s" % [oficio["nombre"], Juego.pago_trabajo(oficio_id),
+			_multiplicador(Juego.multiplicador_pago(oficio_id))],
 			_al_elegir_oficio.bind(oficio_id), Vector2(320, 92), 19)
 		boton.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		boton.toggle_mode = true
@@ -1150,16 +1149,14 @@ func _crear_detalle_oficio() -> void:
 	columna.add_theme_constant_override("separation", 8)
 	panel.add_child(columna)
 	var oficio: Dictionary = DatosTrabajos.OFICIOS[_oficio]
-	var dominio: float = Juego.dominio.get(_oficio, 0.0)
 	columna.add_child(UIReino.etiqueta(oficio["nombre"], 28, UIReino.COLOR_TITULO))
 	columna.add_child(UIReino.parrafo(oficio["descripcion"], 530, 19, Estilo.TEXTO))
-	var pago := DatosTrabajos.pago_dia(_oficio, Juego.multiplicador_pago())
-	columna.add_child(UIReino.parrafo("Pago por cada día que sale bien: %d de oro." % pago, 530, 18))
-	columna.add_child(UIReino.parrafo("Probabilidad de que un día salga bien: %d%% (sube con el dominio, ahora %d de 100)." % [
-		roundi(DatosTrabajos.prob_exito(dominio) * 100.0), roundi(dominio)], 530, 18))
-	columna.add_child(UIReino.parrafo("Estrés de la semana: +%s. Si los siete días salen bien, cobras %d de oro extra." % [
-		String.num(snappedf(Juego.estres_mental(float(oficio["estres"]) * DatosTrabajos.DIAS), 0.1)),
-		pago * DatosTrabajos.BONO_SEMANA_PERFECTA], 530, 18))
+	var pago := Juego.pago_trabajo(_oficio)
+	columna.add_child(UIReino.parrafo("Pago: %d de oro por día, %d por la semana." % [pago, pago * DatosTrabajos.DIAS], 530, 18))
+	columna.add_child(UIReino.parrafo("El pago sube con %s: ahora ×%s." % [DatosTrabajos.texto_partes(_oficio),
+		_multiplicador(Juego.multiplicador_pago(_oficio))], 530, 18))
+	columna.add_child(UIReino.parrafo("Estrés de la semana: +%s." %
+		_formato(Juego.estres_mental(float(oficio["estres"]) * DatosTrabajos.DIAS)), 530, 18))
 	var boton := UIReino.boton("Trabajar esta semana", _al_trabajar, Vector2(530, 70), 24)
 	if not Juego.puede_trabajar():
 		boton.disabled = true
@@ -1200,17 +1197,12 @@ func _al_trabajar() -> void:
 	columna.add_theme_constant_override("separation", 4)
 	panel.add_child(columna)
 	columna.add_child(UIReino.etiqueta("%s · semana %d" % [oficio["nombre"], semana], 24, UIReino.COLOR_TITULO))
-	var dias: Array = resultado["dias"]
-	for i in dias.size():
+	for i in DatosTrabajos.DIAS:
 		await get_tree().create_timer(PAUSA_DIA).timeout
-		var texto := "Día %d: salió bien (+%d de oro)" % [i + 1, resultado["pago_dia"]] if dias[i] \
-			else "Día %d: salió mal (sin pago)" % (i + 1)
-		columna.add_child(UIReino.etiqueta(texto, 19, Color("#a5d6a7") if dias[i] else Color("#ef9a9a")))
+		columna.add_child(UIReino.etiqueta("Día %d: +%d de oro" % [i + 1, resultado["pago_dia"]], 19, Color("#a5d6a7")))
 	await get_tree().create_timer(PAUSA_DIA).timeout
-	var resumen := "Ganaste %d de oro" % resultado["oro"]
-	if int(resultado["bono"]) > 0:
-		resumen += " (incluye %d por la semana perfecta)" % resultado["bono"]
-	columna.add_child(UIReino.parrafo("%s. Estrés +%s." % [resumen, String.num(snappedf(resultado["estres"], 0.1))], 530, 19, Estilo.TEXTO))
+	columna.add_child(UIReino.parrafo("Ganaste %d de oro. Estrés +%s." % [resultado["oro"],
+		_formato(resultado["estres"])], 530, 19, Estilo.TEXTO))
 	columna.add_child(UIReino.boton("Listo", _al_terminar_trabajo, Vector2(530, 64), 22))
 	_actualizar_franja()
 	_avisar("Terminó la semana %d. Empieza la semana %d." % [semana, Juego.semana])

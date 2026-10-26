@@ -42,7 +42,7 @@ Arriba están las pestañas:
   **heridas duran** de un combate a otro: al caminar te curas un poco, y hay
   pociones. Lo que **sangra** sigue sangrando al caminar (vendas y torniquetes
   lo paran) y las heridas abiertas pueden **infectarse** con los días.
-- **Trabajo:** trabajos del rey que dan oro a cambio de estrés.
+- **Trabajo:** trabajos del rey que dan oro a cambio de estrés; cada uno paga más según tres partes de las características.
 - **Salir:** vuelve al menú principal.
 
 La armadura reduce el daño como en *League of Legends*: daño × 100 / (100 + armadura).

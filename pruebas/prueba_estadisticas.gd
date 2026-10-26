@@ -121,7 +121,8 @@ func prueba_efectos_fuera_del_combate() -> void:
 	verificar(juego.precio_venta(objeto) > int(objeto["precio"]), "Negociación: vendes más caro")
 	verificar(juego.estres_de_paso(1.0) < 1.0, "Cardio: cada paso cuesta menos")
 	verificar(juego.estres_mental(10.0) < 10.0, "Compostura: menos estrés")
-	verificar(juego.multiplicador_pago() > 1.0, "Presencia: los trabajos pagan más")
+	verificar(juego.multiplicador_pago("audiencias") > 1.0, "Presencia: las audiencias pagan más")
+	verificar_cerca(juego.multiplicador_pago("guardia"), 1.0, "Presencia no cuenta al entrenar a la guardia")
 	verificar(juego.oro_hallado(100) > 100, "Buen ojo: más oro")
 	juego.puntos_sub = {"aguante": 1000}
 	juego.aplicar_puntos({}, {"cardio": 1000})

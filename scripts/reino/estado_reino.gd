@@ -26,7 +26,6 @@ var inventario: Array[Dictionary] = []
 ## Objeto equipado en cada ranura (ver DatosBotin.RANURAS).
 var equipo: Dictionary = {}
 ## Dominio (0 a 100) de cada trabajo del rey.
-var dominio: Dictionary = {}
 ## Mazmorra en curso (ver mazmorra.gd) o vacío.
 var mazmorra: Dictionary = {}
 ## Salida a una zona en curso (ver expedicion.gd) o vacío.
@@ -120,7 +119,6 @@ func nueva_partida(p_diestro: bool) -> void:
 	diestro = p_diestro
 	inventario = []
 	equipo = {}
-	dominio = {}
 	mazmorra = {}
 	expedicion = {}
 	combate = {}
@@ -161,7 +159,7 @@ func nueva_partida(p_diestro: bool) -> void:
 func datos_guardado() -> Dictionary:
 	return {
 		"version": VERSION_GUARDADO, "semana": semana, "oro": oro, "estres": estres, "diestro": diestro,
-		"inventario": inventario, "equipo": equipo, "dominio": dominio, "mazmorra": mazmorra,
+		"inventario": inventario, "equipo": equipo, "mazmorra": mazmorra,
 		"expedicion": expedicion, "combate": combate, "aviso": aviso, "pestana": pestana,
 		"semilla": semilla, "siguiente_id": _siguiente_id, "rng_semilla": rng.seed, "rng_estado": rng.state,
 		"nivel": nivel, "xp": xp, "puntos_principales": puntos_principales, "puntos_sub": puntos_sub,
@@ -177,7 +175,7 @@ func datos_guardado() -> Dictionary:
 ## Tipo de cada dato guardado (los números pueden venir como enteros o decimales).
 const TIPOS_GUARDADO := {
 	"semana": TYPE_INT, "oro": TYPE_INT, "estres": TYPE_FLOAT, "diestro": TYPE_BOOL,
-	"inventario": TYPE_ARRAY, "equipo": TYPE_DICTIONARY, "dominio": TYPE_DICTIONARY,
+	"inventario": TYPE_ARRAY, "equipo": TYPE_DICTIONARY,
 	"mazmorra": TYPE_DICTIONARY, "expedicion": TYPE_DICTIONARY, "combate": TYPE_DICTIONARY,
 	"aviso": TYPE_STRING, "pestana": TYPE_STRING, "semilla": TYPE_INT, "siguiente_id": TYPE_INT,
 	"rng_semilla": TYPE_INT, "rng_estado": TYPE_INT, "nivel": TYPE_INT, "xp": TYPE_INT,
@@ -241,7 +239,6 @@ func cargar(ruta := ARCHIVO) -> bool:
 	estres = float(datos.get("estres", estres))
 	inventario.assign(datos.get("inventario", inventario))
 	equipo = datos.get("equipo", equipo)
-	dominio = datos.get("dominio", dominio)
 	mazmorra = datos.get("mazmorra", mazmorra)
 	expedicion = datos.get("expedicion", expedicion)
 	combate = datos.get("combate", combate)
@@ -917,9 +914,17 @@ func precio_venta(objeto: Dictionary) -> int:
 	return roundi(int(objeto["precio"]) * DatosEstadisticas.aumento(puntos_de("negociacion"), DatosEstadisticas.VENTA_POR_NEGOCIACION))
 
 
-## Multiplicador del pago de los trabajos (Presencia).
-func multiplicador_pago() -> float:
-	return DatosEstadisticas.aumento(puntos_de("presencia"), DatosEstadisticas.PAGO_POR_PRESENCIA)
+## Multiplicador del pago de ese trabajo: lo suben sus tres partes (ver DatosTrabajos).
+func multiplicador_pago(oficio_id: String) -> float:
+	var puntos := {}
+	for sub_id in DatosTrabajos.OFICIOS[oficio_id]["partes"]:
+		puntos[sub_id] = puntos_de(sub_id)
+	return DatosTrabajos.multiplicador(oficio_id, puntos)
+
+
+## Oro por día que paga ese trabajo ahora.
+func pago_trabajo(oficio_id: String) -> int:
+	return DatosTrabajos.pago_dia(oficio_id, multiplicador_pago(oficio_id))
 
 
 # --- Botín ---
@@ -961,14 +966,13 @@ func puede_trabajar() -> bool:
 	return estres < DatosTrabajos.ESTRES_MAXIMO
 
 
-## Trabaja la semana entera en ese oficio y pasa la semana. Presencia sube el
-## pago y Compostura baja el estrés.
+## Trabaja la semana entera en ese oficio y pasa la semana. Las partes del
+## trabajo suben el pago y Compostura baja el estrés.
 func trabajar(oficio_id: String) -> Dictionary:
-	var resultado := DatosTrabajos.trabajar_semana(oficio_id, dominio.get(oficio_id, 0.0), rng, multiplicador_pago())
+	var resultado := DatosTrabajos.trabajar_semana(oficio_id, multiplicador_pago(oficio_id))
 	resultado["estres"] = estres_mental(resultado["estres"])
 	oro += int(resultado["oro"])
 	sumar_estres(resultado["estres"])
-	dominio[oficio_id] = resultado["dominio"]
 	pasar_semana()
 	return resultado
 

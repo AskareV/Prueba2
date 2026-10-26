@@ -221,16 +221,44 @@ func prueba_mazmorra_se_puede_recorrer_entera() -> void:
 
 
 func prueba_semana_de_trabajo() -> void:
-	var rng := rng_fijo()
 	for oficio_id in DatosTrabajos.ORDEN:
 		var oficio: Dictionary = DatosTrabajos.OFICIOS[oficio_id]
-		var resultado := DatosTrabajos.trabajar_semana(oficio_id, 0.0, rng)
-		var buenos: int = resultado["dias"].count(true)
-		verificar_igual(resultado["dias"].size(), DatosTrabajos.DIAS, "Siete días de trabajo")
-		verificar_igual(resultado["oro"], buenos * int(oficio["pago"]) + int(resultado["bono"]), "Solo se cobran los días buenos")
-		verificar_cerca(resultado["dominio"], DatosTrabajos.DIAS * DatosTrabajos.DOMINIO_POR_DIA, "Gana dominio")
-	verificar(DatosTrabajos.prob_exito(100.0) > DatosTrabajos.prob_exito(0.0), "Con dominio sale mejor")
-	verificar(DatosTrabajos.prob_exito(100.0) <= 0.95, "Nunca es seguro")
+		var resultado := DatosTrabajos.trabajar_semana(oficio_id)
+		verificar_igual(resultado["oro"], DatosTrabajos.DIAS * int(oficio["pago"]), "Se cobran los siete días")
+		verificar_cerca(resultado["estres"], DatosTrabajos.DIAS * float(oficio["estres"]), "Estrés de la semana")
+		var partes: Dictionary = oficio["partes"]
+		verificar_igual(partes.size(), 3, "%s: tres partes" % oficio_id)
+		var suma := 0.0
+		var anterior := 1.0
+		for sub_id in partes:
+			verificar(DatosEstadisticas.SUBS.has(sub_id), "%s: %s es una parte" % [oficio_id, sub_id])
+			verificar(float(partes[sub_id]) <= anterior, "%s: la primera parte es la que más pesa" % oficio_id)
+			anterior = float(partes[sub_id])
+			suma += float(partes[sub_id])
+		verificar_cerca(suma, 1.0, "%s: los pesos suman 1" % oficio_id)
+
+
+## El pago sube con las partes del trabajo, según su peso, hasta ×2 con +20.
+func prueba_el_pago_sube_con_las_partes_del_trabajo() -> void:
+	var juego := EstadoReino.new()
+	juego.nueva_partida(true)
+	verificar_cerca(juego.multiplicador_pago("audiencias"), 1.0, "Sin puntos, el pago base")
+	verificar_igual(juego.pago_trabajo("audiencias"), int(DatosTrabajos.OFICIOS["audiencias"]["pago"]), "Pago base por día")
+	juego.extra["presencia"] = 10
+	verificar_cerca(juego.multiplicador_pago("audiencias"), 1.25, "Presencia +10 pesa la mitad en las audiencias: ×1,25")
+	verificar_cerca(juego.multiplicador_pago("impuestos"), 1.25, "Y en los impuestos")
+	verificar_cerca(juego.multiplicador_pago("mercaderes"), 1.0, "Pero no cuenta con los mercaderes")
+	juego.extra["compostura"] = 10
+	verificar_cerca(juego.multiplicador_pago("audiencias"), 1.4, "Compostura +10 pesa el 30%: ×1,4")
+	for sub_id in ["presencia", "compostura", "estudio"]:
+		juego.extra[sub_id] = 40
+	verificar_cerca(juego.multiplicador_pago("audiencias"), 2.0, "Con todo al tope, ×2")
+	var oro := juego.oro
+	var resultado := juego.trabajar("audiencias")
+	verificar_igual(juego.oro - oro, DatosTrabajos.DIAS * roundi(int(DatosTrabajos.OFICIOS["audiencias"]["pago"]) * 2.0),
+		"Cobra los siete días con el pago aumentado")
+	verificar_igual(int(resultado["oro"]), juego.oro - oro, "Y lo dice")
+	juego.free()
 
 
 func prueba_cada_partida_tiene_sus_mazmorras() -> void:

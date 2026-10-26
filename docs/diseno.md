@@ -469,19 +469,24 @@ quita o se cambia).
 
 ### 7.8 Trabajos del rey
 
-Ocupan la semana entera. Cada día sale bien o mal: probabilidad 55% + dominio
-÷ 250 (máximo 95%). Solo se cobran los días buenos; cada día trabajado suma 2
-de dominio (hasta 100). Si los siete salen bien, se cobra el triple del pago
-diario de más.
+Ocupan la semana entera y se cobran los siete días (ya no hay días que salen
+mal ni dominio). El pago sube con **tres partes** de las características que
+tocan a cada trabajo: la primera pesa 50%, la segunda 30% y la tercera 20%.
+Cada punto (sobre 3, hasta +20) sube el pago un 5% según su peso: con +20 en
+las tres, ×2; con +10 solo en la primera, ×1,25. Compostura baja el estrés.
 
-| Trabajo | Oro por día | Estrés de la semana |
-|---|---|---|
-| Audiencias reales | 10 | 14 |
-| Patrullar las murallas | 12 | 21 |
-| Entrenar a la guardia | 9 | 28 |
-| Cobrar impuestos | 16 | 24,5 |
-| Presidir el tribunal | 20 | 35 |
-| Negociar con mercaderes | 26 | 42 |
+| Trabajo | Oro por día (sin puntos) | Partes que suben el pago | Estrés de la semana |
+|---|---|---|---|
+| Audiencias reales | 6 | Presencia 50%, Compostura 30%, Estudio 20% | 14 |
+| Patrullar las murallas | 7 | Cardio 50%, Reflejos 30%, Resistencia 20% | 21 |
+| Entrenar a la guardia | 5 | Liderazgo 50%, Fuerza máxima 30%, Precisión 20% | 28 |
+| Cobrar impuestos | 9 | Presencia 50%, Velocidad 30%, Buen ojo 20% | 24,5 |
+| Presidir el tribunal | 11 | Estudio 50%, Compostura 30%, Firmeza 20% | 35 |
+| Negociar con mercaderes | 15 | Negociación 50%, Buen ojo 30%, Golpe de suerte 20% | 42 |
+
+El pago sin puntos es más bajo que antes para que, cobrando los siete días, un
+rey que empieza gane lo mismo que antes (unos 4 días cobrados de 7). Las partes
+de cada trabajo son una primera prueba.
 
 ### 7.9 Equilibrio de los enemigos (simulado)
 
@@ -624,6 +629,8 @@ números son **provisionales**.
 
 ### 8.2 Qué hace cada parte (por cada punto sobre 3)
 
+Además, cada trabajo paga más según tres partes (ver 7.8).
+
 | Característica | Parte | Efecto |
 |---|---|---|
 | Fuerza | Fuerza máxima | +2% de daño con armas físicas |
@@ -646,7 +653,7 @@ números son **provisionales**.
 | | Mago | +5 de maná máximo (20 en la base) y +0,5 de maná por turno (2 en la base) |
 | Carisma | Negociación | +3% al vender (como mucho ×1,6, con el tope) y −2% al comprar en el mercado (como mucho 40% menos, y nunca por debajo de lo que te pagarían al venderlo) |
 | | Liderazgo | Provisional: +3% de moral de los soldados de la ciudad, que defienden mejor y bajan más el peligro |
-| | Presencia | +3% de pago en los trabajos. Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −8% de acierto, −10% de daño y −5% de rapidez |
+| | Presencia | Sube el pago de las audiencias y de cobrar impuestos (ver 7.8). Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −8% de acierto, −10% de daño y −5% de rapidez |
 
 Ninguna parte mejora más allá de +20 puntos (ver 8.1). Ningún multiplicador
 que reduce estrés, estados o trampas baja de un 30% de lo normal, y el acierto

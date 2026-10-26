@@ -74,7 +74,7 @@ const SUBS := {
 	"liderazgo": {"nombre": "Liderazgo",
 		"descripcion": "Moral de los soldados de la ciudad: defienden mejor y bajan más el peligro."},
 	"presencia": {"nombre": "Presencia",
-		"descripcion": "Más pago en los trabajos. Si supera de lejos al enemigo, este queda atemorizado todo el combate."},
+		"descripcion": "Más pago en las audiencias y al cobrar impuestos. Si supera de lejos al enemigo, este queda atemorizado todo el combate."},
 }
 
 # --- Efectos por punto sobre la base (provisionales) ---
@@ -122,7 +122,6 @@ const REGENERACION_POR_MAGO := 0.5
 const VENTA_POR_NEGOCIACION := 0.03
 const COMPRA_POR_NEGOCIACION := 0.02
 const MORAL_POR_LIDERAZGO := 0.03
-const PAGO_POR_PRESENCIA := 0.03
 ## Presencia que debe superar al "valor" del enemigo para atemorizarlo.
 const VENTAJA_PARA_ATEMORIZAR := 3.0
 ## Ningún multiplicador que reduce (estrés, estados) baja de esto.
