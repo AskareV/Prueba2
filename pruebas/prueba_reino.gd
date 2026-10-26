@@ -255,9 +255,11 @@ func prueba_el_pago_sube_con_las_partes_del_trabajo() -> void:
 	verificar_cerca(juego.multiplicador_pago("audiencias"), 2.0, "Con todo al tope, ×2")
 	var oro := juego.oro
 	var resultado := juego.trabajar("audiencias")
-	verificar_igual(juego.oro - oro, DatosTrabajos.DIAS * roundi(int(DatosTrabajos.OFICIOS["audiencias"]["pago"]) * 2.0),
+	# Al pasar la semana la ciudad puede sufrir un ataque al azar que se lleva parte del oro.
+	var saqueo := int(juego.informe_ciudad.get("ataque", {}).get("oro", 0))
+	verificar_igual(int(resultado["oro"]), DatosTrabajos.DIAS * roundi(int(DatosTrabajos.OFICIOS["audiencias"]["pago"]) * 2.0),
 		"Cobra los siete días con el pago aumentado")
-	verificar_igual(int(resultado["oro"]), juego.oro - oro, "Y lo dice")
+	verificar_igual(juego.oro - oro + saqueo, int(resultado["oro"]), "Y ese oro se suma")
 	juego.free()
 
 
