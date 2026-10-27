@@ -238,6 +238,42 @@ func prueba_semana_de_trabajo() -> void:
 		verificar_cerca(suma, 1.0, "%s: los pesos suman 1" % oficio_id)
 
 
+## Los trabajos que pagan más piden un mínimo en su parte principal.
+func prueba_los_trabajos_caros_piden_un_minimo() -> void:
+	for oficio_id in DatosTrabajos.ORDEN:
+		var partes: Dictionary = DatosTrabajos.OFICIOS[oficio_id]["partes"]
+		for sub_id in DatosTrabajos.requisito(oficio_id):
+			verificar_igual(sub_id, partes.keys()[0], "%s pide su parte principal" % oficio_id)
+	var juego := EstadoReino.new()
+	juego.nueva_partida(true)
+	for oficio_id in ["audiencias", "murallas", "guardia"]:
+		verificar(juego.cumple_requisito(oficio_id), "%s: libre desde el principio" % oficio_id)
+	for oficio_id in ["impuestos", "tribunal", "mercaderes"]:
+		verificar(not juego.cumple_requisito(oficio_id), "%s: cerrado al principio" % oficio_id)
+	juego.extra["presencia"] = 4
+	verificar(not juego.cumple_requisito("impuestos"), "Con Presencia +4 todavía no cobra impuestos")
+	juego.extra["presencia"] = 5
+	verificar(juego.cumple_requisito("impuestos"), "Con Presencia +5 ya puede")
+	juego.extra["estudio"] = 8
+	verificar(juego.cumple_requisito("tribunal"), "Estudio +8 abre el tribunal")
+	juego.extra["negociacion"] = 11
+	verificar(not juego.cumple_requisito("mercaderes"), "Negociación +11 no alcanza")
+	# Un punto en Carisma sube +1 sus tres partes: también cuenta.
+	juego.veces["carisma"] = 1
+	verificar(juego.cumple_requisito("mercaderes"), "Con un punto en Carisma llega a +12")
+	verificar_igual(DatosTrabajos.texto_requisito("mercaderes"), "Negociación 15", "Se muestra como en la pestaña Rey")
+	verificar_igual(DatosTrabajos.texto_requisito("audiencias"), "", "Las audiencias no piden nada")
+	# El Amuleto suma decimales: 4,975 se ve 8 en la pestaña Rey y alcanza; 4,9 se ve 7,9 y no.
+	juego.veces.erase("carisma")
+	juego.extra["presencia"] = 4
+	juego.extra["amuleto"] = 13
+	verificar_cerca(juego.puntos_de("presencia"), 4.975, "Presencia +4 con el Amuleto +13")
+	verificar(juego.cumple_requisito("impuestos"), "Se ve como Presencia 8: alcanza")
+	juego.extra["amuleto"] = 12
+	verificar(not juego.cumple_requisito("impuestos"), "Se ve como Presencia 7,9: no alcanza")
+	juego.free()
+
+
 ## El pago sube con las partes del trabajo, según su peso, hasta ×2 con +20.
 func prueba_el_pago_sube_con_las_partes_del_trabajo() -> void:
 	var juego := EstadoReino.new()

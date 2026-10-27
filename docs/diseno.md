@@ -480,14 +480,21 @@ tocan a cada trabajo: la primera pesa 50%, la segunda 30% y la tercera 20%.
 Cada punto (sobre 3, hasta +20) sube el pago un 5% según su peso: con +20 en
 las tres, ×2; con +10 solo en la primera, ×1,25. Compostura baja el estrés.
 
-| Trabajo | Oro por día (sin puntos) | Partes que suben el pago | Estrés de la semana |
-|---|---|---|---|
-| Audiencias reales | 6 | Presencia 50%, Compostura 30%, Estudio 20% | 14 |
-| Patrullar las murallas | 7 | Cardio 50%, Reflejos 30%, Resistencia 20% | 21 |
-| Entrenar a la guardia | 5 | Liderazgo 50%, Fuerza máxima 30%, Precisión 20% | 28 |
-| Cobrar impuestos | 9 | Presencia 50%, Velocidad 30%, Buen ojo 20% | 24,5 |
-| Presidir el tribunal | 11 | Estudio 50%, Compostura 30%, Firmeza 20% | 35 |
-| Negociar con mercaderes | 15 | Negociación 50%, Buen ojo 30%, Golpe de suerte 20% | 42 |
+Los que pagan más **piden un mínimo** en su parte principal para entrar; los
+tres primeros no piden nada. Así, al principio solo se pueden hacer los
+baratos (antes nadie los elegía: el más caro siempre convenía más). En la pestaña
+Trabajo los que todavía no se pueden hacer se ven en gris con lo que piden,
+como en la pestaña Rey (Presencia +5 se ve como 8), y al elegirlos dicen
+cuánto tienes.
+
+| Trabajo | Oro por día (sin puntos) | Partes que suben el pago | Estrés de la semana | Para entrar |
+|---|---|---|---|---|
+| Audiencias reales | 6 | Presencia 50%, Compostura 30%, Estudio 20% | 14 | Nada |
+| Patrullar las murallas | 7 | Cardio 50%, Reflejos 30%, Resistencia 20% | 21 | Nada |
+| Entrenar a la guardia | 5 | Liderazgo 50%, Fuerza máxima 30%, Precisión 20% | 28 | Nada |
+| Cobrar impuestos | 9 | Presencia 50%, Velocidad 30%, Buen ojo 20% | 24,5 | Presencia +5 |
+| Presidir el tribunal | 11 | Estudio 50%, Compostura 30%, Firmeza 20% | 35 | Estudio +8 |
+| Negociar con mercaderes | 15 | Negociación 50%, Buen ojo 30%, Golpe de suerte 20% | 42 | Negociación +12 |
 
 El pago sin puntos es más bajo que antes para que, cobrando los siete días, un
 rey que empieza gane lo mismo que antes (unos 4 días cobrados de 7). Las partes
@@ -634,7 +641,8 @@ números son **provisionales**.
 
 ### 8.2 Qué hace cada parte (por cada punto sobre 3)
 
-Además, cada trabajo paga más según tres partes (ver 7.8).
+Además, cada trabajo paga más según tres partes, y los que pagan más piden un
+mínimo para entrar (ver 7.8).
 
 | Característica | Parte | Efecto |
 |---|---|---|
@@ -654,11 +662,11 @@ Además, cada trabajo paga más según tres partes (ver 7.8).
 | | Buen ojo | +5% de probabilidad de calidades raras o mejores y +5% de oro, en cofres y enemigos; +5% de que un enemigo suelte un objeto |
 | | Amuleto | +0,075 a todas las demás partes; +5% de días buenos (oro, objeto, descanso) y −5% de trampas en las zonas |
 | Inteligencia | Arcano | +3% de daño mágico (bastón y hechizos) y +1 de vida por cada Curación |
-| | Estudio | +5% de experiencia |
+| | Estudio | +5% de experiencia. Con +8 deja presidir el tribunal (ver 7.8) |
 | | Mago | +5 de maná máximo (20 en la base) y +0,5 de maná por turno (2 en la base) |
-| Carisma | Negociación | +3% al vender (como mucho ×1,6, con el tope) y −2% al comprar en el mercado (como mucho 40% menos, y nunca por debajo de lo que te pagarían al venderlo) |
+| Carisma | Negociación | +3% al vender (como mucho ×1,6, con el tope) y −2% al comprar en el mercado (como mucho 40% menos, y nunca por debajo de lo que te pagarían al venderlo). Con +12 deja negociar con mercaderes (ver 7.8) |
 | | Liderazgo | Provisional: +3% de moral de los soldados de la ciudad, que defienden mejor y bajan más el peligro |
-| | Presencia | Sube el pago de las audiencias y de cobrar impuestos (ver 7.8). Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −8% de acierto, −10% de daño y −5% de rapidez |
+| | Presencia | Sube el pago de las audiencias y de cobrar impuestos, y con +5 deja cobrarlos (ver 7.8). Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −8% de acierto, −10% de daño y −5% de rapidez |
 
 Ninguna parte mejora más allá de +20 puntos (ver 8.1). Ningún multiplicador
 que reduce estrés, estados o trampas baja de un 30% de lo normal, y el acierto

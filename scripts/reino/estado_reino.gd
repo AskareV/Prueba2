@@ -966,8 +966,17 @@ func puede_trabajar() -> bool:
 	return estres < DatosTrabajos.ESTRES_MAXIMO
 
 
-## Trabaja la semana entera en ese oficio y pasa la semana. Las partes del
-## trabajo suben el pago y Compostura baja el estrés.
+## true si el rey tiene lo que pide ese trabajo para entrar (ver DatosTrabajos).
+func cumple_requisito(oficio_id: String) -> bool:
+	var puntos := {}
+	for sub_id in DatosTrabajos.requisito(oficio_id):
+		puntos[sub_id] = puntos_de(sub_id)
+	return DatosTrabajos.cumple_requisito(oficio_id, puntos)
+
+
+## Trabaja la semana entera en ese oficio y pasa la semana (antes hay que mirar
+## puede_trabajar y cumple_requisito). Las partes del trabajo suben el pago y
+## Compostura baja el estrés.
 func trabajar(oficio_id: String) -> Dictionary:
 	var resultado := DatosTrabajos.trabajar_semana(oficio_id, multiplicador_pago(oficio_id))
 	resultado["estres"] = estres_mental(resultado["estres"])

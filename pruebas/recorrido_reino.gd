@@ -396,15 +396,43 @@ func _recorrer_inventario() -> void:
 	_verificar(_juego.oro == oro + precio, "Vender suma el oro (con Negociación)")
 
 
-## Trabaja una semana y espera a que se muestren los siete días.
+## Primer botón en pantalla cuyo texto empieza así, o null.
+func _boton(nodo: Node, texto: String) -> Button:
+	for hijo in nodo.get_children():
+		if hijo.is_queued_for_deletion():
+			continue
+		if hijo is Button and (hijo as Button).text.begins_with(texto):
+			return hijo
+		var encontrado := _boton(hijo, texto)
+		if encontrado != null:
+			return encontrado
+	return null
+
+
+## Trabaja una semana y espera a que se muestren los siete días. El tribunal
+## pide Estudio +8: sin eso, su botón dice qué pide y no deja trabajar.
 func _recorrer_trabajo() -> void:
 	var reino := current_scene
 	_juego.estres = 0.0
 	var semana: int = _juego.semana
 	reino.call("_mostrar_pestana", "trabajo")
 	await process_frame
+	_verificar(not _juego.cumple_requisito("tribunal"), "El rey del recorrido todavía no tiene Estudio +8")
+	_verificar(_boton(reino, "Presidir el tribunal\nPide Estudio 11") != null, "El tribunal dice qué pide")
 	reino.call("_al_elegir_oficio", "tribunal")
 	await process_frame
+	var trabajar := _boton(reino, "Trabajar esta semana")
+	_verificar(trabajar != null and trabajar.disabled, "Sin el requisito, el botón de trabajar está apagado")
+	reino.call("_al_trabajar")
+	await process_frame
+	_verificar(_juego.semana == semana and not reino.get("_ocupado"), "Y no pasa la semana")
+	_juego.extra["estudio"] = int(_juego.extra.get("estudio", 0)) + 8
+	reino.call("_mostrar_pestana", "trabajo")
+	await process_frame
+	reino.call("_al_elegir_oficio", "tribunal")
+	await process_frame
+	trabajar = _boton(reino, "Trabajar esta semana")
+	_verificar(trabajar != null and not trabajar.disabled, "Con Estudio +8 ya se puede")
 	reino.call("_al_trabajar")
 	for i in 600:
 		await process_frame

@@ -1127,14 +1127,20 @@ func _crear_trabajo() -> void:
 	var grupo := ButtonGroup.new()
 	for oficio_id in DatosTrabajos.ORDEN:
 		var oficio: Dictionary = DatosTrabajos.OFICIOS[oficio_id]
-		var boton := UIReino.boton("%s\n%d oro por día · ×%s" % [oficio["nombre"], Juego.pago_trabajo(oficio_id),
-			_multiplicador(Juego.multiplicador_pago(oficio_id))],
+		# Los que todavía no puede hacer dicen qué piden, en gris.
+		var abierto := Juego.cumple_requisito(oficio_id)
+		var linea := "%d oro por día · ×%s" % [Juego.pago_trabajo(oficio_id), _multiplicador(Juego.multiplicador_pago(oficio_id))]
+		if not abierto:
+			linea = "Pide " + DatosTrabajos.texto_requisito(oficio_id)
+		var boton := UIReino.boton("%s\n%s" % [oficio["nombre"], linea],
 			_al_elegir_oficio.bind(oficio_id), Vector2(320, 92), 19)
 		boton.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		boton.toggle_mode = true
 		boton.button_group = grupo
 		boton.button_pressed = oficio_id == _oficio
-		Estilo.con_franja(boton, Color("#66bb6a"))
+		Estilo.con_franja(boton, Color("#66bb6a") if abierto else Color("#9e9e9e"))
+		if not abierto:
+			boton.add_theme_color_override("font_color", Estilo.TEXTO_SUAVE)
 		rejilla.add_child(boton)
 	_crear_detalle_oficio()
 
@@ -1158,10 +1164,23 @@ func _crear_detalle_oficio() -> void:
 	columna.add_child(UIReino.parrafo("Estrés de la semana: +%s." %
 		_formato(Juego.estres_mental(float(oficio["estres"]) * DatosTrabajos.DIAS)), 530, 18))
 	var boton := UIReino.boton("Trabajar esta semana", _al_trabajar, Vector2(530, 70), 24)
-	if not Juego.puede_trabajar():
+	if not Juego.cumple_requisito(_oficio):
+		boton.disabled = true
+		columna.add_child(UIReino.parrafo(_texto_requisito(_oficio), 530, 18, Color("#ef9a9a")))
+	elif not Juego.puede_trabajar():
 		boton.disabled = true
 		columna.add_child(UIReino.parrafo("Demasiado estresado para trabajar (máximo %d). Descansa primero." % roundi(DatosTrabajos.ESTRES_MAXIMO), 530, 18, Color("#ef9a9a")))
 	columna.add_child(boton)
+
+
+## "Para trabajar aquí necesitas Presencia 8 (tienes 5)."
+func _texto_requisito(oficio_id: String) -> String:
+	var textos: PackedStringArray = []
+	var pide := DatosTrabajos.requisito(oficio_id)
+	for sub_id in pide:
+		textos.append("%s %d (tienes %s)" % [DatosEstadisticas.SUBS[sub_id]["nombre"],
+			roundi(DatosEstadisticas.BASE) + int(pide[sub_id]), _formato(Juego.valor_sub(sub_id))])
+	return "Para trabajar aquí necesitas %s." % " y ".join(textos)
 
 
 func _al_elegir_oficio(oficio_id: String) -> void:
@@ -1181,7 +1200,7 @@ func _quitar_detalle_oficio() -> void:
 
 ## Pasa la semana trabajando y muestra día por día cómo fue.
 func _al_trabajar() -> void:
-	if _ocupado or not Juego.puede_trabajar():
+	if _ocupado or not Juego.puede_trabajar() or not Juego.cumple_requisito(_oficio):
 		return
 	_ocupado = true
 	var oficio: Dictionary = DatosTrabajos.OFICIOS[_oficio]
