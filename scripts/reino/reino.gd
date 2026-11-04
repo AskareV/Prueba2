@@ -230,8 +230,11 @@ func _crear_resumen_rey() -> void:
 	var salud := UIReino.texto_salud()
 	if salud != "":
 		columna.add_child(UIReino.parrafo(salud + ".", 228, 15, UIReino.COLOR_AVISO))
-	columna.add_child(UIReino.etiqueta("Maná %d / %d · Rapidez %s" % [floori(rey.mana), roundi(rey.mana_max), _formato(rey.rapidez)],
-		17, Estilo.TEXTO_SUAVE))
+	columna.add_child(UIReino.etiqueta("Maná %d / %d · Rapidez %s" % [floori(rey.mana), roundi(rey.mana_max),
+		_formato(rey.rapidez * (1.0 - rey.carga))], 17, Estilo.TEXTO_SUAVE))
+	if rey.carga > 0.0:
+		columna.add_child(UIReino.parrafo("Tu armadura pesa: −%d%% de rapidez." % roundi(100.0 * rey.carga), 228, 15,
+			Estilo.TEXTO_SUAVE))
 	var principales := _puntos_principales_libres()
 	var de_partes := 0
 	for car_id in DatosEstadisticas.ORDEN:
@@ -500,13 +503,22 @@ func _crear_equipo() -> void:
 		Estilo.con_franja(boton, color)
 		boton.disabled = objeto.is_empty()
 		columna.add_child(boton)
-	columna.add_child(UIReino.etiqueta("Protección (armadura · resistencia mágica)", 17, Estilo.TEXTO_SUAVE))
+	columna.add_child(UIReino.etiqueta("Frena (corte · perforación · contusión · magia)", 17, Estilo.TEXTO_SUAVE))
 	var armadura := Juego.armadura_por_zona()
 	for grupo in [["Cabeza", "cabeza"], ["Torso", "torso"], ["Brazos", "brazo_der"], ["Piernas", "pierna_der"]]:
-		var valores: Dictionary = armadura.get(grupo[1], {"fisica": 0, "magica": 0})
-		columna.add_child(UIReino.etiqueta("%s: %d (−%d%%) · %d (−%d%%)" % [grupo[0],
-			valores["fisica"], DatosBotin.porcentaje_reduccion(valores["fisica"]),
-			valores["magica"], DatosBotin.porcentaje_reduccion(valores["magica"])], 17))
+		if not armadura.has(grupo[1]):
+			columna.add_child(UIReino.etiqueta("%s: nada" % grupo[0], 17))
+			continue
+		var valores: Dictionary = armadura[grupo[1]]
+		var porcentajes: PackedStringArray = []
+		for tipo_arma in ["cortante", "punzante", "contundente"]:
+			porcentajes.append("%d%%" % DatosBotin.porcentaje_reduccion(
+				float(valores["fisica"]) * DatosArmaduras.eficacia(valores["tipo"], tipo_arma)))
+		porcentajes.append("%d%%" % DatosBotin.porcentaje_reduccion(valores["magica"]))
+		columna.add_child(UIReino.etiqueta("%s, %s: %s" % [grupo[0], String(DatosArmaduras.tipo(valores["tipo"])["nombre"]).to_lower(),
+			" · ".join(porcentajes)], 17))
+	if Juego.carga() > 0.0:
+		columna.add_child(UIReino.etiqueta("Peso: −%d%% de rapidez" % roundi(100.0 * Juego.carga()), 17, Estilo.TEXTO_SUAVE))
 
 
 func _crear_mochila() -> void:

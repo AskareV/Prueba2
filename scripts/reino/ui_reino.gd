@@ -128,7 +128,11 @@ static func boton_objeto(objeto: Dictionary, al_pulsar: Callable, tamano: Vector
 	elif objeto["ranura"] == "arma":
 		texto += "\nDaño %d–%d" % [objeto["danio_min"], objeto["danio_max"]]
 	else:
-		texto += "\nArm. %d · Res. mág. %d" % [objeto["armadura"], objeto["resistencia_magica"]]
+		# Las runas valen por la resistencia mágica; las demás, por la armadura.
+		if objeto["tipo"] == "runas":
+			texto += "\nRunas · Mág. %d" % objeto["resistencia_magica"]
+		else:
+			texto += "\n%s · Arm. %d" % [DatosArmaduras.tipo(objeto["tipo"])["nombre"], objeto["armadura"]]
 	var nuevo := boton(texto, al_pulsar, tamano, 16)
 	nuevo.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	nuevo.clip_text = true
@@ -181,6 +185,12 @@ static func texto_salud() -> String:
 	var etapa := Juego.peor_infeccion()
 	if etapa > 0:
 		partes.append(String(DatosHeridas.ETAPAS[etapa]).to_lower())
+	if not Juego.organos.is_empty():
+		var nombres: PackedStringArray = []
+		for organo_id in DatosOrganos.ORDEN:
+			if Juego.organos.has(organo_id):
+				nombres.append(DatosOrganos.organo(organo_id)["nombre"])
+		partes.append("%s: %s" % ["órgano dañado" if nombres.size() == 1 else "órganos dañados", ", ".join(nombres)])
 	if partes.is_empty():
 		return ""
 	var linea := " · ".join(partes)

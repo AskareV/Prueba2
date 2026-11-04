@@ -10,6 +10,8 @@ extends RefCounted
 ## - oro: [mínimo, máximo] que dan al vencerlos.
 ## - armadura: por grupo de zonas ("cabeza", "torso", "brazos", "piernas"),
 ##   [física, mágica]. Ver MotorCombate.multiplicador_armadura.
+## - tipo_armadura: de qué es (ver DatosArmaduras). La física está puesta para
+##   que contra la espada frene lo mismo que antes de los tipos de armadura.
 ## - danio: [mínimo, máximo] de su arma, si no usa el daño básico.
 ## - precision: precisión de su arma, si no usa la básica.
 ## - rapidez: velocidad en la barra de turnos (el rey empieza con 13). Los
@@ -92,20 +94,20 @@ static var ENEMIGOS := {
 	"goblin_lancero": {
 		"nombre": "Goblin lancero", "articulo": "el", "vida": 48, "diestro": true, "arma": "lanza",
 		"rapidez": 15, "coraje": 2, "personalidad": "preciso", "nivel": 1, "oro": [4, 9], "danio": [7, 10], "precision": 0.85,
-		"armadura": {"torso": [4, 0]},
+		"armadura": {"torso": [4, 0]}, "tipo_armadura": "cuero",
 		"aspecto": _GOBLIN.merged({"torso": Color("#6d4c41"), "hombros": Color("#8d6e63")}, true),
 	},
 	"chaman_goblin": {
 		"nombre": "Chamán goblin", "articulo": "el", "vida": 40, "diestro": false, "arma": "baston",
 		"rapidez": 14, "coraje": 3, "personalidad": "normal", "nivel": 1, "oro": [5, 10], "danio": [7, 10], "precision": 0.85,
 		"mana": 15, "hechizos": ["llamarada", "curacion"],
-		"armadura": {"torso": [0, 10], "cabeza": [0, 10]},
+		"armadura": {"torso": [0, 10], "cabeza": [0, 10]}, "tipo_armadura": "runas",
 		"aspecto": _GOBLIN.merged({"torso": Color("#5e35b1"), "muslos": Color("#5e35b1"), "escala": 0.72}, true),
 	},
 	"ladron": {
 		"nombre": "Ladrón", "articulo": "el", "vida": 60, "diestro": true, "arma": "espada",
 		"rapidez": 16, "coraje": 3, "personalidad": "astuto", "nivel": 2, "oro": [8, 14], "danio": [11, 14], "precision": 0.9,
-		"armadura": {"torso": [6, 2]},
+		"armadura": {"torso": [5, 2]}, "tipo_armadura": "cuero",
 		"aspecto": {
 			"piel": Color("#d9a066"), "torso": Color("#455a64"), "hombros": Color("#37474f"),
 			"brazos": Color("#455a64"), "antebrazos": Color("#d9a066"), "manos": Color("#d9a066"),
@@ -117,7 +119,7 @@ static var ENEMIGOS := {
 	"maton": {
 		"nombre": "Matón", "articulo": "el", "vida": 90, "diestro": true, "arma": "maza",
 		"rapidez": 11, "coraje": 5, "personalidad": "bruto", "nivel": 2, "oro": [9, 16], "danio": [13, 17], "empuje": 0.1,
-		"armadura": {"torso": [10, 2], "cabeza": [6, 0]},
+		"armadura": {"torso": [11, 2], "cabeza": [7, 0]}, "tipo_armadura": "acolchada",
 		"aspecto": {
 			"piel": Color("#c68642"), "torso": Color("#795548"), "hombros": Color("#5d4037"),
 			"brazos": Color("#c68642"), "antebrazos": Color("#c68642"), "manos": Color("#c68642"),
@@ -129,14 +131,14 @@ static var ENEMIGOS := {
 	"orco_guerrero": {
 		"nombre": "Orco guerrero", "articulo": "el", "vida": 115, "diestro": false, "arma": "maza",
 		"rapidez": 11, "coraje": 6, "personalidad": "bruto", "nivel": 3, "oro": [14, 24], "danio": [18, 23], "empuje": 0.15,
-		"armadura": {"cabeza": [15, 4], "torso": [22, 6], "brazos": [10, 3], "piernas": [10, 3]},
+		"armadura": {"cabeza": [12, 4], "torso": [17, 6], "brazos": [8, 3], "piernas": [8, 3]}, "tipo_armadura": "malla",
 		"aspecto": _ORCO.merged({"accesorio": "casco", "accesorio_color": Color("#78909c"),
 			"ancho": 1.25, "escala": 1.12}, true),
 	},
 	"orco_cazador": {
 		"nombre": "Orco cazador", "articulo": "el", "vida": 95, "diestro": true, "arma": "lanza",
 		"rapidez": 14, "coraje": 5, "personalidad": "preciso", "nivel": 3, "oro": [12, 22], "danio": [15, 20],
-		"armadura": {"torso": [12, 3]},
+		"armadura": {"torso": [11, 3]}, "tipo_armadura": "cuero",
 		"aspecto": _ORCO.merged({"torso": Color("#5d4037"), "hombros": Color("#6d4c41"), "ancho": 1.15,
 			"escala": 1.08}, true),
 	},
@@ -144,14 +146,14 @@ static var ENEMIGOS := {
 		"nombre": "Chamán orco", "articulo": "el", "vida": 85, "diestro": true, "arma": "baston",
 		"rapidez": 12, "coraje": 6, "personalidad": "normal", "nivel": 3, "oro": [15, 25], "danio": [14, 18],
 		"mana": 25, "hechizos": ["llamarada", "curacion", "ralentizar"],
-		"armadura": {"cabeza": [4, 18], "torso": [6, 18]},
+		"armadura": {"cabeza": [4, 18], "torso": [6, 18]}, "tipo_armadura": "runas",
 		"aspecto": _ORCO.merged({"torso": Color("#4a148c"), "muslos": Color("#4a148c"),
 			"pelo": Color("#e0e0e0")}, true),
 	},
 	"caballero_negro": {
 		"nombre": "Caballero negro", "articulo": "el", "vida": 140, "diestro": true, "arma": "espada",
 		"rapidez": 12, "coraje": 9, "personalidad": "astuto", "nivel": 4, "oro": [25, 40], "danio": [19, 24], "precision": 0.88,
-		"armadura": {"cabeza": [35, 10], "torso": [45, 12], "brazos": [25, 8], "piernas": [25, 8]},
+		"armadura": {"cabeza": [27, 10], "torso": [35, 12], "brazos": [19, 8], "piernas": [19, 8]}, "tipo_armadura": "placas",
 		"aspecto": {
 			"piel": Color("#d7ccc8"), "torso": Color("#263238"), "hombros": Color("#37474f"),
 			"brazos": Color("#37474f"), "antebrazos": Color("#263238"), "manos": Color("#212121"),
@@ -164,7 +166,7 @@ static var ENEMIGOS := {
 		"nombre": "Cultista", "articulo": "el", "vida": 90, "diestro": true, "arma": "baston",
 		"rapidez": 13, "coraje": 8, "personalidad": "preciso", "nivel": 4, "oro": [22, 36], "danio": [18, 23],
 		"mana": 30, "hechizos": ["llamarada", "curacion", "ralentizar"],
-		"armadura": {"cabeza": [5, 35], "torso": [8, 40], "brazos": [4, 25], "piernas": [4, 25]},
+		"armadura": {"cabeza": [5, 35], "torso": [8, 40], "brazos": [4, 25], "piernas": [4, 25]}, "tipo_armadura": "runas",
 		"aspecto": {
 			"piel": Color("#e0c3a0"), "torso": Color("#4a148c"), "hombros": Color("#311b92"),
 			"brazos": Color("#4a148c"), "antebrazos": Color("#4a148c"), "manos": Color("#e0c3a0"),
@@ -176,7 +178,7 @@ static var ENEMIGOS := {
 	"verdugo": {
 		"nombre": "Verdugo", "articulo": "el", "vida": 135, "diestro": true, "arma": "maza",
 		"rapidez": 10, "coraje": 9, "personalidad": "bruto", "nivel": 4, "oro": [28, 42], "danio": [20, 26], "empuje": 0.2,
-		"armadura": {"cabeza": [10, 5], "torso": [30, 8], "brazos": [12, 4], "piernas": [12, 4]},
+		"armadura": {"cabeza": [9, 5], "torso": [27, 8], "brazos": [11, 4], "piernas": [11, 4]}, "tipo_armadura": "cuero",
 		"aspecto": {
 			"piel": Color("#d9a066"), "torso": Color("#d9a066"), "hombros": Color("#212121"),
 			"brazos": Color("#d9a066"), "antebrazos": Color("#212121"), "manos": Color("#d9a066"),
@@ -233,7 +235,8 @@ static func crear_rival(rival_id: String) -> Luchador:
 	var armadura: Dictionary = datos.get("armadura", {})
 	for grupo in armadura:
 		for zona_id in ZONAS_DE_GRUPO[grupo]:
-			luchador.armadura[zona_id] = {"fisica": armadura[grupo][0], "magica": armadura[grupo][1]}
+			luchador.armadura[zona_id] = {"fisica": armadura[grupo][0], "magica": armadura[grupo][1],
+				"tipo": datos.get("tipo_armadura", "")}
 	return luchador
 
 

@@ -38,13 +38,14 @@ const PROB_CALIDAD := {
 ## Material según el nivel del lugar donde se encontró.
 const MATERIALES := ["de bronce", "de hierro", "de acero", "de obsidiana"]
 
-## Ranuras de equipo. "zonas": zonas del cuerpo que protege esa pieza.
+## Ranuras de equipo. "zonas": zonas del cuerpo que protege esa pieza;
+## "genero" y "plural": para el nombre ("Grebas acolchadas").
 const RANURAS := {
 	"arma": {"nombre": "Arma", "zonas": []},
-	"casco": {"nombre": "Casco", "zonas": ["cabeza"]},
-	"peto": {"nombre": "Peto", "zonas": ["torso"]},
-	"brazales": {"nombre": "Brazales", "zonas": ["brazo_der", "brazo_izq"]},
-	"grebas": {"nombre": "Grebas", "zonas": ["pierna_der", "pierna_izq"]},
+	"casco": {"nombre": "Casco", "zonas": ["cabeza"], "genero": "m", "plural": false},
+	"peto": {"nombre": "Peto", "zonas": ["torso"], "genero": "m", "plural": false},
+	"brazales": {"nombre": "Brazales", "zonas": ["brazo_der", "brazo_izq"], "genero": "m", "plural": true},
+	"grebas": {"nombre": "Grebas", "zonas": ["pierna_der", "pierna_izq"], "genero": "f", "plural": true},
 }
 const ORDEN_RANURAS := ["arma", "casco", "peto", "brazales", "grebas"]
 const PIEZAS := ["casco", "peto", "brazales", "grebas"]
@@ -56,12 +57,8 @@ const ARMADURA_BASE := {
 	"brazales": [5, 10, 16, 24],
 	"grebas": [6, 12, 18, 26],
 }
-## Dos estilos de armadura: de metal (mucha armadura, poca resistencia mágica)
-## o con runas (al revés). "peso": probabilidad (%) de que salga.
-const ESTILOS := {
-	"metal": {"fisica": 1.0, "magica": 0.25, "peso": 75.0},
-	"runas": {"fisica": 0.55, "magica": 1.0, "peso": 25.0},
-}
+## El tipo de cada pieza (acolchada, cuero, malla, placas o runas) sale según el
+## nivel del lugar: ver DatosArmaduras.
 
 ## Armas que pueden salir como botín (ver DatosArmas).
 const ARMAS_BOTIN := ["espada", "maza", "lanza", "baston"]
@@ -195,8 +192,7 @@ static func generar(nivel: int, rng: RandomNumberGenerator, ranura := "", calida
 	if ranura == "arma":
 		_completar_arma(objeto, ARMAS_BOTIN[rng.randi() % ARMAS_BOTIN.size()])
 	else:
-		var estilo := "runas" if rng.randf() * 100.0 < ESTILOS["runas"]["peso"] else "metal"
-		_completar_pieza(objeto, estilo)
+		_completar_pieza(objeto, DatosArmaduras.sortear(nivel, rng))
 	objeto["precio"] = precio_venta(objeto)
 	return objeto
 
@@ -209,7 +205,7 @@ static func crear_arma(base: String, nivel: int, calidad: String) -> Dictionary:
 	return objeto
 
 
-## El mismo objeto con otra calidad: conserva su base, estilo, nivel e id
+## El mismo objeto con otra calidad: conserva su base, tipo, nivel e id
 ## (para la herrería).
 static func con_calidad(objeto: Dictionary, calidad: String) -> Dictionary:
 	var nuevo := objeto.duplicate()
@@ -217,7 +213,7 @@ static func con_calidad(objeto: Dictionary, calidad: String) -> Dictionary:
 	if nuevo["ranura"] == "arma":
 		_completar_arma(nuevo, nuevo["base"])
 	else:
-		_completar_pieza(nuevo, nuevo["estilo"])
+		_completar_pieza(nuevo, nuevo["tipo"])
 	nuevo["precio"] = precio_venta(nuevo)
 	return nuevo
 
@@ -234,16 +230,35 @@ static func _completar_arma(objeto: Dictionary, base: String) -> void:
 	objeto["precision"] = minf(float(arma["precision"]) + float(calidad["precision"]), 0.99)
 
 
-static func _completar_pieza(objeto: Dictionary, estilo: String) -> void:
+## Pieza de armadura de ese tipo (ver DatosArmaduras), con su nivel y calidad.
+static func crear_pieza(ranura: String, tipo_id: String, nivel: int, calidad: String) -> Dictionary:
+	var objeto := {"ranura": ranura, "calidad": calidad, "nivel": clampi(nivel, 1, 4)}
+	_completar_pieza(objeto, tipo_id)
+	objeto["precio"] = precio_venta(objeto)
+	return objeto
+
+
+## Las piezas de antes de los tipos de armadura ("estilo" metal o runas) pasan a
+## ser de malla o con runas. Devuelve true si cambió algo.
+static func migrar(objeto: Dictionary) -> bool:
+	if not objeto.has("estilo") or objeto.has("tipo"):
+		return false
+	_completar_pieza(objeto, "runas" if objeto["estilo"] == "runas" else "malla")
+	objeto.erase("estilo")
+	return true
+
+
+static func _completar_pieza(objeto: Dictionary, tipo_id: String) -> void:
 	var ranura: String = objeto["ranura"]
 	var nivel: int = objeto["nivel"]
 	var valor: float = ARMADURA_BASE[ranura][nivel - 1] * float(DATOS_CALIDAD[objeto["calidad"]]["mult_armadura"])
-	objeto["estilo"] = estilo
-	objeto["nombre"] = "%s %s" % [RANURAS[ranura]["nombre"], MATERIALES[nivel - 1]]
-	if estilo == "runas":
-		objeto["nombre"] += " con runas"
-	objeto["armadura"] = roundi(valor * ESTILOS[estilo]["fisica"])
-	objeto["resistencia_magica"] = roundi(valor * ESTILOS[estilo]["magica"])
+	var tipo: Dictionary = DatosArmaduras.tipo(tipo_id)
+	var datos_ranura: Dictionary = RANURAS[ranura]
+	objeto["tipo"] = tipo_id
+	objeto["nombre"] = DatosArmaduras.nombre_pieza(datos_ranura["nombre"], datos_ranura["genero"], datos_ranura["plural"],
+		tipo_id, MATERIALES[nivel - 1])
+	objeto["armadura"] = roundi(valor * float(tipo["fisica"]))
+	objeto["resistencia_magica"] = roundi(valor * float(tipo["magica"]))
 
 
 ## Oro que da venderlo: depende sobre todo de la calidad, y algo del nivel.
@@ -263,6 +278,16 @@ static func color_calidad(calidad: String) -> Color:
 ## Reducción de daño en porcentaje que da ese valor de armadura (ej. 100 -> 50).
 static func porcentaje_reduccion(valor: float) -> int:
 	return roundi((1.0 - MotorCombate.multiplicador_armadura(valor)) * 100.0)
+
+
+## "corte −12% · perforación −7% · contusión −5%": cuánto frena esa armadura de
+## ese tipo cada daño físico.
+static func texto_proteccion(tipo_id: String, valor: float) -> String:
+	var textos: PackedStringArray = []
+	for tipo_arma in ["cortante", "punzante", "contundente"]:
+		textos.append("%s −%d%%" % [String(DatosArmas.tipo(tipo_arma)["herida"]).to_lower(),
+			porcentaje_reduccion(valor * DatosArmaduras.eficacia(tipo_id, tipo_arma))])
+	return " · ".join(textos)
 
 
 ## Líneas de texto con los datos del objeto, para mostrarlo. "precio": lo que
@@ -288,9 +313,13 @@ static func describir(objeto: Dictionary, precio := -1) -> PackedStringArray:
 		var nombres: PackedStringArray = []
 		for zona_id in zonas:
 			nombres.append(String(DatosCuerpo.ZONAS[zona_id]["nombre"]).to_lower())
-		lineas.append("Protege: %s" % ", ".join(nombres))
-		lineas.append("Armadura %d (−%d%% daño físico)" % [objeto["armadura"], porcentaje_reduccion(objeto["armadura"])])
+		var tipo: Dictionary = DatosArmaduras.tipo(objeto["tipo"])
+		lineas.append("Protege: %s · %s" % [", ".join(nombres), String(tipo["nombre"]).to_lower()])
+		lineas.append(tipo["descripcion"])
+		lineas.append("Armadura %d: %s" % [objeto["armadura"], texto_proteccion(objeto["tipo"], objeto["armadura"])])
 		lineas.append("Resist. mágica %d (−%d%% daño mágico)" % [
 			objeto["resistencia_magica"], porcentaje_reduccion(objeto["resistencia_magica"])])
+		if float(tipo["peso"]) > 0.0:
+			lineas.append("Pesa: −%d%% de rapidez" % roundi(100.0 * float(tipo["peso"])))
 	lineas.append("Se vende por %d de oro" % (objeto["precio"] if precio < 0 else precio))
 	return lineas

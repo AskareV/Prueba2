@@ -71,9 +71,13 @@ var poder_magico := 1.0
 var empuje := 0.0
 var _vida_base := 0
 
-## Armadura por zona del cuerpo: zona -> {"fisica": n, "magica": n}. Frena el
-## daño como en League of Legends (ver MotorCombate.multiplicador_armadura).
+## Armadura por zona del cuerpo: zona -> {"fisica": n, "magica": n, "tipo":
+## tipo de armadura (ver DatosArmaduras; vacío = rinde igual contra todo)}. Frena
+## el daño como en League of Legends (ver MotorCombate.multiplicador_armadura).
 var armadura: Dictionary = {}
+## Rapidez que le quita la armadura que lleva puesta (0,12 = 12%; ver
+## DatosArmaduras). Los enemigos ya tienen la suya en su rapidez.
+var carga := 0.0
 ## Arma de botín equipada (ver DatosBotin) o vacío para usar el arma básica.
 var arma_objeto: Dictionary = {}
 
@@ -84,6 +88,9 @@ var integridad: Dictionary = {}
 var heridas: Array[Dictionary] = []
 ## Partes con fractura: parte -> true.
 var fracturas: Dictionary = {}
+## Órganos dañados: órgano -> true (ver DatosOrganos). Duran hasta que su parte
+## se cura del todo.
+var organos: Dictionary = {}
 
 ## Sangre (ver DatosHeridas): litros que le quedan y partes que sangran,
 ## {"parte", "tipo": "externo" o "interno", "nivel": 1 a 3, "turnos": los que le
@@ -160,9 +167,10 @@ func regenerar_mana() -> void:
 		mana = minf(mana + regeneracion_mana(), mana_max)
 
 
-## Rapidez real: las piernas heridas, la falta de aire y el miedo lo frenan.
+## Rapidez real: la armadura pesada, las piernas heridas, la falta de aire y el
+## miedo lo frenan.
 func rapidez_efectiva() -> float:
-	var valor_rapidez := rapidez * (0.6 + 0.4 * mov_piernas())
+	var valor_rapidez := rapidez * (1.0 - carga) * (0.6 + 0.4 * mov_piernas())
 	valor_rapidez *= 1.0 - RESPIRACION_RAPIDEZ * (1.0 - respiracion())
 	if atemorizado:
 		valor_rapidez *= MotorCombate.ATEMORIZADO_RAPIDEZ
@@ -235,10 +243,15 @@ func pagar_ataque() -> void:
 		mana -= DatosHechizos.COSTE_BASTON
 
 
-## Armadura (física o mágica) que protege esa zona; la Resistencia la hace rendir más.
-func proteccion(zona_id: String, magica: bool) -> float:
+## Armadura que protege esa zona contra ese tipo de arma (ver DatosArmas.TIPOS):
+## la resistencia mágica frena la magia y la armadura lo demás, según su tipo
+## (ver DatosArmaduras: la malla frena muy bien un corte y poco un mazazo). La
+## Resistencia la hace rendir más.
+func proteccion(zona_id: String, tipo_arma: String) -> float:
 	var datos: Dictionary = armadura.get(zona_id, {})
-	var valor_armadura := float(datos.get("magica" if magica else "fisica", 0.0))
+	var valor_armadura := float(datos.get("magica", 0.0))
+	if not DatosArmas.es_magico(tipo_arma):
+		valor_armadura = float(datos.get("fisica", 0.0)) * DatosArmaduras.eficacia(String(datos.get("tipo", "")), tipo_arma)
 	return valor_armadura * DatosEstadisticas.aumento(puntos("resistencia"), DatosEstadisticas.ARMADURA_POR_RESISTENCIA)
 
 
@@ -322,9 +335,14 @@ func heridas_de(parte_id: String) -> Dictionary:
 
 # --- Funciones de supervivencia (B.2), de 0 a 1 ---
 
-## La fiebre de una infección grave también la baja.
+## La fiebre de una infección grave y el cerebro dañado también la bajan.
 func conciencia() -> float:
-	return factor("craneo") * DatosHeridas.CONCIENCIA_FIEBRE[infeccion]
+	return factor("craneo") * DatosHeridas.CONCIENCIA_FIEBRE[infeccion] * factor_cerebro()
+
+
+## Lo que rinde la conciencia por el cerebro dañado: 0,7 o 1.
+func factor_cerebro() -> float:
+	return DatosOrganos.CONCIENCIA_CEREBRO if organos.has("cerebro") else 1.0
 
 
 ## Sin los dos ojos (los dos inutilizados) está ciego: acierta mucho menos.
@@ -339,13 +357,24 @@ func vision() -> float:
 	return maxf(der, izq) * 0.7 + minf(der, izq) * 0.3
 
 
+## La tráquea y cada pulmón dañados la bajan más.
 func respiracion() -> float:
-	return minf(factor("cuello"), (factor("torax_der") + factor("torax_izq")) / 2.0)
+	var valor := minf(factor("cuello"), (factor("torax_der") + factor("torax_izq")) / 2.0)
+	if organos.has("traquea"):
+		valor *= DatosOrganos.RESPIRACION_TRAQUEA
+	for pulmon in ["pulmon_der", "pulmon_izq"]:
+		if organos.has(pulmon):
+			valor *= DatosOrganos.RESPIRACION_PULMON
+	return valor
 
 
-## Una lesión que inutiliza el cuello (columna) afecta brazos y piernas a la vez.
+## Una lesión que inutiliza el cuello (columna) afecta brazos y piernas a la vez;
+## la columna dañada, algo menos.
 func factor_columna() -> float:
-	return 0.3 if esta_inutilizada("cuello") else 1.0
+	var valor := 0.3 if esta_inutilizada("cuello") else 1.0
+	if organos.has("columna"):
+		valor = minf(valor, DatosOrganos.MOVIMIENTO_COLUMNA)
+	return valor
 
 
 func mov_brazo(lado: String) -> float:
@@ -497,7 +526,8 @@ func ajustar_vida_max() -> void:
 
 
 ## Cura vida y la integridad de todas las partes a la vez (una poción). Una parte
-## que se cura del todo deja de estar fracturada y de sangrar.
+## que se cura del todo deja de estar fracturada, de sangrar y de tener órganos
+## dañados.
 func curar(cantidad_vida: int, partes: float) -> int:
 	var antes := vida
 	vida = mini(vida + cantidad_vida, vida_max)
@@ -505,6 +535,8 @@ func curar(cantidad_vida: int, partes: float) -> int:
 		integridad[parte_id] = minf(integridad[parte_id] + partes, 100.0)
 		if integridad[parte_id] >= 100.0:
 			fracturas.erase(parte_id)
+			for organo_id in DatosOrganos.organos_de(parte_id):
+				organos.erase(organo_id)
 	sangrados.assign(sangrados.filter(func(sangrado: Dictionary) -> bool: return integridad[sangrado["parte"]] < 100.0))
 	return vida - antes
 

@@ -64,12 +64,13 @@ var mercado: Array[Dictionary] = []
 var informe_ciudad: Dictionary = {}
 
 ## Salud del rey entre combates (las heridas duran): vida y maná que le faltan,
-## integridad de las partes heridas (las que no están, sanas), fracturas y golpes
-## recibidos en las partes que siguen heridas.
+## integridad de las partes heridas (las que no están, sanas), fracturas, órganos
+## dañados (ver DatosOrganos) y golpes recibidos en las partes que siguen heridas.
 var vida_perdida := 0
 var mana_perdido := 0.0
 var integridad: Dictionary = {}
 var fracturas: Dictionary = {}
+var organos: Dictionary = {}
 var heridas: Array[Dictionary] = []
 ## Decimales de vida curada que todavía no llegan a un punto (al caminar se cura
 ## poco a poco: así Recuperación también se nota ahí).
@@ -144,6 +145,7 @@ func nueva_partida(p_diestro: bool) -> void:
 	mana_perdido = 0.0
 	integridad = {}
 	fracturas = {}
+	organos = {}
 	heridas = []
 	resto_vida = 0.0
 	sangre_perdida = 0.0
@@ -166,7 +168,7 @@ func datos_guardado() -> Dictionary:
 		"veces": veces, "extra": extra, "edificios": edificios, "comida": comida, "soldados": soldados,
 		"peligro": peligro, "mercado": mercado, "informe_ciudad": informe_ciudad,
 		"vida_perdida": vida_perdida, "mana_perdido": mana_perdido, "integridad": integridad,
-		"fracturas": fracturas, "heridas": heridas, "resto_vida": resto_vida,
+		"fracturas": fracturas, "organos": organos, "heridas": heridas, "resto_vida": resto_vida,
 		"sangre_perdida": sangre_perdida, "sangrados": sangrados, "infecciones": infecciones,
 		"dias_semana": dias_semana,
 	}
@@ -183,7 +185,7 @@ const TIPOS_GUARDADO := {
 	"extra": TYPE_DICTIONARY, "edificios": TYPE_DICTIONARY, "comida": TYPE_INT, "soldados": TYPE_INT,
 	"peligro": TYPE_FLOAT, "mercado": TYPE_ARRAY, "informe_ciudad": TYPE_DICTIONARY,
 	"vida_perdida": TYPE_INT, "mana_perdido": TYPE_FLOAT, "integridad": TYPE_DICTIONARY,
-	"fracturas": TYPE_DICTIONARY, "heridas": TYPE_ARRAY, "resto_vida": TYPE_FLOAT,
+	"fracturas": TYPE_DICTIONARY, "organos": TYPE_DICTIONARY, "heridas": TYPE_ARRAY, "resto_vida": TYPE_FLOAT,
 	"sangre_perdida": TYPE_FLOAT, "sangrados": TYPE_ARRAY, "infecciones": TYPE_ARRAY, "dias_semana": TYPE_INT,
 }
 
@@ -264,12 +266,17 @@ func cargar(ruta := ARCHIVO) -> bool:
 	mana_perdido = float(datos.get("mana_perdido", 0.0))
 	integridad = datos.get("integridad", {})
 	fracturas = datos.get("fracturas", {})
+	organos = datos.get("organos", {})
 	heridas.assign(datos.get("heridas", []))
 	resto_vida = float(datos.get("resto_vida", 0.0))
 	sangre_perdida = float(datos.get("sangre_perdida", 0.0))
 	sangrados.assign(datos.get("sangrados", []))
 	infecciones.assign(datos.get("infecciones", []))
 	dias_semana = int(datos.get("dias_semana", 0))
+	# Las piezas de antes de los tipos de armadura pasan a ser de malla o con runas.
+	for lista in [inventario, mercado, equipo.values()]:
+		for objeto in lista:
+			DatosBotin.migrar(objeto)
 	_ultimo_guardado = var_to_str(datos_guardado())
 	return true
 
@@ -385,7 +392,8 @@ func quitar(ranura: String) -> bool:
 	return true
 
 
-## Armadura total por zona del cuerpo: zona -> {"fisica": n, "magica": n}.
+## Armadura por zona del cuerpo: zona -> {"fisica": n, "magica": n, "tipo": tipo
+## de armadura}. Cada zona la cubre una sola pieza.
 func armadura_por_zona() -> Dictionary:
 	var total := {}
 	for ranura in DatosBotin.PIEZAS:
@@ -393,10 +401,18 @@ func armadura_por_zona() -> Dictionary:
 			continue
 		var pieza: Dictionary = equipo[ranura]
 		for zona_id in DatosBotin.RANURAS[ranura]["zonas"]:
-			var actual: Dictionary = total.get(zona_id, {"fisica": 0, "magica": 0})
-			actual["fisica"] += int(pieza["armadura"])
-			actual["magica"] += int(pieza["resistencia_magica"])
-			total[zona_id] = actual
+			total[zona_id] = {"fisica": int(pieza["armadura"]), "magica": int(pieza["resistencia_magica"]),
+				"tipo": String(pieza["tipo"])}
+	return total
+
+
+## Rapidez que le quita al rey la armadura puesta: cada pieza de placas 3%, de
+## malla 2% y de cuero 1% (ver DatosArmaduras).
+func carga() -> float:
+	var total := 0.0
+	for ranura in DatosBotin.PIEZAS:
+		if equipo.has(ranura):
+			total += float(DatosArmaduras.tipo(equipo[ranura]["tipo"])["peso"])
 	return total
 
 
@@ -407,6 +423,7 @@ func crear_rey() -> Luchador:
 	var rey := DatosRivales.crear_rey(diestro, arma.get("base", "espada"), estadisticas())
 	rey.arma_objeto = arma
 	rey.armadura = armadura_por_zona()
+	rey.carga = carga()
 	rey.sangre = DatosHeridas.SANGRE_MAX - sangre_perdida
 	rey.sangrados.assign(sangrados.duplicate(true))
 	rey.infeccion = peor_infeccion()
@@ -416,6 +433,7 @@ func crear_rey() -> Luchador:
 	for parte_id in integridad:
 		rey.integridad[parte_id] = float(integridad[parte_id])
 	rey.fracturas = fracturas.duplicate()
+	rey.organos = organos.duplicate()
 	rey.heridas.assign(heridas.duplicate(true))
 	# Si la mano del arma quedó inútil, toma el arma con la otra (o pelea sin ella).
 	if not rey.empunar():
@@ -439,12 +457,19 @@ func guardar_salud(rey: Luchador) -> void:
 		if rey.integridad[parte_id] < 100.0:
 			integridad[parte_id] = rey.integridad[parte_id]
 	if rey.desmayado:
-		var despierto := MotorCombate.umbral_desmayo(rey) * 100.0 / rey.factor_fractura("craneo") + 1.0
+		var despierto := MotorCombate.umbral_desmayo(rey) * 100.0 / (rey.factor_fractura("craneo") * rey.factor_cerebro()) + 1.0
 		integridad["craneo"] = minf(maxf(float(integridad.get("craneo", 100.0)), despierto), 99.0)
 	fracturas = {}
 	for parte_id in rey.fracturas:
 		if integridad.has(parte_id):
 			fracturas[parte_id] = true
+	# Los intestinos dañados en este combate infectan la herida.
+	if rey.organos.has("intestinos") and not organos.has("intestinos"):
+		_infectar(DatosOrganos.parte_de("intestinos"))
+	organos = {}
+	for organo_id in rey.organos:
+		if integridad.has(DatosOrganos.parte_de(organo_id)):
+			organos[organo_id] = true
 	_sumar_riesgos(rey.heridas)
 	heridas.assign(rey.heridas.filter(func(herida: Dictionary) -> bool: return integridad.has(herida["parte"])))
 	for herida in heridas:
@@ -467,6 +492,16 @@ func _sumar_riesgos(golpes: Array[Dictionary]) -> void:
 		elif int(infeccion["etapa"]) == 0:
 			infeccion["limpia"] = infeccion["limpia"] and limpia
 			infeccion["sucia"] = infeccion["sucia"] or sucia
+
+
+## Esa parte queda infectada (infección leve), como al dañarse los intestinos.
+func _infectar(parte_id: String) -> void:
+	var infeccion := infeccion_de(parte_id)
+	if infeccion.is_empty():
+		infecciones.append({"parte": parte_id, "etapa": 1, "limpia": false,
+			"sucia": combate.get("origen", "") == "mazmorra"})
+	else:
+		infeccion["etapa"] = maxi(int(infeccion["etapa"]), 1)
 
 
 ## Vida máxima con toda la sangre.
@@ -580,8 +615,8 @@ func multiplicador_curacion() -> float:
 
 ## Cura "vida" puntos de vida (sin pasar de la vida máxima de ahora) y "partes"
 ## de integridad a cada parte herida (la mitad si está infectada). Una parte que
-## se cura del todo deja de estar fracturada, olvida sus golpes, deja de sangrar
-## y, si solo estaba en riesgo, de poder infectarse.
+## se cura del todo deja de estar fracturada, sana sus órganos, olvida sus golpes,
+## deja de sangrar y, si solo estaba en riesgo, de poder infectarse.
 func curar(vida: int, partes: float) -> void:
 	vida_perdida = maxi(vida_perdida - vida, 0)
 	_limitar_vida()
@@ -592,6 +627,8 @@ func curar(vida: int, partes: float) -> void:
 		if valor >= 100.0:
 			integridad.erase(parte_id)
 			fracturas.erase(parte_id)
+			for organo_id in DatosOrganos.organos_de(parte_id):
+				organos.erase(organo_id)
 		else:
 			integridad[parte_id] = valor
 	heridas.assign(heridas.filter(func(herida: Dictionary) -> bool: return integridad.has(herida["parte"])))

@@ -1145,6 +1145,7 @@ func _narrar(atacante: Luchador, defensor: Luchador, r: Dictionary) -> String:
 			_con_arma(arma_id, "su"), String(r["herida"]).to_lower(), _danio(r["danio"])]
 	var tu := defensor.es_jugador
 	texto += _texto_sangrado(r, tu)
+	texto += _texto_organos(r, tu)
 	if r["inutilizada"]:
 		var genero := "inutilizada" if DatosCuerpo.PARTES[parte_id]["articulo"] == "la" else "inutilizado"
 		texto += " %s queda %s." % [_mayuscula(DatosCuerpo.posesivo(parte_id, "tu" if tu else "su")), genero]
@@ -1181,10 +1182,28 @@ func _texto_sangrado(r: Dictionary, tu: bool) -> String:
 	return " Tu herida sangra." if tu else " La herida sangra."
 
 
+## "¡Le perforas el pulmón derecho!" o "¡Te corta la carótida!" ("" si no dañó
+## ningún órgano).
+func _texto_organos(r: Dictionary, tu: bool) -> String:
+	var organos: Array = r.get("organos", [])
+	if organos.is_empty():
+		return ""
+	var nombres: PackedStringArray = []
+	for organo_id in organos:
+		nombres.append(DatosOrganos.con_articulo(organo_id))
+	var lista := nombres[0] if nombres.size() == 1 else \
+		", ".join(nombres.slice(0, nombres.size() - 1)) + " y " + nombres[nombres.size() - 1]
+	var verbo: String = {"cortante": "corta", "punzante": "perfora"}.get(
+		DatosArmas.ARMAS.get(r["arma"], {}).get("tipo", ""), "daña")
+	return " ¡Te %s %s!" % [verbo, lista] if tu else " ¡Le %ss %s!" % [verbo, lista]
+
+
 func _avisos(r: Dictionary) -> Array[String]:
 	var avisos: Array[String] = []
 	if r["critico"]:
 		avisos.append("¡Crítico!")
+	for organo_id in r.get("organos", []):
+		avisos.append("¡%s!" % _mayuscula(DatosOrganos.organo(organo_id)["nombre"]))
 	if r["sangrado"] == 3 and r["sangrado_tipo"] == "externo":
 		avisos.append("¡Sangra mucho!")
 	if r["empujon"]:
@@ -1277,7 +1296,9 @@ func _mostrar_estado() -> void:
 		+ "menos esa parte; sin los dos ojos se queda ciego; con poca respiración se es más lento. Los cortes y las "
 		+ "perforaciones sangran por fuera, y los golpes contundentes en la cabeza y el torso, por dentro: en cada "
 		+ "turno se pierde sangre y baja la vida máxima; con mucha sangre perdida se rinde menos y con la mitad se "
-		+ "muere. El más rápido puede actuar dos veces seguidas. En el reino las heridas siguen en el próximo combate.",
+		+ "muere. Un golpe fuerte en la cabeza o el torso puede dañar un órgano; dura hasta que esa parte se cura. "
+		+ "Cada armadura frena distinto: la malla, los cortes; lo acolchado, los golpes; las placas, casi todo. "
+		+ "El más rápido puede actuar dos veces seguidas. En el reino las heridas siguen en el próximo combate.",
 		15, Estilo.TEXTO_SUAVE)
 	reglas.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	reglas.custom_minimum_size = Vector2(1100, 0)
@@ -1343,6 +1364,10 @@ func _columna_estado(luchador: Luchador, titulo: String) -> VBoxContainer:
 			texto += " (%s)" % ", ".join(tipos)
 		texto += _sangrado_de(luchador, parte_id)
 		lista.add_child(_etiqueta_simple(texto, 17, Barra.color_para(1.0 - nivel / 4.0)))
+		for organo_id in DatosOrganos.organos_de(parte_id):
+			if luchador.organos.has(organo_id):
+				lista.add_child(_etiqueta_simple("    %s: %s" % [DatosOrganos.danado(organo_id),
+					DatosOrganos.organo(organo_id)["efecto"]], 16, Color("#ef9a9a")))
 	if not alguna:
 		lista.add_child(_etiqueta_simple("Sin heridas.", 17, Estilo.TEXTO_SUAVE))
 	return columna

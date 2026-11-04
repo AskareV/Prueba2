@@ -129,6 +129,43 @@ dominante es el que ataca). La circulación ya la cubre el sangrado (B.1).
 | Espinilla | tibia, peroné | Movimiento de piernas |
 | Pie | huesos del pie | Movimiento de piernas (equilibrio) |
 
+**Órganos dañados (provisional).** Un golpe acertado en la cabeza o el torso
+puede dañar un órgano de esa parte. El daño dura como una fractura: hasta que
+la parte se cura del todo (también de un combate al siguiente).
+
+| Órgano | Parte | Si lo dañan | Corte | Perforación | Contusión |
+|---|---|---|---|---|---|
+| Cerebro | Cráneo | Conciencia −30%: se aturde y se desmaya antes | 2% | 6% | 20% |
+| Tráquea | Cuello | Respiración −50% | 12% | 10% | 8% |
+| Carótida | Cuello | Sangra grave por fuera | 15% | 10% | 1% |
+| Columna | Cuello | Brazos y piernas −40% | 2% | 3% | 4% |
+| Pulmón derecho | Tórax derecho | Respiración −40% | 5% | 18% | 5% |
+| Pulmón izquierdo | Tórax izquierdo | Respiración −40% | 4% | 12% | 4% |
+| Corazón | Tórax izquierdo | Sangra grave por dentro (no mata en el acto) | 1% | 6% | 1% |
+| Hígado | Abdomen | Sangra grave por dentro | 5% | 10% | 8% |
+| Bazo | Abdomen | Sangra grave por dentro | 3% | 6% | 6% |
+| Intestinos | Abdomen | La herida queda infectada (al terminar el combate) | 12% | 15% | 2% |
+
+- Los porcentajes son por golpe acertado con la **fuerza de referencia**. Para
+  llegar a un órgano, la fuerza del golpe (con la armadura y todo, como en el
+  sangrado) tiene que pasar 6, más 0,25 por cada punto de armadura que frena
+  ese golpe; con 10 más, llega con el porcentaje de la tabla, y si es más
+  fuerte, hasta 1,5 veces. Así un puñetazo nunca llega, y la armadura que
+  frena bien ese daño casi no lo deja llegar (ver 7.6).
+- Con la parte fracturada es el doble de fácil dañar el cerebro, la columna o
+  un pulmón (una costilla rota pincha el pulmón).
+- La magia no daña órganos.
+- Con el daño medio de cada arma y sin armadura, la probabilidad de dañar algún
+  órgano por golpe acertado es: espada, cuello 25% y abdomen 11%; lanza, tórax
+  11%, abdomen 19% y cuello 18%; maza, cráneo 20%. Con un peto de nivel 2 de
+  cualquier tipo, la espada ya no llega a los órganos del torso; la lanza pasa
+  el cuero (5%) pero no las placas, y la maza pasa la malla (2%) pero no lo
+  acolchado. En la cabeza, un casco de nivel 2 de malla deja el cerebro en 15%
+  por mazazo; uno acolchado, en 8%.
+- En combate se ve en la narración ("¡Te perfora el pulmón derecho!"), en un
+  aviso sobre la parte y en la ventana de estado; en el reino, en la salud del
+  rey.
+
 Descartados: sistema digestivo, habla y audición.
 
 ### B.3 Dolor
@@ -279,6 +316,9 @@ y después se va a la cabeza o el torso.
 - Las heridas se registran por tipo (corte, contusión, perforación, fractura y
   quemadura): de ahí salen el **sangrado** (B.1) y el riesgo de **infección**
   (B.4). Falta conectarlas con el dolor (B.3).
+- **Órganos:** un golpe fuerte en la cabeza o el torso puede dañar un órgano
+  (ver B.2): baja la conciencia o la respiración, debilita brazos y piernas,
+  hace sangrar grave o infecta la herida.
 
 ### 6.4 Rivales
 
@@ -430,7 +470,7 @@ Abajo a la izquierda, *Objetos*.
 - Un 35% del botín es un objeto para curarse (ver 7.12): **poción de curación**
   20%, **venda** 8%, **torniquete** 3,5% y **medicina** 3,5%. El resto: 35%
   **arma** (espada, maza, lanza o bastón) y 65% **armadura** (casco, peto,
-  brazales o grebas).
+  brazales o grebas), de un tipo que depende del nivel del lugar (ver 7.6).
 - El material depende del nivel del lugar: bronce, hierro, acero, obsidiana.
   Cada nivel hace el arma un 25% más fuerte y la armadura más resistente.
 
@@ -452,10 +492,43 @@ Probabilidad de cada calidad según la dificultad del lugar:
   La **resistencia mágica** frena el daño mágico (bastón).
 - Se aplica **por zona del cuerpo**: casco → cabeza; peto → torso; brazales →
   los dos brazos; grebas → las dos piernas.
-- Las piezas **de metal** (75%) dan mucha armadura y poca resistencia mágica;
-  las piezas **con runas** (25%), al revés.
-- Los enemigos también llevan armadura: los goblins casi nada, el caballero
-  negro mucha, el cultista mucha resistencia mágica.
+- Cada pieza es de un **tipo**, y cada tipo frena mejor un daño que otro. Su
+  armadura se multiplica según el arma que la golpea (provisional):
+
+  | Tipo | Corte (espada) | Perforación (lanza) | Contusión (maza, puños, patadas) | Resist. mágica | Rapidez por pieza |
+  |---|---|---|---|---|---|
+  | Acolchada | ×0,9 | ×0,8 | ×1,2 | poca | — |
+  | Cuero | ×1,1 | ×0,6 | ×0,8 | poca | −1% |
+  | Malla | ×1,3 | ×0,7 | ×0,5 | poca | −2% |
+  | Placas | ×1,3 | ×1,2 | ×0,8 | poca | −3% |
+  | Runas | ×1 (con un 55% de la armadura) | ×1 | ×1 | mucha | — |
+
+  "Poca" resistencia mágica es un cuarto del valor de la pieza; las runas la
+  tienen entera y solo el 55% de armadura.
+- La armadura pesada **hace más lento** al rey en la barra de turnos: con las
+  cuatro piezas de placas, −12% (de 13 a 11,4 de rapidez). La pestaña Rey
+  muestra la rapidez con la armadura puesta.
+- La armadura también decide si un golpe **llega a un órgano** (ver B.2): la que
+  frena bien ese daño casi no lo deja llegar.
+- El tipo sale según el nivel del lugar; las placas, en los lugares difíciles:
+
+  | Nivel del lugar | Acolchada | Cuero | Malla | Placas | Runas |
+  |---|---|---|---|---|---|
+  | 1 (fácil) | 35% | 35% | 10% | — | 20% |
+  | 2 (fácil / medio) | 25% | 30% | 20% | 5% | 20% |
+  | 3 (medio) | 15% | 20% | 30% | 15% | 20% |
+  | 4 (difícil) | 10% | 15% | 30% | 25% | 20% |
+
+  Los nombres dicen el tipo: "Peto acolchado", "Grebas de cuero", "Casco de
+  malla de hierro", "Peto de placas de acero", "Brazales de bronce con runas".
+  Las piezas guardadas de antes de los tipos pasan a ser de malla (las de
+  metal) o con runas.
+- Los enemigos también llevan armadura, cada uno de su tipo: goblin lancero,
+  ladrón, orco cazador y verdugo, cuero; matón, acolchada; orco guerrero, malla;
+  caballero negro, placas; chamanes y cultista, runas. Su valor está puesto para
+  que contra la espada frenen lo mismo que antes de los tipos: contra la maza,
+  la malla del orco guerrero frena mucho menos, y contra la lanza, el cuero.
+  Su rapidez ya incluye lo que pesa su armadura.
 - En las mazmorras y zonas el rey pelea con el arma que tiene equipada (se
   cambia en el Inventario, no durante el combate).
 
@@ -582,8 +655,10 @@ Todos los números son **provisionales**.
   infecciones. Trabajar no cura. El botón de descanso dice cuánto vas a curar.
 - **Recuperación** multiplica toda la curación (+5% por punto), también la de la
   sangre.
-- Una parte que se cura del todo deja de estar fracturada, deja de sangrar y, si
-  solo estaba en riesgo, ya no se infecta. Una parte infectada se cura a la mitad.
+- Una parte que se cura del todo deja de estar fracturada, sana sus órganos
+  dañados (B.2), deja de sangrar y, si solo estaba en riesgo, ya no se infecta.
+  Una parte infectada se cura a la mitad. Los intestinos dañados dejan la herida
+  del abdomen infectada al terminar el combate.
 - **Desangrarse** (perder la mitad de la sangre) o **morir de una infección** es
   como perder un combate: lo traen al castillo con 1 de vida y +50 de estrés, le
   paran el sangrado y le curan las infecciones.
@@ -680,7 +755,8 @@ cultista 8, caballero negro y verdugo 9.
 |---|---|---|
 | Goblin 16, ladrón 16, goblin lancero 15, chamán goblin 14, orco cazador 14 | Cultista 13 (y los rivales de la demo, como el rey) | Caballero negro 12, chamán orco 12, orco guerrero 11, matón 11, verdugo 10 |
 
-El rey empieza con 13; cada punto de Velocidad suma 0,2. Para huir también
+El rey empieza con 13; cada punto de Velocidad suma 0,2, y la armadura pesada
+le resta (ver 7.6). Para huir también
 cuenta quién es más rápido: cada punto de rapidez de ventaja suma un 2%.
 
 ### 8.4 Maná y hechizos (provisionales)

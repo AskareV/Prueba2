@@ -103,7 +103,7 @@ static func multiplicador_golpe(atacante: Luchador, defensor: Luchador, parte_id
 	var arma: Dictionary = atacante.datos_arma()
 	var mult := DatosArmas.afinidad(arma["tipo"], parte_id)
 	var magico := DatosArmas.es_magico(arma["tipo"])
-	mult *= multiplicador_armadura(defensor.proteccion(DatosCuerpo.zona_de(parte_id), magico))
+	mult *= multiplicador_armadura(defensor.proteccion(DatosCuerpo.zona_de(parte_id), arma["tipo"]))
 	if atacante.hechizo.is_empty():
 		mult *= FUERZA_MINIMA + (1.0 - FUERZA_MINIMA) * atacante.fuerza_ataque()
 	if _usa_el_brazo(atacante) and atacante.mano_torpe:
@@ -236,7 +236,7 @@ static func _resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: S
 		"parte": parte_id, "arma": arma_id, "acierto": false, "danio": 0, "herida": "",
 		"fractura": false, "inutilizada": false, "expuesto": false, "desarme": false,
 		"aturdido": false, "desmayo": false, "critico": false, "empujon": false,
-		"sangrado": 0, "sangrado_tipo": "",
+		"sangrado": 0, "sangrado_tipo": "", "organos": [],
 	}
 	atacante.ataques += 1
 	if rng.randf() >= prob_acierto(atacante, defensor, parte_id):
@@ -272,6 +272,7 @@ static func _resolver_ataque(atacante: Luchador, defensor: Luchador, parte_id: S
 		resultado["herida"] = "Fractura"
 
 	_causar_sangrado(atacante, defensor, parte_id, base, resultado)
+	_danar_organos(atacante, defensor, parte_id, tipo_id, base, resultado, rng)
 
 	if antes >= Luchador.INUTILIZADA and despues < Luchador.INUTILIZADA:
 		resultado["inutilizada"] = true
@@ -329,6 +330,43 @@ static func _causar_sangrado(atacante: Luchador, defensor: Luchador, parte_id: S
 		return
 	resultado["sangrado"] = defensor.agregar_sangrado(parte_id, tipo, nivel)
 	resultado["sangrado_tipo"] = tipo
+
+
+## Un golpe acertado que pasa la armadura con fuerza puede dañar un órgano de esa
+## parte (ver DatosOrganos): depende del tipo de arma, de la fuerza del golpe con
+## la armadura y todo, y de si la parte está fracturada. Al dañar la carótida, el
+## corazón, el hígado o el bazo, la parte sangra grave. Anota los órganos dañados
+## en "resultado" (y el sangrado, si quedó peor).
+static func _danar_organos(atacante: Luchador, defensor: Luchador, parte_id: String, tipo_arma: String,
+		base: float, resultado: Dictionary, rng: RandomNumberGenerator) -> void:
+	var organos := DatosOrganos.organos_de(parte_id)
+	if organos.is_empty():
+		return
+	var fuerza := base * multiplicador_golpe(atacante, defensor, parte_id) * compensacion(atacante, defensor, parte_id)
+	var fracturada := defensor.fracturas.has(parte_id)
+	var armadura := defensor.proteccion(DatosCuerpo.zona_de(parte_id), tipo_arma)
+	for organo_id in organos:
+		if defensor.organos.has(organo_id):
+			continue
+		var prob := DatosOrganos.probabilidad(organo_id, tipo_arma, fuerza, fracturada, armadura)
+		if prob <= 0.0 or rng.randf() >= prob:
+			continue
+		(resultado["organos"] as Array).append(organo_id)
+		var nivel := danar_organo(defensor, organo_id)
+		if nivel > 0 and nivel >= int(resultado["sangrado"]):
+			resultado["sangrado"] = nivel
+			resultado["sangrado_tipo"] = DatosOrganos.organo(organo_id)["sangra"]
+
+
+## Daña ese órgano: queda dañado (ver Luchador.organos) y, si es la carótida, el
+## corazón, el hígado o el bazo, su parte sangra grave. Devuelve el nivel con que
+## sangra esa parte por eso (0 si no sangra).
+static func danar_organo(defensor: Luchador, organo_id: String) -> int:
+	defensor.organos[organo_id] = true
+	var datos := DatosOrganos.organo(organo_id)
+	if not datos.has("sangra") or not defensor.sangra:
+		return 0
+	return defensor.agregar_sangrado(datos["parte"], datos["sangra"], 3)
 
 
 ## Lo que pasa al empezar el turno de un luchador, antes de actuar: recupera

@@ -89,6 +89,82 @@ func prueba_armadura_fisica_y_magica_se_aplican_por_zona() -> void:
 		MotorCombate.multiplicador_golpe(mago, sin_armadura, "torax_der") * 0.5, "La resistencia mágica frena la magia")
 
 
+## Cada tipo de armadura frena distinto cada daño, y las pesadas hacen más lento.
+func prueba_tipos_de_armadura() -> void:
+	verificar(DatosArmaduras.eficacia("malla", "cortante") > DatosArmaduras.eficacia("malla", "contundente"),
+		"La malla frena más un corte que un mazazo")
+	verificar(DatosArmaduras.eficacia("acolchada", "contundente") > DatosArmaduras.eficacia("malla", "contundente"),
+		"Lo acolchado frena mejor los mazazos")
+	verificar(DatosArmaduras.eficacia("placas", "punzante") > DatosArmaduras.eficacia("cuero", "punzante"),
+		"Las placas frenan las estocadas que atraviesan el cuero")
+	verificar_cerca(DatosArmaduras.eficacia("", "cortante"), 1.0, "Sin tipo rinde igual contra todo")
+	# Contra una malla, la maza pasa más que la espada.
+	var defensor := DatosRivales.crear_rival("orco")
+	defensor.armadura = {"torso": {"fisica": 60, "magica": 0, "tipo": "malla"}}
+	var sin_armadura := DatosRivales.crear_rival("orco")
+	var espada := DatosRivales.crear_rey(true, "espada")
+	var maza := DatosRivales.crear_rey(true, "maza")
+	var frena_espada := MotorCombate.multiplicador_golpe(espada, defensor, "torax_der") / MotorCombate.multiplicador_golpe(espada, sin_armadura, "torax_der")
+	var frena_maza := MotorCombate.multiplicador_golpe(maza, defensor, "torax_der") / MotorCombate.multiplicador_golpe(maza, sin_armadura, "torax_der")
+	verificar_cerca(frena_espada, MotorCombate.multiplicador_armadura(60 * 1.3), "A la espada la frena como 78 de armadura")
+	verificar_cerca(frena_maza, MotorCombate.multiplicador_armadura(60 * 0.5), "A la maza, como 30")
+	# Nombres y valores de las piezas.
+	verificar_igual(DatosBotin.crear_pieza("grebas", "acolchada", 1, "normal")["nombre"], "Grebas acolchadas", "Nombre acolchado")
+	verificar_igual(DatosBotin.crear_pieza("brazales", "cuero", 2, "normal")["nombre"], "Brazales de cuero", "Nombre de cuero")
+	verificar_igual(DatosBotin.crear_pieza("peto", "malla", 2, "normal")["nombre"], "Peto de malla de hierro", "Nombre de malla")
+	verificar_igual(DatosBotin.crear_pieza("casco", "placas", 3, "normal")["nombre"], "Casco de placas de acero", "Nombre de placas")
+	verificar_igual(DatosBotin.crear_pieza("casco", "runas", 1, "normal")["nombre"], "Casco de bronce con runas", "Nombre con runas")
+	var peto_runas := DatosBotin.crear_pieza("peto", "runas", 1, "normal")
+	var peto_malla := DatosBotin.crear_pieza("peto", "malla", 1, "normal")
+	verificar(peto_runas["armadura"] < peto_malla["armadura"] and peto_runas["resistencia_magica"] > peto_malla["resistencia_magica"],
+		"Las runas frenan la magia y poco lo demás")
+	# Las placas salen en los lugares difíciles.
+	var rng := rng_fijo(5)
+	var placas := [0, 0]
+	for i in 2000:
+		if DatosArmaduras.sortear(1, rng) == "placas":
+			placas[0] += 1
+		if DatosArmaduras.sortear(4, rng) == "placas":
+			placas[1] += 1
+	verificar_igual(placas[0], 0, "En un lugar fácil no salen placas")
+	verificar(placas[1] > 400 and placas[1] < 600, "En uno difícil, una de cada cuatro (%d de 2000)" % placas[1])
+	# Peso: con las cuatro piezas de placas, 12% menos de rapidez.
+	var juego := EstadoReino.new()
+	juego.nueva_partida(true)
+	for ranura in DatosBotin.PIEZAS:
+		juego.equipar(juego.agregar(DatosBotin.crear_pieza(ranura, "placas", 4, "normal"))["id"])
+	verificar_cerca(juego.carga(), 0.12, "Cuatro piezas de placas pesan 12%")
+	var rey := juego.crear_rey()
+	verificar_cerca(rey.rapidez_efectiva(), rey.rapidez * 0.88, "El rey es 12% más lento")
+	verificar_igual(String(juego.armadura_por_zona()["torso"]["tipo"]), "placas", "La zona sabe de qué es su armadura")
+	juego.quitar("peto")
+	juego.equipar(juego.agregar(DatosBotin.crear_pieza("peto", "acolchada", 4, "normal"))["id"])
+	verificar_cerca(juego.carga(), 0.09, "Lo acolchado no pesa")
+	juego.free()
+	# Los enemigos: contra la espada frenan lo mismo que antes de los tipos.
+	var orco := DatosRivales.crear_rival("orco_guerrero")
+	verificar_igual(String(orco.armadura["torso"]["tipo"]), "malla", "El orco guerrero lleva malla")
+	verificar(absf(orco.proteccion("torso", "cortante") - 22.0) < 1.0, "Contra la espada, como antes (22)")
+	verificar(orco.proteccion("torso", "contundente") < 10.0, "Contra la maza, mucho menos")
+
+
+## Las piezas guardadas antes de los tipos de armadura pasan a ser de malla o con runas.
+func prueba_las_piezas_viejas_pasan_a_tener_tipo() -> void:
+	var vieja := {"ranura": "peto", "calidad": "raro", "nivel": 2, "estilo": "metal", "nombre": "Peto de hierro",
+		"armadura": 23, "resistencia_magica": 6, "precio": 45, "id": 7}
+	verificar(DatosBotin.migrar(vieja), "Cambia la pieza vieja")
+	verificar_igual(vieja["tipo"], "malla", "La de metal pasa a ser de malla")
+	verificar_igual(vieja["nombre"], "Peto de malla de hierro", "Con su nombre nuevo")
+	verificar_igual(vieja["armadura"], 23, "Y la misma armadura")
+	verificar(not vieja.has("estilo") and vieja["id"] == 7, "Sin el estilo y con su id")
+	verificar(not DatosBotin.migrar(vieja), "Una pieza nueva no cambia")
+	var runas := {"ranura": "casco", "calidad": "normal", "nivel": 1, "estilo": "runas", "nombre": "Casco de bronce con runas",
+		"armadura": 3, "resistencia_magica": 6, "precio": 8}
+	DatosBotin.migrar(runas)
+	verificar_igual(runas["tipo"], "runas", "La de runas sigue con runas")
+	verificar_igual(runas["armadura"], 3, "Con la misma armadura")
+
+
 func prueba_arma_de_botin_cambia_el_danio() -> void:
 	var rey := DatosRivales.crear_rey(true, "espada")
 	var base := rey.datos_arma()
@@ -113,12 +189,13 @@ func prueba_enemigos_del_reino_existen_y_tienen_datos() -> void:
 		verificar(luchador.vida > 0, "%s tiene vida" % enemigo_id)
 	var goblin := DatosRivales.crear_rival("goblin")
 	var caballero := DatosRivales.crear_rival("caballero_negro")
-	verificar(goblin.proteccion("torso", false) < caballero.proteccion("torso", false),
+	verificar(goblin.proteccion("torso", "cortante") < caballero.proteccion("torso", "cortante"),
 		"Los goblins casi no usan armadura")
 	var brazos: Array = DatosRivales.ENEMIGOS["caballero_negro"]["armadura"]["brazos"]
 	verificar(brazos[0] > 0, "El caballero lleva armadura en los brazos")
-	verificar_cerca(caballero.proteccion("brazo_izq", false), float(brazos[0]), "La armadura de brazos cubre el izquierdo")
-	verificar_cerca(caballero.proteccion("brazo_der", false), float(brazos[0]), "Y el derecho")
+	var contra_espada := float(brazos[0]) * DatosArmaduras.eficacia("placas", "cortante")
+	verificar_cerca(caballero.proteccion("brazo_izq", "cortante"), contra_espada, "La armadura de brazos cubre el izquierdo")
+	verificar_cerca(caballero.proteccion("brazo_der", "cortante"), contra_espada, "Y el derecho")
 
 
 func prueba_vender_y_equipar() -> void:
@@ -132,7 +209,8 @@ func prueba_vender_y_equipar() -> void:
 	verificar_cerca(float(juego.armadura_por_zona()["cabeza"]["fisica"]), float(casco["armadura"]),
 		"El casco protege la cabeza")
 	var rey := juego.crear_rey()
-	verificar_cerca(rey.proteccion("cabeza", false), float(casco["armadura"]), "El rey lleva el casco al combatir")
+	verificar_cerca(rey.proteccion("cabeza", "cortante"), float(casco["armadura"]) * DatosArmaduras.eficacia(casco["tipo"], "cortante"),
+		"El rey lleva el casco al combatir")
 	var vieja: Dictionary = juego.equipo["arma"]
 	verificar(juego.equipar(espada["id"]), "Equipa la maza")
 	verificar_igual(juego.inventario[0]["id"], vieja["id"], "El arma vieja vuelve a la mochila")

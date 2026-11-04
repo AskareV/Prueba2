@@ -46,6 +46,8 @@ Arriba están las pestañas:
 - **Salir:** vuelve al menú principal.
 
 La armadura reduce el daño como en *League of Legends*: daño × 100 / (100 + armadura).
+Cada pieza es de un tipo (acolchada, cuero, malla, placas o runas) que frena mejor
+unos daños que otros, y las pesadas hacen más lento al rey.
 Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 
 ## La demo de combate
@@ -62,8 +64,8 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
    - **Objeto** (solo en el reino): una poción, una venda, un torniquete o una
      medicina.
    - **Cambiar o recoger el arma**, y **Huir**.
-   - **Estado:** funciones de supervivencia, cobertura, sangre y partes heridas
-     (y cuáles sangran) de ambos.
+   - **Estado:** funciones de supervivencia, cobertura, sangre, partes heridas
+     (y cuáles sangran) y órganos dañados de ambos.
 3. **Turnos por velocidad:** arriba se ven los próximos turnos; el más rápido
    puede actuar dos veces seguidas.
 4. **Táctica:** los brazos son fáciles de acertar pero quitan poca vida; la
@@ -78,6 +80,10 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
    sangre de todas las heridas y baja la vida máxima; con mucha sangre perdida se
    acierta y se pega menos, se pierden turnos y se puede caer en shock; con la
    mitad, se muere.
+7. **Órganos:** un golpe fuerte en la cabeza o el torso puede dañar un órgano
+   (cerebro, tráquea, carótida, columna, pulmones, corazón, hígado, bazo o
+   intestinos). Depende del arma y de la armadura: la malla casi no deja llegar
+   un corte, pero sí un mazazo. Dura hasta que esa parte se cura.
 
 ## Estructura
 
@@ -101,6 +107,8 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | Archivo | Qué hace |
 |---|---|
 | `datos_cuerpo.gd` | Las 21 partes, las 6 zonas y las funciones de supervivencia |
+| `datos_organos.gd` | Órganos de la cabeza y el torso: cuándo se dañan y qué hacen |
+| `datos_armaduras.gd` | Tipos de armadura: cuánto frena cada uno cada daño y cuánto pesa |
 | `datos_heridas.gd` | Sangrado e infecciones: cuánto sangra cada herida, estados por la sangre perdida, vendas y torniquetes, etapas de las infecciones |
 | `datos_armas.gd` | Las armas (espada, maza, lanza y bastón mágico) y sus números provisionales |
 | `datos_rivales.gd` | Rivales de la demo, enemigos del reino y aspecto del rey |
@@ -108,7 +116,7 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | `orden_turnos.gd` | Barra de turnos por velocidad |
 | `datos_hechizos.gd` | Maná, bastón y hechizos |
 | `luchador.gd` | Estado de un combatiente: vida, integridad de cada parte, lateralidad |
-| `motor_combate.gd` | Reglas: acierto, daño, armadura, fracturas, sangrado, ceguera, desarme, aturdimiento, desmayo, empujones, huir y hechizos |
+| `motor_combate.gd` | Reglas: acierto, daño, armadura, fracturas, sangrado, órganos, ceguera, desarme, aturdimiento, desmayo, empujones, huir y hechizos |
 | `ia_enemigo.gd` | Cómo deciden los rivales: el plan de su personalidad, a veces improvisan, se defienden y, si saben, lanzan hechizos |
 | `figura.gd` / `plantilla_humanoide.gd` | Dibujo del cuerpo por partes, heridas y animaciones |
 | `fondo_mazmorra.gd`, `antorchas.gd`, `vineta.gd` | Fondo de piedra, antorchas y oscurecido de los bordes |
