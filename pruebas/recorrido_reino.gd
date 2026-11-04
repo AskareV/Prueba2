@@ -447,8 +447,8 @@ func _recorrer_trabajo() -> void:
 
 
 ## Ciudad: abre cada edificio, reconstruye, recluta, compra (con doble toque),
-## mejora en la herrería y descansa en el castillo. Después fuerza un ataque que
-## la ciudad pierde, para ver las noticias.
+## mejora en la herrería y descansa en el castillo. Después deja a los soldados
+## sin comida, para ver las noticias.
 func _recorrer_ciudad() -> void:
 	var reino := current_scene
 	_juego.oro = 5000
@@ -503,19 +503,21 @@ func _recorrer_ciudad() -> void:
 	if reino.get("_ventana_lugar") != null:
 		reino.call("_cerrar_lugar")
 		await process_frame
-	# Un ataque perdido: sin soldados, con todo el peligro y muy avanzada la partida.
-	_juego.soldados = 0
-	_juego.peligro = 100.0
-	_juego.semana = 60
+	# Sin comida se van soldados (ya no hay invasiones): al volver, las noticias lo cuentan.
+	var granja: int = _juego.nivel_edificio("granja")
+	_juego.edificios["granja"] = 0
+	_juego.comida = 0
+	_juego.soldados = maxi(_juego.soldados, 1)
 	reino.call("_abrir_edificio", "castillo")
 	await process_frame
 	reino.call("_al_descansar")
 	await process_frame
 	var informe: Dictionary = _juego.informe_ciudad
-	_verificar(informe.has("ataque") and not informe["ataque"]["ganado"], "Sin defensa, la ciudad pierde el ataque")
-	_verificar(reino.get("_ventana_lugar") != null, "Se muestran las noticias del ataque")
+	_verificar(int(informe.get("desertores", 0)) > 0 and not informe.has("ataque"), "Sin comida se van soldados, y nadie ataca")
+	_verificar(reino.get("_ventana_lugar") != null, "Se muestran las noticias")
 	reino.call("_cerrar_lugar")
 	await process_frame
+	_juego.edificios["granja"] = granja
 	reino.call("_mostrar_pestana", "ciudad")
 	await process_frame
 	reino.call("_abrir_edificio", "castillo")

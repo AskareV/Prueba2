@@ -383,7 +383,7 @@ combate* (la demo anterior). La pantalla del reino tiene pestañas arriba:
 |---|---|
 | **Rey** | Nivel, experiencia y las 7 características del rey (ver sección 8); los puntos se reparten con +, Confirmar y Deshacer. |
 | **Inventario** | Equipo puesto, mochila con el botín, las pociones, las vendas, los torniquetes y las medicinas; equipar, usarlos y vender. |
-| **Ciudad** | Seis edificios fijos que se reconstruyen y mejoran, y el peligro de la ciudad (ver 7.11). En el castillo se descansa. |
+| **Ciudad** | Seis edificios fijos que se reconstruyen y mejoran (ver 7.11). En el castillo se descansa. |
 | **Aventura** | Mapa con 4 mazmorras y 3 zonas. |
 | **Trabajo** | Trabajos dignos de un rey. |
 | **Salir** | Vuelve al menú principal (la partida sigue en *Continuar*). |
@@ -594,10 +594,13 @@ características).
 
 ### 7.11 Ciudad
 
-La ciudad es **autosuficiente**: produce su comida, cobra impuestos y sus
-soldados la defienden sin el rey. El rey solo invierte oro. Si está mal
-protegida, el **peligro** sube y pueden atacarla; las batallas de la ciudad se
-resuelven solas y se pueden perder. Todos los números son **provisionales**.
+La ciudad es **autosuficiente**: produce su comida y cobra impuestos sin el
+rey. El rey solo invierte oro. Todos los números son **provisionales**.
+
+**Ya no hay invasiones** (decidido): el peligro y los ataques se quitaron porque
+eran arbitrarios y no se explicaban. Los soldados, las barracas, la granja (que
+los alimenta) y la moral de Liderazgo quedan **sin uso por ahora**; más adelante
+se quieren **batallas campales** (ver 9).
 
 **Edificios fijos (seis).** Se tocan para abrir su ventana. La partida empieza
 con el castillo en pie y los demás **en ruinas** (nivel 0): hay que
@@ -606,36 +609,20 @@ tener más nivel que el castillo.
 
 | Edificio | Oro para nivel 1 / 2 / 3 | Qué hace (nivel 1 / 2 / 3) |
 |---|---|---|
-| Castillo | (empieza en 1) / 400 / 1000 | Murallas: +4 / +8 / +12 de defensa. Aquí descansa el rey (y se cura) y se ve el estado de la ciudad. |
-| Herrería | 150 / 400 / 900 | Sube una calidad tu arma o armadura puesta, hasta rara / épica / legendaria (cuesta 3 veces el precio de venta base del objeto con la calidad nueva). Los soldados defienden ×1,25 / ×1,5 / ×1,75. |
+| Castillo | (empieza en 1) / 400 / 1000 | Ningún otro edificio puede tener más nivel que él. Aquí descansa el rey (y se cura) y se ve el estado de la ciudad. |
+| Herrería | 150 / 400 / 900 | Sube una calidad tu arma o armadura puesta, hasta rara / épica / legendaria (cuesta 3 veces el precio de venta base del objeto con la calidad nueva). |
 | Granja | 100 / 300 / 700 | 10 / 18 / 28 de comida por semana. |
 | Mercado | 120 / 350 / 800 | 15 / 30 / 50 de oro de impuestos por semana; vende 3 / 4 / 5 objetos de nivel 1 / 2 / 3 que cambian cada semana, y pilas de pociones (2 / 3 / 4), vendas (3 / 4 / 5), torniquetes (1 / 2 / 2) y medicinas (1 / 2 / 3), que se compran de a una. Precio: 4 veces el de venta base; Negociación lo baja hasta un 40% menos, y nunca por debajo de lo que te pagarían al venderlo. |
-| Barracas | 150 / 400 / 900 | Caben 5 / 10 / 15 soldados (40 de oro cada uno). Cada soldado come 2 de comida por semana. |
+| Barracas | 150 / 400 / 900 | Caben 5 / 10 / 15 soldados (40 de oro cada uno). Cada soldado come 2 de comida por semana. Por ahora no tienen uso. |
 | Enfermería | 120 / 300 / 700 | Al descansar en el castillo recuperas el 60% / 80% / 100% de tu vida máxima y de tu sangre y 60 / 80 / 100 puntos de cada parte herida (sin ella, 40% y 40), y te para el sangrado por dentro y te cura las infecciones. |
 
 **La semana de la ciudad** (al pasar la semana):
 1. La granja produce y los soldados comen. Sin comida suficiente, se van
    soldados (uno por cada 2 de comida que falte). Empieza con 20 de comida.
-2. El mercado cobra impuestos.
-3. **Peligro** (0 a 100%): sube 10 por semana y cada punto de **defensa** lo
-   baja 0,8. Defensa = soldados × equipo de la herrería × moral (Liderazgo,
-   +3% por punto) + murallas del castillo.
-4. Con ese peligro como probabilidad, hay un **ataque**. Su fuerza es
-   8 + 0,8 × semana (con azar de ×0,8 a ×1,25) contra la defensa (con azar de
-   ×0,85 a ×1,15):
-   - **Se gana:** el peligro baja 30 y muere hasta el 15% de los soldados
-     (redondeado hacia abajo: con menos de 7 soldados no muere ninguno).
-   - **Se pierde:** se llevan el 20% del oro y el 50% de la comida, muere la
-     mitad de los soldados (redondeado hacia arriba), un edificio (no el
-     castillo) baja un nivel y el peligro baja 20. Si dañan las barracas, se
-     van los soldados que ya no caben.
-5. Si atacaron o se fueron soldados, al volver al reino aparece una ventana
-   con las noticias. El castillo muestra el informe de la última semana.
-
-Simulado en 40 semanas (200 partidas por caso, medido de nuevo con las reglas
-actuales): sin invertir en la ciudad hay unos 13 ataques y se pierden todos; con
-barracas, granja y 5 soldados, unos 6 o 7; con todo mejorado y unos 250 de oro
-por semana, menos de 1.
+2. El mercado cobra impuestos y cambia lo que vende.
+3. Si se fueron soldados (o empeoró una infección del rey), al volver al reino
+   aparece una ventana con las noticias. El castillo muestra el informe de la
+   última semana.
 
 ### 7.12 Salud del rey: las heridas duran
 
@@ -744,7 +731,7 @@ mínimo para entrar (ver 7.8).
 | | Estudio | +5% de experiencia. Con +8 deja presidir el tribunal (ver 7.8) |
 | | Mago | +5 de maná máximo (20 en la base) y +0,5 de maná por turno (2 en la base) |
 | Carisma | Negociación | +3% al vender (como mucho ×1,6, con el tope) y −2% al comprar en el mercado (como mucho 40% menos, y nunca por debajo de lo que te pagarían al venderlo). Con +12 deja negociar con mercaderes (ver 7.8) |
-| | Liderazgo | Provisional: +3% de moral de los soldados de la ciudad, que defienden mejor y bajan más el peligro |
+| | Liderazgo | Sube el pago de entrenar a la guardia (ver 7.8). La moral de los soldados quedó sin uso al quitar las invasiones |
 | | Presencia | Sube el pago de las audiencias y de cobrar impuestos, y con +5 deja cobrarlos (ver 7.8). Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −8% de acierto, −10% de daño y −5% de rapidez |
 
 Ninguna parte mejora más allá de +20 puntos (ver 8.1). Ningún multiplicador
@@ -851,7 +838,9 @@ del arma queda inútil, el combate siguiente empieza con la otra mano:
   enfermería.
 - Estrés o cansancio dentro del combate.
 - Escudos (el agarre ya mejora el bloqueo con el arma).
-- Cómo funciona Liderazgo (hoy, provisional: +3% de moral de los soldados).
+- **Batallas campales** (pedido, para más adelante): darían uso a los soldados,
+  la granja y la moral de Liderazgo, que quedaron sin uso al quitar las
+  invasiones.
 - Cómo se aprenden los hechizos (hoy el rey sabe los tres desde el principio).
 - Ambidiestros.
 - ¿Quién baja a la mazmorra: solo el rey, el rey con compañeros o héroes enviados?

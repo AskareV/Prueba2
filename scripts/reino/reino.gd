@@ -23,7 +23,6 @@ var _contenido: Control
 var _botones_pestana := {}
 var _etiqueta_semana: Label
 var _etiqueta_oro: Label
-var _etiqueta_peligro: Label
 var _barra_estres: Barra
 var _aviso: Label
 var _pestana := ""
@@ -96,8 +95,6 @@ func _crear_franja() -> void:
 	franja.add_child(_etiqueta_semana)
 	_etiqueta_oro = UIReino.etiqueta("", 22, Color("#ffd54f"))
 	franja.add_child(_etiqueta_oro)
-	_etiqueta_peligro = UIReino.etiqueta("", 20)
-	franja.add_child(_etiqueta_peligro)
 	franja.add_child(UIReino.etiqueta("Estrés", 20, Estilo.TEXTO))
 	_barra_estres = UIReino.barra_estres()
 	_barra_estres.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -116,8 +113,6 @@ func _actualizar_franja(inmediato := false) -> void:
 	var por_repartir := Juego.puntos_principales + Juego.total_puntos_sub() > 0
 	_botones_pestana["rey"].text = "Rey (+)" if por_repartir else String(NOMBRES_PESTANA["rey"])
 	_etiqueta_oro.text = "Oro: %d" % Juego.oro
-	_etiqueta_peligro.text = "Peligro %d%%" % roundi(Juego.peligro)
-	_etiqueta_peligro.add_theme_color_override("font_color", _color_peligro(Juego.peligro))
 	UIReino.actualizar_estres(_barra_estres, Juego.estres, inmediato)
 
 
@@ -669,10 +664,6 @@ func _crear_ciudad() -> void:
 	fila.position = Vector2(24, 4)
 	fila.add_theme_constant_override("separation", 26)
 	_contenido.add_child(fila)
-	var cambio := Juego.cambio_peligro_previsto()
-	fila.add_child(UIReino.etiqueta("Peligro %d%% (%s por semana)" % [roundi(Juego.peligro), _con_signo(cambio)], 20,
-		_color_peligro(Juego.peligro)))
-	fila.add_child(UIReino.etiqueta("Defensa %s" % _decimal(Juego.defensa_ciudad()), 20))
 	fila.add_child(UIReino.etiqueta("Soldados %d/%d" % [Juego.soldados, Juego.soldados_maximos()], 20))
 	fila.add_child(UIReino.etiqueta("Comida %d (%s por semana)" % [
 		Juego.comida, _con_signo(Juego.produccion_comida() - Juego.consumo_comida())], 20))
@@ -696,14 +687,6 @@ func _decimal(valor: float) -> String:
 ## Un multiplicador con hasta dos decimales ("1,25", "1,5", "1").
 func _multiplicador(valor: float) -> String:
 	return String.num(snappedf(valor, 0.01)).replace(".", ",")
-
-
-func _color_peligro(valor: float) -> Color:
-	if valor < 25.0:
-		return Color("#a5d6a7")
-	if valor < 50.0:
-		return Color("#ffe082")
-	return Color("#ef9a9a")
 
 
 ## Ventana de un edificio: a la izquierda qué es y su mejora; a la derecha lo
@@ -779,20 +762,11 @@ func _dibujar_edificio() -> void:
 
 func _detalle_castillo(columna: VBoxContainer) -> void:
 	columna.add_child(UIReino.etiqueta("Estado de la ciudad", 24, UIReino.COLOR_TITULO))
-	var cambio := Juego.cambio_peligro_previsto()
-	var texto_peligro := "Peligro: %d%%. Cambia %s por semana: al terminar esta semana será de %d%%, y esa es la probabilidad de un ataque." % [
-		roundi(Juego.peligro), _con_signo(cambio), roundi(Juego.peligro_previsto())]
+	var estado := "La ciudad se cuida sola: cada semana la granja produce comida y el mercado cobra impuestos."
 	var desertores := Juego.desertores_previstos()
 	if desertores > 0:
-		texto_peligro += " (Cuenta que, sin comida, se irán %d.)" % desertores
-	columna.add_child(UIReino.parrafo(texto_peligro, 540, 18, _color_peligro(Juego.peligro)))
-	var por_soldado: float = DatosCiudad.EQUIPO_SOLDADOS[Juego.nivel_edificio("herreria")] * Juego.moral()
-	columna.add_child(UIReino.parrafo("Defensa %s: %d %s × %s (equipo y moral) + %d de murallas. Cada punto de defensa baja %s el peligro por semana." % [
-		_decimal(Juego.defensa_ciudad()), Juego.soldados, "soldado" if Juego.soldados == 1 else "soldados", _multiplicador(por_soldado),
-		DatosCiudad.MURALLAS[Juego.nivel_edificio("castillo")], _decimal(DatosCiudad.PELIGRO_POR_DEFENSA)], 540, 17))
-	var fuerza := DatosCiudad.FUERZA_BASE + DatosCiudad.FUERZA_POR_SEMANA * Juego.semana
-	columna.add_child(UIReino.parrafo("Un ataque al terminar esta semana tendría unos %d a %d de fuerza. Si tu defensa es menor, saquean la ciudad: oro, comida, soldados y un edificio dañado." % [
-		roundi(fuerza * DatosCiudad.AZAR_ATAQUE.x), roundi(fuerza * DatosCiudad.AZAR_ATAQUE.y)], 540, 17))
+		estado += " Sin comida, al terminar esta semana se irán %d %s." % [desertores, "soldado" if desertores == 1 else "soldados"]
+	columna.add_child(UIReino.parrafo(estado, 540, 18))
 	if not Juego.informe_ciudad.is_empty():
 		columna.add_child(UIReino.etiqueta("Semana %d" % Juego.informe_ciudad["semana"], 20, UIReino.COLOR_TITULO))
 		columna.add_child(UIReino.parrafo(_resumen_semana(Juego.informe_ciudad), 540, 17))
@@ -842,14 +816,11 @@ func _detalle_enfermeria(columna: VBoxContainer, nivel: int) -> void:
 
 ## Todo lo que pasó en la ciudad esa semana, en un párrafo.
 func _resumen_semana(informe: Dictionary) -> String:
-	var texto := "Comida +%d −%d. Impuestos +%d de oro. Peligro de %d%% a %d%%." % [
-		informe["comida_producida"], informe["comida_consumida"], informe["impuestos"],
-		roundi(informe["peligro_antes"]), roundi(informe["peligro_final"])]
+	var texto := "Comida +%d −%d. Impuestos +%d de oro." % [
+		informe["comida_producida"], informe["comida_consumida"], informe["impuestos"]]
 	var grave := Juego.texto_informe(informe)
 	if grave != "":
 		texto += " " + grave
-	elif not informe.has("ataque"):
-		texto += " Sin ataques."
 	return texto
 
 
@@ -943,13 +914,10 @@ func _detalle_mercado(columna: VBoxContainer, nivel: int) -> void:
 func _detalle_barracas(columna: VBoxContainer, nivel: int) -> void:
 	columna.add_child(UIReino.etiqueta("Soldados", 24, UIReino.COLOR_TITULO))
 	if nivel <= 0:
-		columna.add_child(UIReino.parrafo("Reconstrúyelas para reclutar soldados que cuiden la ciudad.", 540, 18))
+		columna.add_child(UIReino.parrafo("Reconstrúyelas para reclutar soldados. Por ahora no tienen uso: ya no hay invasiones.", 540, 18))
 		return
-	var por_soldado: float = DatosCiudad.EQUIPO_SOLDADOS[Juego.nivel_edificio("herreria")] * Juego.moral()
-	columna.add_child(UIReino.parrafo("Tienes %d de %d soldados. Cada uno da %s de defensa (equipo de la herrería ×%s, moral ×%s por Liderazgo) y come %d de comida por semana." % [
-		Juego.soldados, Juego.soldados_maximos(), _multiplicador(por_soldado),
-		_multiplicador(DatosCiudad.EQUIPO_SOLDADOS[Juego.nivel_edificio("herreria")]), _multiplicador(Juego.moral()),
-		DatosCiudad.COMIDA_POR_SOLDADO], 540, 18))
+	columna.add_child(UIReino.parrafo("Tienes %d de %d soldados. Cada uno come %d de comida por semana. Por ahora no tienen uso: ya no hay invasiones." % [
+		Juego.soldados, Juego.soldados_maximos(), DatosCiudad.COMIDA_POR_SOLDADO], 540, 18))
 	var reclutar := UIReino.boton("Reclutar un soldado (%d de oro)" % DatosCiudad.COSTO_SOLDADO, _al_reclutar, Vector2(540, 64), 21)
 	reclutar.disabled = not Juego.puede_reclutar()
 	Estilo.con_franja(reclutar, DatosCiudad.edificio("barracas")["color"])
@@ -1044,7 +1012,6 @@ func _mostrar_noticias() -> void:
 	panel.add_child(columna)
 	columna.add_child(UIReino.etiqueta("Noticias de la semana %d" % informe["semana"], 26, UIReino.COLOR_TITULO))
 	columna.add_child(UIReino.parrafo(texto, 600, 19, Estilo.TEXTO))
-	columna.add_child(UIReino.parrafo("Peligro ahora: %d%%. Mira el castillo para ver cómo protegerla." % roundi(Juego.peligro), 600, 17))
 	var listo := UIReino.boton("Listo", _cerrar_lugar, Vector2(600, 60), 22)
 	columna.add_child(listo)
 	UIReino.bloquear_toques(self, 0.35)

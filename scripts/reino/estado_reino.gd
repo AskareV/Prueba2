@@ -54,12 +54,10 @@ var veces: Dictionary = {}
 var extra: Dictionary = {}
 
 ## Ciudad (ver DatosCiudad): nivel de cada edificio (0 = en ruinas), comida,
-## soldados, peligro (0 a 100), lo que vende el mercado esta semana y el informe
-## de la última semana.
+## soldados, lo que vende el mercado esta semana y el informe de la última semana.
 var edificios: Dictionary = {}
 var comida := 0
 var soldados := 0
-var peligro := 0.0
 var mercado: Array[Dictionary] = []
 var informe_ciudad: Dictionary = {}
 
@@ -138,7 +136,6 @@ func nueva_partida(p_diestro: bool) -> void:
 	edificios = DatosCiudad.NIVEL_INICIAL.duplicate()
 	comida = DatosCiudad.COMIDA_INICIAL
 	soldados = 0
-	peligro = 0.0
 	mercado = []
 	informe_ciudad = {}
 	vida_perdida = 0
@@ -166,7 +163,7 @@ func datos_guardado() -> Dictionary:
 		"semilla": semilla, "siguiente_id": _siguiente_id, "rng_semilla": rng.seed, "rng_estado": rng.state,
 		"nivel": nivel, "xp": xp, "puntos_principales": puntos_principales, "puntos_sub": puntos_sub,
 		"veces": veces, "extra": extra, "edificios": edificios, "comida": comida, "soldados": soldados,
-		"peligro": peligro, "mercado": mercado, "informe_ciudad": informe_ciudad,
+		"mercado": mercado, "informe_ciudad": informe_ciudad,
 		"vida_perdida": vida_perdida, "mana_perdido": mana_perdido, "integridad": integridad,
 		"fracturas": fracturas, "organos": organos, "heridas": heridas, "resto_vida": resto_vida,
 		"sangre_perdida": sangre_perdida, "sangrados": sangrados, "infecciones": infecciones,
@@ -183,7 +180,7 @@ const TIPOS_GUARDADO := {
 	"rng_semilla": TYPE_INT, "rng_estado": TYPE_INT, "nivel": TYPE_INT, "xp": TYPE_INT,
 	"puntos_principales": TYPE_INT, "puntos_sub": TYPE_DICTIONARY, "veces": TYPE_DICTIONARY,
 	"extra": TYPE_DICTIONARY, "edificios": TYPE_DICTIONARY, "comida": TYPE_INT, "soldados": TYPE_INT,
-	"peligro": TYPE_FLOAT, "mercado": TYPE_ARRAY, "informe_ciudad": TYPE_DICTIONARY,
+	"mercado": TYPE_ARRAY, "informe_ciudad": TYPE_DICTIONARY,
 	"vida_perdida": TYPE_INT, "mana_perdido": TYPE_FLOAT, "integridad": TYPE_DICTIONARY,
 	"fracturas": TYPE_DICTIONARY, "organos": TYPE_DICTIONARY, "heridas": TYPE_ARRAY, "resto_vida": TYPE_FLOAT,
 	"sangre_perdida": TYPE_FLOAT, "sangrados": TYPE_ARRAY, "infecciones": TYPE_ARRAY, "dias_semana": TYPE_INT,
@@ -259,7 +256,6 @@ func cargar(ruta := ARCHIVO) -> bool:
 	edificios = DatosCiudad.NIVEL_INICIAL.merged(datos.get("edificios", {}), true)
 	comida = int(datos.get("comida", comida))
 	soldados = int(datos.get("soldados", soldados))
-	peligro = float(datos.get("peligro", peligro))
 	mercado.assign(datos.get("mercado", mercado))
 	informe_ciudad = datos.get("informe_ciudad", informe_ciudad)
 	vida_perdida = int(datos.get("vida_perdida", 0))
@@ -1070,44 +1066,12 @@ func reclutar() -> bool:
 	return true
 
 
-## Moral de los soldados: Liderazgo la sube.
-func moral() -> float:
-	return DatosEstadisticas.aumento(puntos_de("liderazgo"), DatosEstadisticas.MORAL_POR_LIDERAZGO)
-
-
-## Defensa de la ciudad: los soldados (con el equipo de la herrería y su moral)
-## más las murallas del castillo.
-func defensa_ciudad() -> float:
-	var por_soldado: float = DatosCiudad.EQUIPO_SOLDADOS[nivel_edificio("herreria")] * moral()
-	return soldados * por_soldado + DatosCiudad.MURALLAS[nivel_edificio("castillo")]
-
-
-## Cuánto cambia el peligro en una semana con la defensa de ahora (negativo = baja).
-func cambio_peligro() -> float:
-	return DatosCiudad.PELIGRO_POR_SEMANA - DatosCiudad.PELIGRO_POR_DEFENSA * defensa_ciudad()
-
-
 ## Soldados que se irán al terminar esta semana por falta de comida.
 func desertores_previstos() -> int:
 	var resto := comida + produccion_comida() - consumo_comida()
 	if resto >= 0:
 		return 0
 	return mini(ceili(-resto / float(DatosCiudad.COMIDA_POR_SOLDADO)), soldados)
-
-
-## Cuánto cambiará el peligro al terminar esta semana: como cambio_peligro, pero
-## sin los soldados que se irán por falta de comida (semana_ciudad los quita antes).
-func cambio_peligro_previsto() -> float:
-	var antes := soldados
-	soldados -= desertores_previstos()
-	var cambio := cambio_peligro()
-	soldados = antes
-	return cambio
-
-
-## Peligro al terminar esta semana, que es también la probabilidad (%) de ataque.
-func peligro_previsto() -> float:
-	return clampf(peligro + cambio_peligro_previsto(), 0.0, 100.0)
 
 
 func produccion_comida() -> int:
@@ -1123,10 +1087,9 @@ func impuestos() -> int:
 
 
 ## La ciudad vive sola la semana que termina: la granja produce y los soldados
-## comen (sin comida, algunos se van), el mercado cobra impuestos y cambia lo que
-## vende, y el peligro sube o baja según la defensa. Con ese peligro (en %) hay
-## probabilidad de un ataque, que defienden los soldados y las murallas sin el
-## rey. Devuelve el informe y lo guarda en informe_ciudad.
+## comen (sin comida, algunos se van), y el mercado cobra impuestos y cambia lo
+## que vende. Ya no hay invasiones. Devuelve el informe y lo guarda en
+## informe_ciudad.
 func semana_ciudad() -> Dictionary:
 	var informe := {"semana": semana, "nuevo": true}
 	var producida := produccion_comida()
@@ -1143,86 +1106,18 @@ func semana_ciudad() -> Dictionary:
 	var cobrado := impuestos()
 	oro += cobrado
 	informe["impuestos"] = cobrado
-	var antes := peligro
-	peligro = clampf(peligro + cambio_peligro(), 0.0, 100.0)
-	informe["peligro_antes"] = antes
-	informe["peligro_despues"] = peligro
-	if rng.randf() * 100.0 < peligro:
-		informe["ataque"] = _ataque_ciudad()
-	informe["peligro_final"] = peligro
 	_renovar_mercado()
 	informe_ciudad = informe
 	return informe
 
 
-## Un ataque a la ciudad: fuerza del enemigo (crece con las semanas) contra la
-## defensa, las dos con algo de azar.
-func _ataque_ciudad() -> Dictionary:
-	var fuerza := (DatosCiudad.FUERZA_BASE + DatosCiudad.FUERZA_POR_SEMANA * semana) \
-		* rng.randf_range(DatosCiudad.AZAR_ATAQUE.x, DatosCiudad.AZAR_ATAQUE.y)
-	var defensa := defensa_ciudad() * rng.randf_range(DatosCiudad.AZAR_DEFENSA.x, DatosCiudad.AZAR_DEFENSA.y)
-	var ataque := {"fuerza": fuerza, "defensa": defensa, "ganado": defensa >= fuerza, "soldados": soldados}
-	var soldados_antes := soldados
-	if ataque["ganado"]:
-		soldados -= rng.randi_range(0, floori(soldados * DatosCiudad.BAJAS_VICTORIA))
-		ataque["bajas"] = soldados_antes - soldados
-		peligro = maxf(peligro - DatosCiudad.PELIGRO_VICTORIA, 0.0)
-		return ataque
-	var oro_perdido := roundi(oro * DatosCiudad.SAQUEO_ORO)
-	var comida_perdida := roundi(comida * DatosCiudad.SAQUEO_COMIDA)
-	oro -= oro_perdido
-	comida -= comida_perdida
-	soldados -= ceili(soldados * DatosCiudad.BAJAS_DERROTA)
-	# Un edificio en pie (no el castillo) queda dañado: baja un nivel.
-	var en_pie: Array[String] = []
-	for edificio_id in DatosCiudad.ORDEN:
-		if edificio_id != "castillo" and nivel_edificio(edificio_id) > 0:
-			en_pie.append(edificio_id)
-	var danado := ""
-	if not en_pie.is_empty():
-		danado = en_pie[rng.randi() % en_pie.size()]
-		edificios[danado] = nivel_edificio(danado) - 1
-		soldados = mini(soldados, soldados_maximos())
-	peligro = maxf(peligro - DatosCiudad.PELIGRO_DERROTA, 0.0)
-	# Las bajas incluyen a los que se van porque las barracas dañadas ya no tienen sitio.
-	ataque.merge({"oro": oro_perdido, "comida": comida_perdida, "bajas": soldados_antes - soldados, "danado": danado})
-	return ataque
-
-
 ## Una línea con lo importante de una semana de la ciudad ("" si no pasó nada
-## grave): ataques, soldados que se fueron por falta de comida y lo que pasó con
-## las infecciones del rey.
+## grave): soldados que se fueron por falta de comida y lo que pasó con las
+## infecciones del rey.
 func texto_informe(informe: Dictionary) -> String:
 	var partes: PackedStringArray = []
 	if informe.get("salud", "") != "":
 		partes.append(informe["salud"])
-	if informe.has("ataque"):
-		var ataque: Dictionary = informe["ataque"]
-		var bajas := int(ataque["bajas"])
-		if ataque["ganado"]:
-			if int(ataque["soldados"]) == 0:
-				partes.append("Atacaron la ciudad y las murallas la defendieron.")
-			elif bajas == 0:
-				partes.append("Atacaron la ciudad y los soldados la defendieron sin bajas.")
-			else:
-				partes.append("Atacaron la ciudad y los soldados la defendieron (%s)." % _cantidad(bajas, "baja", "bajas"))
-		else:
-			# Solo lo que de verdad se perdió.
-			var perdidas: PackedStringArray = []
-			if int(ataque["oro"]) > 0:
-				perdidas.append("−%d de oro" % ataque["oro"])
-			if int(ataque["comida"]) > 0:
-				perdidas.append("−%d de comida" % ataque["comida"])
-			if bajas > 0:
-				perdidas.append("−" + _cantidad(bajas, "soldado", "soldados"))
-			if ataque["danado"] != "":
-				perdidas.append("dañaron %s" % DatosCiudad.edificio(ataque["danado"])["articulo"])
-			var texto := "Atacaron la ciudad y la saquearon"
-			if not perdidas.is_empty():
-				var ultima := perdidas[perdidas.size() - 1]
-				perdidas.remove_at(perdidas.size() - 1)
-				texto += ": " + (", ".join(perdidas) + " y " + ultima if not perdidas.is_empty() else ultima)
-			partes.append(texto + ".")
 	var desertores := int(informe.get("desertores", 0))
 	if desertores > 0:
 		partes.append("Faltó comida: %s %s." % ["se fue" if desertores == 1 else "se fueron", _cantidad(desertores, "soldado", "soldados")])

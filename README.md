@@ -31,8 +31,7 @@ Arriba están las pestañas:
   venda, un torniquete o una medicina para usarla.
 - **Ciudad:** castillo, herrería, granja, mercado, barracas y enfermería, que se
   tocan para reconstruirlos y mejorarlos. La ciudad se cuida sola: produce
-  comida, cobra impuestos y sus soldados la defienden. Si está mal protegida
-  sube el **peligro** y pueden atacarla y saquearla. En el castillo se descansa
+  comida y cobra impuestos (ya no hay invasiones). En el castillo se descansa
   (y te curas; más con la enfermería, que además para el sangrado por dentro y
   cura las infecciones).
 - **Aventura:** mapa con 4 mazmorras (banderín oscuro) y 3 zonas de siete días
@@ -127,7 +126,7 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | Archivo | Qué hace |
 |---|---|
 | `estado_reino.gd` | La partida (global `Juego`): semana, oro, estrés, inventario, equipo, salud del rey y la ciudad; guarda y carga la partida |
-| `datos_ciudad.gd` | Edificios de la ciudad, sus costos y efectos, peligro y ataques |
+| `datos_ciudad.gd` | Edificios de la ciudad, sus costos y efectos |
 | `vista_ciudad.gd` | Dibujo de la ciudad con los edificios que se tocan |
 | `datos_botin.gd` | Calidades, armas, armaduras, pociones, vendas, torniquetes y medicinas de botín, precios de venta |
 | `datos_aventura.gd` | Mazmorras, zonas, sucesos de los siete días y la curación al caminar |

@@ -72,7 +72,7 @@ const SUBS := {
 	"negociacion": {"nombre": "Negociación",
 		"descripcion": "Vendes más caro (hasta ×1,6) y compras más barato en el mercado (hasta 40% menos)."},
 	"liderazgo": {"nombre": "Liderazgo",
-		"descripcion": "Moral de los soldados de la ciudad: defienden mejor y bajan más el peligro."},
+		"descripcion": "Más pago al entrenar a la guardia. La moral de los soldados no tiene uso por ahora: ya no hay invasiones."},
 	"presencia": {"nombre": "Presencia",
 		"descripcion": "Más pago en las audiencias y al cobrar impuestos. Si supera de lejos al enemigo, este queda atemorizado todo el combate."},
 }
@@ -121,7 +121,6 @@ const REGENERACION_POR_MAGO := 0.5
 ## nunca da ganancia.
 const VENTA_POR_NEGOCIACION := 0.03
 const COMPRA_POR_NEGOCIACION := 0.02
-const MORAL_POR_LIDERAZGO := 0.03
 ## Presencia que debe superar al "valor" del enemigo para atemorizarlo.
 const VENTAJA_PARA_ATEMORIZAR := 3.0
 ## Ningún multiplicador que reduce (estrés, estados) baja de esto.

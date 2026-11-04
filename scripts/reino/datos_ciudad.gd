@@ -1,10 +1,9 @@
 class_name DatosCiudad
 extends RefCounted
 ## Ciudad del reino (provisional): seis edificios fijos que se reconstruyen y
-## mejoran con oro, y el peligro de la ciudad. La ciudad se cuida sola: produce
-## su comida, cobra impuestos y sus soldados la defienden sin el rey. Si está
-## mal protegida, el peligro sube y pueden atacarla. Todos los números son
-## provisionales.
+## mejoran con oro. La ciudad se cuida sola: produce su comida y cobra impuestos.
+## Ya no hay invasiones: los soldados no tienen uso por ahora (más adelante,
+## quizá batallas campales). Todos los números son provisionales.
 
 const NIVEL_MAXIMO := 3
 const ORDEN := ["castillo", "herreria", "granja", "mercado", "barracas", "enfermeria"]
@@ -15,12 +14,12 @@ const ORDEN := ["castillo", "herreria", "granja", "mercado", "barracas", "enferm
 const EDIFICIOS := {
 	"castillo": {
 		"nombre": "Castillo", "articulo": "el castillo", "color": Color("#ffd54f"), "posicion": Vector2(0.5, 0.36),
-		"descripcion": "El centro de la ciudad. Sus murallas defienden, y ningún otro edificio puede tener más nivel que él. Aquí descansa el rey.",
+		"descripcion": "El centro de la ciudad: ningún otro edificio puede tener más nivel que él. Aquí descansa el rey.",
 		"costos": [0, 400, 1000],
 	},
 	"herreria": {
 		"nombre": "Herrería", "articulo": "la herrería", "color": Color("#ff8a65"), "posicion": Vector2(0.16, 0.42),
-		"descripcion": "Mejora la calidad de tus armas y armaduras, y equipa a los soldados: con más nivel defienden mejor.",
+		"descripcion": "Mejora la calidad de tus armas y armaduras.",
 		"costos": [150, 400, 900],
 	},
 	"granja": {
@@ -35,7 +34,7 @@ const EDIFICIOS := {
 	},
 	"barracas": {
 		"nombre": "Barracas", "articulo": "las barracas", "color": Color("#ef5350"), "posicion": Vector2(0.84, 0.4),
-		"descripcion": "Aquí se reclutan los soldados que cuidan la ciudad: bajan el peligro cada semana y la defienden si la atacan.",
+		"descripcion": "Aquí se reclutan soldados. Por ahora no tienen uso: ya no hay invasiones.",
 		"costos": [150, 400, 900],
 	},
 	"enfermeria": {
@@ -50,14 +49,10 @@ const NIVEL_INICIAL := {"castillo": 1, "herreria": 0, "granja": 0, "mercado": 0,
 
 # --- Efectos por nivel (índice = nivel 0 a 3) ---
 
-## Defensa de las murallas del castillo.
-const MURALLAS := [0, 4, 8, 12]
 ## Calidad máxima a la que la herrería sube un objeto.
 const CALIDAD_MAXIMA_HERRERIA := ["", "raro", "epico", "legendario"]
 ## Nombre de la calidad en femenino, para frases con "calidad" ("calidad rara").
 const CALIDAD_FEMENINA := {"normal": "normal", "raro": "rara", "epico": "épica", "legendario": "legendaria"}
-## Cuánto defiende cada soldado según el equipo que da la herrería.
-const EQUIPO_SOLDADOS := [1.0, 1.25, 1.5, 1.75]
 ## Comida que produce la granja por semana.
 const COMIDA_GRANJA := [0, 10, 18, 28]
 ## Oro de impuestos que cobra el mercado por semana.
@@ -81,29 +76,6 @@ const CURA_ENFERMERIA := [0.0, 0.2, 0.4, 0.6]
 const COSTO_SOLDADO := 40
 const COMIDA_POR_SOLDADO := 2
 const COMIDA_INICIAL := 20
-
-# --- Peligro y ataques ---
-
-## Lo que sube el peligro cada semana si la ciudad no tiene defensa.
-const PELIGRO_POR_SEMANA := 10.0
-## Cuánto peligro baja por semana cada punto de defensa.
-const PELIGRO_POR_DEFENSA := 0.8
-## Fuerza de un ataque: FUERZA_BASE + FUERZA_POR_SEMANA × semana, con azar.
-const FUERZA_BASE := 8.0
-const FUERZA_POR_SEMANA := 0.8
-const AZAR_ATAQUE := Vector2(0.8, 1.25)
-const AZAR_DEFENSA := Vector2(0.85, 1.15)
-## Al ganar: el peligro baja esto y muere hasta esta fracción de los soldados
-## (redondeado hacia abajo: con menos de 7 soldados no muere ninguno).
-const PELIGRO_VICTORIA := 30.0
-const BAJAS_VICTORIA := 0.15
-## Al perder: se llevan esta parte del oro y de la comida, mueren esta parte de
-## los soldados, un edificio baja un nivel (si son las barracas, se van los que
-## ya no caben) y el peligro baja un poco (se van).
-const SAQUEO_ORO := 0.2
-const SAQUEO_COMIDA := 0.5
-const BAJAS_DERROTA := 0.5
-const PELIGRO_DERROTA := 20.0
 
 ## Precio en el mercado: el precio de venta por esto, rebajado por Negociación.
 const MARGEN_MERCADO := 4.0
@@ -129,16 +101,15 @@ static func efecto(edificio_id: String, nivel: int) -> String:
 		return "En ruinas: no hace nada hasta que se reconstruya."
 	match edificio_id:
 		"castillo":
-			return "Murallas: +%d de defensa. Los demás edificios llegan hasta nivel %d." % [MURALLAS[nivel], nivel]
+			return "Los demás edificios llegan hasta nivel %d." % nivel
 		"herreria":
-			return "Mejora objetos hasta calidad %s. Soldados ×%s de defensa." % [
-				CALIDAD_FEMENINA[CALIDAD_MAXIMA_HERRERIA[nivel]], String.num(EQUIPO_SOLDADOS[nivel]).replace(".", ",")]
+			return "Mejora objetos hasta calidad %s." % CALIDAD_FEMENINA[CALIDAD_MAXIMA_HERRERIA[nivel]]
 		"granja":
 			return "Produce %d de comida por semana." % COMIDA_GRANJA[nivel]
 		"mercado":
 			return "Cobra %d de oro por semana y vende %d objetos de nivel %d." % [IMPUESTOS[nivel], OBJETOS_MERCADO[nivel], nivel]
 		"barracas":
-			return "Caben %d soldados." % SOLDADOS_MAXIMOS[nivel]
+			return "Caben %d soldados (por ahora sin uso)." % SOLDADOS_MAXIMOS[nivel]
 		"enfermeria":
 			var cura := roundi((CURA_DESCANSO + CURA_ENFERMERIA[nivel]) * 100.0)
 			return "Al descansar recuperas el %d%% de tu vida máxima y de tu sangre y %d de cada parte herida (sin ella, %d%% y %d), y te cura el sangrado por dentro y las infecciones." % [
