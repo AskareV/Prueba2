@@ -343,28 +343,32 @@ pueden hacerte retroceder un tercio de turno (orco y matón 10%, orco guerrero
 
 Victorias del rey (sin características) en 600 combates simulados por casilla
 y arma, promedio de las tres armas, según cómo elige a qué atacar. Medido de
-nuevo con las reglas actuales (sangrado, el acierto nuevo y el 50% mirado en
-la parte preferida de cada rival):
+nuevo con las reglas actuales (sangrado, el acierto nuevo, el 50% mirado en la
+parte preferida de cada rival y los órganos):
 
 | Cómo ataca el rey | Bandido | Lancero | Orco |
 |---|---|---|---|
-| Inutiliza el brazo del arma y luego va al cuerpo | 97% | 98% | 84% |
-| Inutiliza los dos brazos y luego va al cuerpo | 93% | 93% | 80% |
-| La parte del torso que más daña | 83% | 68% | 42% |
-| Como la IA de los rivales | 77% | 58% | 25% |
-| Primero las piernas | 60% | 46% | 22% |
-| Siempre al abdomen | 50% | 25% | 6% |
-| Siempre al cuello | 61% | 54% | 39% |
-| Siempre al cráneo | 26% | 23% | 17% |
-| Partes al azar | 19% | 11% | 5% |
+| Inutiliza el brazo del arma y luego va al cuerpo | 97% | 97% | 84% |
+| Inutiliza los dos brazos y luego va al cuerpo | 94% | 92% | 79% |
+| La parte del torso que más daña | 85% | 70% | 41% |
+| Como la IA de los rivales | 79% | 58% | 30% |
+| Primero las piernas | 59% | 44% | 23% |
+| Siempre al abdomen | 56% | 35% | 13% |
+| Siempre al cuello | 61% | 53% | 42% |
+| Siempre al cráneo | 35% | 30% | 24% |
+| Partes al azar | 20% | 14% | 6% |
 
 - Inutilizar primero el brazo del arma rinde mucho más que ir directo al
   abdomen, y contra cada rival atacar siempre la misma parte rinde menos que
   abrir la guardia. Con menos fallos, la mejor forma de pelear gana todavía más
   seguido.
+- Con los órganos, ir siempre al abdomen o al cráneo rinde más que antes (del
+  50% al 56% contra el bandido y del 6% al 13% contra el orco en el abdomen):
+  ahí están el hígado, el bazo, los intestinos y el cerebro. El resto casi no
+  cambia, porque los órganos les tocan a los dos.
 - Contra el bandido y el lancero se pierde sangre (sus cortes y estocadas); el
   orco casi no te hace sangrar, pero sus mazazos pegan fuerte. Entre el 0% y el
-  11% de los combates terminan con alguien desangrado, según cómo se ataque.
+  10% de los combates terminan con alguien desangrado, según cómo se ataque.
 - Dificultad de los rivales: bandido fácil, lancero medio, orco difícil.
 
 ## 7. Reino (versión preliminar)
@@ -789,42 +793,49 @@ de +20). Los puntos principales (los 15 del principio y uno por nivel) se repart
 en las mismas proporciones, y los de partes por igual entre sus 3 partes.
 "Parejo": 3 en Fuerza y 2 en cada una de las demás. "Guerrero": 5 en Fuerza,
 Destreza y Aguante. "Todo fuerza": los 15 en Fuerza. El rey pelea como la IA
-de los rivales, con espada y armadura de metal.
+de los rivales, con espada y armadura acolchada (no pesa y frena parejo los
+tres daños; antes de los tipos de armadura era "de metal").
 
-**Un combate, empezando sano** (150 combates por casilla; con sangrado y el
-acierto nuevo):
+**Un combate, empezando sano** (150 combates por casilla; con sangrado, el
+acierto nuevo y los órganos):
 
 | Rey | Reparto | Ladrón | Orco guerrero | Cultista | Caballero negro | Verdugo |
 |---|---|---|---|---|---|---|
-| Nivel 1, sin armadura | Sin puntos | 82% | 3% | 13% | 0% | 1% |
-| | Parejo | 100% | 75% | 85% | 1% | 39% |
-| | Guerrero | 100% | 100% | 100% | 27% | 96% |
-| | Todo fuerza | 100% | 63% | 89% | 3% | 33% |
-| Nivel 5, equipo nivel 2 raro | Sin puntos | 99% | 51% | 77% | 3% | 16% |
-| | Parejo | 100% | 100% | 100% | 86% | 100% |
-| Nivel 10, equipo nivel 3 raro | Sin puntos | 100% | 94% | 88% | 28% | 71% |
+| Nivel 1, sin armadura | Sin puntos | 79% | 2% | 17% | 0% | 0% |
+| | Parejo | 100% | 77% | 85% | 3% | 44% |
+| | Guerrero | 100% | 100% | 100% | 27% | 87% |
+| | Todo fuerza | 99% | 63% | 84% | 4% | 30% |
+| Nivel 5, equipo nivel 2 raro | Sin puntos | 100% | 57% | 81% | 3% | 27% |
+| | Parejo | 100% | 100% | 100% | 87% | 100% |
+| Nivel 10, equipo nivel 3 raro | Sin puntos | 100% | 95% | 95% | 33% | 81% |
 | | Parejo | 100% | 100% | 100% | 99% | 100% |
 
-- El caballero negro (espada, 19–24) quedó más difícil: sus cortes hacen sangrar
-  mucho. El verdugo (maza) casi no hace sangrar y quedó algo más fácil.
+- El caballero negro (espada, 19–24) es el más difícil: sus cortes hacen sangrar
+  mucho y su armadura de placas casi no deja llegar a sus órganos.
 
-**Una mazmorra entera**, con las heridas y lo que sangra de un combate al
-siguiente, 6 pasos de cura entre combates (sangrando también) y sin pociones ni
-vendas (300 intentos; % de veces que vence a todos). Si la mano del arma queda
-inútil, el combate siguiente empieza con la otra mano:
+**Una mazmorra entera**, con las heridas, los órganos dañados y lo que sangra de
+un combate al siguiente, 6 pasos de cura entre combates (sangrando también) y
+sin pociones ni vendas (300 intentos; % de veces que vence a todos). Si la mano
+del arma queda inútil, el combate siguiente empieza con la otra mano:
 
 | Rey | Reparto | Madriguera goblin | Guarida de bandidos | Fortaleza orca | Ciudadela maldita |
 |---|---|---|---|---|---|
-| Nivel 1, sin armadura | Sin puntos | 13% | 0% | 0% | 0% |
-| | Parejo | 100% | 3% | 0% | 0% |
-| | Guerrero | 100% | 43% | 0% | 0% |
-| Nivel 5, equipo nivel 2 raro | Parejo | 100% | 97% | 0% | 0% |
-| | Guerrero | 100% | 99% | 42% | 0% |
-| Nivel 10, equipo nivel 3 raro | Parejo | 100% | 100% | 73% | 0% |
-| | Guerrero | 100% | 100% | 96% | 55% |
+| Nivel 1, sin armadura | Sin puntos | 14% | 0% | 0% | 0% |
+| | Parejo | 100% | 2% | 0% | 0% |
+| | Guerrero | 100% | 45% | 0% | 0% |
+| Nivel 5, equipo nivel 2 raro | Parejo | 100% | 98% | 0% | 0% |
+| | Guerrero | 100% | 100% | 44% | 1% |
+| Nivel 10, equipo nivel 3 raro | Parejo | 100% | 100% | 80% | 0% |
+| | Guerrero | 100% | 100% | 94% | 66% |
 
+- **El tipo de armadura importa:** con malla en vez de acolchada (frena mal las
+  mazas y pesa: −8% de rapidez con las cuatro piezas), el rey guerrero de nivel
+  5 limpia la fortaleza orca el 15% de las veces (con acolchada, el 44%), y el
+  de nivel 10, la ciudadela el 44% (con acolchada, el 66%). En un combate, el
+  rey sin puntos de nivel 5 le gana al orco guerrero el 31% con malla y el 57%
+  con acolchada.
 - Con los 3 puntos por principal y el tope de +20, el rey "parejo" de nivel 1
-  le gana al verdugo el 39% (antes de esos cambios, el 97%).
+  le gana al verdugo el 44% (antes de esos cambios, el 97%).
 - Poner los 15 puntos en Fuerza rinde mucho menos que repartirlos entre Fuerza,
   Destreza y Aguante: con el tope, los puntos de más no sirven.
 - Las heridas que duran hacen que la dificultad real sea la mazmorra entera,
