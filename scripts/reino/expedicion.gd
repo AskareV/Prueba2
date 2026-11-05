@@ -138,13 +138,16 @@ func _al_pulsar_dia(indice: int) -> void:
 			get_tree().change_scene_to_file.call_deferred(ESCENA_COMBATE)
 			return
 		"oro":
-			var oro := Juego.rng.randi_range(5, 15) * nivel
-			Juego.oro += oro
+			var oro := Juego.suceso_oro(nivel)
 			_registrar("+%d de oro" % oro, "Encuentras una bolsa olvidada con %d de oro." % oro)
 		"objeto":
-			var objeto := Juego.agregar(DatosBotin.generar_botin(nivel, Juego.rng))
+			var objeto := Juego.suceso_objeto(nivel)
 			_registrar(String(objeto["nombre"]).get_slice(" ", 0) if DatosBotin.es_consumible(objeto) else String(objeto["nombre"]),
 				"Encuentras %s." % DatosBotin.texto_hallazgo(objeto))
+		"materiales":
+			var hallazgo := Juego.suceso_material(nivel)
+			_registrar("+%d %s" % [hallazgo["cantidad"], String(DatosCiudad.MATERIALES[hallazgo["material"]]["nombre"]).to_lower()],
+				String(DatosAventura.TEXTO_MATERIALES[hallazgo["material"]]) % DatosBotin.texto_material(hallazgo))
 		"descanso":
 			Juego.sumar_estres(-10.0)
 			_registrar("Descanso", "Acampas junto a un arroyo y descansas: −10 de estrés.")
@@ -215,11 +218,7 @@ func _procesar_combate() -> void:
 		"victoria":
 			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_VICTORIA))
 			var botin := Juego.recompensa_enemigo(combate["rival"], int(_datos["nivel"]))
-			var texto := "Venciste al %s: %d de oro" % [nombre, botin["oro"]]
-			var objeto: Dictionary = botin["objeto"]
-			if not objeto.is_empty():
-				texto += " y %s" % DatosBotin.texto_hallazgo(objeto)
-			_registrar("Victoria", "%s. %s." % [texto, Juego.texto_xp(botin)])
+			_registrar("Victoria", "Venciste al %s: %s. %s." % [nombre, Juego.texto_botin(botin), Juego.texto_xp(botin)])
 		"derrota":
 			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_DERROTA))
 			_registrar("Derrota", "El %s te venció." % nombre)

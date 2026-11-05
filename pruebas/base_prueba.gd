@@ -28,3 +28,10 @@ func rng_fijo(semilla := 1234) -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = semilla
 	return rng
+
+
+## Le da materiales de sobra a esa partida, para mejorar edificios sin salir de
+## aventura.
+func dar_materiales(juego: EstadoReino, cantidad := 100000) -> void:
+	for material_id in DatosCiudad.ORDEN_MATERIALES:
+		juego.materiales[material_id] = cantidad

@@ -394,6 +394,43 @@ func _recorrer_inventario() -> void:
 	reino.call("_al_vender")
 	await process_frame
 	_verificar(_juego.oro == oro + precio, "Vender suma el oro (con Negociación)")
+	_verificar(_hay_texto(reino, "Madera"), "La mochila muestra los materiales")
+	# Anillos: dos manos; con las dos ocupadas, se elige cuál cambiar.
+	var vida_maxima: int = _juego.vida_maxima_sana()
+	var anillos: Array[Dictionary] = []
+	for anillo_id in ["vida", "mana", "critico"]:
+		anillos.append(_juego.agregar(DatosBotin.crear_anillo(anillo_id, 1, "raro")))
+	await process_frame
+	for i in 2:
+		reino.call("_al_elegir_mochila", anillos[i]["id"])
+		await process_frame
+		reino.call("_al_equipar")
+		await process_frame
+	_verificar(_juego.ranura_equipada(anillos[0]["id"]) == "anillo_der" and _juego.ranura_equipada(anillos[1]["id"]) == "anillo_izq",
+		"Un anillo en cada mano")
+	_verificar(_juego.vida_maxima_sana() > vida_maxima, "El anillo de vida sube la vida máxima")
+	reino.call("_al_elegir_mochila", anillos[2]["id"])
+	await process_frame
+	var cambiar := _boton(reino, "Cambiar por: Maná")
+	_verificar(cambiar != null and _boton(reino, "Cambiar por: Vida") != null, "Con las dos manos ocupadas, elige cuál cambiar")
+	if cambiar != null:
+		cambiar.pressed.emit()
+		await process_frame
+	_verificar(_juego.ranura_equipada(anillos[2]["id"]) == "anillo_izq", "Cambia el de maná")
+	_verificar(_juego.ranura_equipada(anillos[1]["id"]) == "", "Y el de maná vuelve a la mochila")
+	_verificar(_boton(reino, "Crítico +6%") != null, "El equipo muestra el anillo nuevo")
+
+
+## true si algún texto en pantalla (etiqueta o botón) contiene ese texto.
+func _hay_texto(nodo: Node, texto: String) -> bool:
+	for hijo in nodo.get_children():
+		if hijo.is_queued_for_deletion():
+			continue
+		if (hijo is Label and (hijo as Label).text.contains(texto)) or (hijo is Button and (hijo as Button).text.contains(texto)):
+			return true
+		if _hay_texto(hijo, texto):
+			return true
+	return false
 
 
 ## Primer botón en pantalla cuyo texto empieza así, o null.
@@ -461,12 +498,27 @@ func _recorrer_ciudad() -> void:
 		_verificar(reino.get("_ventana_lugar") != null, "Se abre la ventana de %s" % edificio_id)
 		reino.call("_cerrar_lugar")
 		await process_frame
+	# Sin materiales no se reconstruye: la ventana dice qué falta.
+	_juego.materiales = {}
+	reino.call("_abrir_edificio", "granja")
+	await process_frame
+	reino.call("_al_mejorar_edificio")
+	await process_frame
+	_verificar(_juego.nivel_edificio("granja") == 0, "Sin materiales no se reconstruye")
+	_verificar(_hay_texto(reino, "Te faltan 5 de madera y 2 de piedra"), "Dice qué materiales faltan")
+	_verificar(_boton(reino, "Reconstruir") != null and _boton(reino, "Reconstruir").text.contains("5 madera"),
+		"El botón dice lo que cuesta")
+	reino.call("_cerrar_lugar")
+	await process_frame
+	_juego.materiales = {"madera": 200, "piedra": 200, "hierro": 200}
 	for edificio_id in ["barracas", "granja", "mercado", "herreria"]:
 		reino.call("_abrir_edificio", edificio_id)
 		await process_frame
+		var madera: int = _juego.material("madera")
 		reino.call("_al_mejorar_edificio")
 		await process_frame
 		_verificar(_juego.nivel_edificio(edificio_id) == 1, "Reconstruir %s desde su ventana" % edificio_id)
+		_verificar(_juego.material("madera") < madera, "Reconstruir %s gasta madera" % edificio_id)
 		_verificar(reino.get("_ventana_lugar") != null, "La ventana de %s sigue abierta" % edificio_id)
 		match edificio_id:
 			"barracas":
@@ -556,6 +608,7 @@ func _recorrer_salud() -> void:
 	_verificar(_juego.pociones() == pociones - 1 and _juego.vida_actual() > vida, "Tomar una poción en el inventario")
 	# La enfermería: se reconstruye y hace que descansar cure más.
 	_juego.oro = 5000
+	_juego.materiales = {"madera": 200, "piedra": 200, "hierro": 200}
 	reino.call("_mostrar_pestana", "ciudad")
 	await process_frame
 	reino.call("_abrir_edificio", "enfermeria")

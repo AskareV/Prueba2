@@ -106,6 +106,10 @@ var vida_max_sana := 0
 ## Etapa de su peor infección (ver DatosHeridas.ETAPAS); desde la grave tiene
 ## fiebre. Solo el rey las arrastra de un día a otro.
 var infeccion := 0
+## Lo que dan los anillos del rey (ver aplicar_anillos): probabilidad de crítico
+## extra y parte de la sangre que pierde por sus heridas (1 = toda).
+var critico_extra := 0.0
+var factor_sangrado := 1.0
 
 # Estadísticas para el resumen final.
 var danio_causado := 0
@@ -157,6 +161,18 @@ func aplicar_estadisticas(p_estadisticas: Dictionary) -> void:
 	rapidez = DatosEstadisticas.RAPIDEZ_BASE + DatosEstadisticas.RAPIDEZ_POR_VELOCIDAD * puntos("velocidad")
 
 
+## Suma lo que dan los anillos (ver DatosBotin.efectos_anillos): vida y maná
+## máximos, crítico y menos sangrado. Va después de aplicar_estadisticas.
+func aplicar_anillos(efectos: Dictionary) -> void:
+	vida_max_sana += int(efectos.get("vida", 0))
+	vida = vida_max_sana
+	ajustar_vida_max()
+	mana_max += float(efectos.get("mana", 0))
+	mana = mana_max
+	critico_extra = float(efectos.get("critico", 0.0))
+	factor_sangrado = float(efectos.get("sangrado", 1.0))
+
+
 ## Maná que recupera al empezar cada uno de sus turnos.
 func regeneracion_mana() -> float:
 	return DatosEstadisticas.REGENERACION_BASE + DatosEstadisticas.REGENERACION_POR_MAGO * puntos("mago")
@@ -177,9 +193,10 @@ func rapidez_efectiva() -> float:
 	return maxf(valor_rapidez, 1.0)
 
 
-## Probabilidad de golpe crítico: solo con puntos de Golpe de suerte sobre la base.
+## Probabilidad de golpe crítico: con puntos de Golpe de suerte sobre la base y
+## con anillos de críticos.
 func prob_critico() -> float:
-	return DatosEstadisticas.CRITICO_POR_SUERTE * puntos("golpe_suerte")
+	return DatosEstadisticas.CRITICO_POR_SUERTE * puntos("golpe_suerte") + critico_extra
 
 
 ## Multiplicador de una penalización de la mano torpe (ej. 0.85): el agarre la achica.
@@ -496,10 +513,10 @@ func sangra_por_fuera() -> bool:
 	return DatosHeridas.hay_sangrado(sangrados, "externo")
 
 
-## Pierde la sangre de sus heridas durante esos turnos (las leves paran solas).
-## Devuelve los litros perdidos.
+## Pierde la sangre de sus heridas durante esos turnos (las leves paran solas;
+## un anillo coagulante hace perder menos). Devuelve los litros perdidos.
 func sangrar(turnos := 1) -> float:
-	var perdida := DatosHeridas.avanzar_sangrados(sangrados, turnos)
+	var perdida := DatosHeridas.avanzar_sangrados(sangrados, turnos) * factor_sangrado
 	perder_sangre(perdida)
 	return perdida
 

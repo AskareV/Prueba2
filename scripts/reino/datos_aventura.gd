@@ -62,9 +62,10 @@ const ESTRES_POR_DIA := 5.0
 ## Sucesos de un día en una zona y su peso (probabilidad relativa).
 const SUCESOS := {
 	"combate": 30.0,
-	"nada": 25.0,
+	"nada": 15.0,
 	"oro": 20.0,
 	"objeto": 10.0,
+	"materiales": 10.0,
 	"descanso": 10.0,
 	"trampa": 5.0,
 }
@@ -83,7 +84,13 @@ const CURA_POR_PASO := 0.01
 const MANA_POR_PASO := 0.5
 const PASOS_POR_DIA := 4.0
 ## Sucesos buenos de las zonas: el Amuleto los hace más probables (y la trampa menos).
-const SUCESOS_BUENOS := ["oro", "objeto", "descanso"]
+const SUCESOS_BUENOS := ["oro", "objeto", "materiales", "descanso"]
+## Lo que cuenta el suceso de materiales, según lo que encontró.
+const TEXTO_MATERIALES := {
+	"madera": "Encuentras troncos ya cortados junto al camino: %s.",
+	"piedra": "Encuentras piedras talladas entre unas ruinas: %s.",
+	"hierro": "Encuentras armas viejas y oxidadas para fundir: %s.",
+}
 
 
 static func lugar(lugar_id: String) -> Dictionary:

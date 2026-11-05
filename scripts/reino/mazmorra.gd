@@ -247,8 +247,7 @@ func _revelar(celda: Vector2i) -> void:
 func _abrir_cofre(celda: Vector2i) -> void:
 	Juego.mazmorra["plano"]["cofres"].erase(celda)
 	var botin := Juego.abrir_cofre(int(_datos["nivel"]))
-	_mensaje("Abres un cofre: %d de oro y %s. %s." % [botin["oro"], DatosBotin.texto_hallazgo(botin["objeto"]),
-		Juego.texto_xp(botin)])
+	_mensaje("Abres un cofre: %s. %s." % [Juego.texto_botin(botin), Juego.texto_xp(botin)])
 
 
 ## Abre o cierra la lista de objetos para usar entre combates.
@@ -296,11 +295,7 @@ func _procesar_combate() -> void:
 			Juego.mazmorra["plano"]["enemigos"].erase(combate["celda"])
 			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_VICTORIA))
 			var botin := Juego.recompensa_enemigo(combate["rival"], int(_datos["nivel"]))
-			var texto := "Venciste al %s: %d de oro" % [nombre, botin["oro"]]
-			var objeto: Dictionary = botin["objeto"]
-			if not objeto.is_empty():
-				texto += " y %s" % DatosBotin.texto_hallazgo(objeto)
-			_mensaje("%s. %s." % [texto, Juego.texto_xp(botin)])
+			_mensaje("Venciste al %s: %s. %s." % [nombre, Juego.texto_botin(botin), Juego.texto_xp(botin)])
 			_comprobar_estres()
 		"derrota":
 			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_DERROTA))

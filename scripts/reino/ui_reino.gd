@@ -127,6 +127,8 @@ static func boton_objeto(objeto: Dictionary, al_pulsar: Callable, tamano: Vector
 		texto += "\n×%d · %s" % [int(objeto.get("cantidad", 1)), DatosBotin.CONSUMIBLES[objeto["ranura"]]["resumen"]]
 	elif objeto["ranura"] == "arma":
 		texto += "\nDaño %d–%d" % [objeto["danio_min"], objeto["danio_max"]]
+	elif DatosBotin.es_anillo(objeto):
+		texto += "\n" + DatosBotin.texto_anillo(objeto)
 	else:
 		# Las runas valen por la resistencia mágica; las demás, por la armadura.
 		if objeto["tipo"] == "runas":

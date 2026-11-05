@@ -12,6 +12,7 @@ func _juego_nuevo() -> EstadoReino:
 ## Ciudad con castillo 3, barracas 1 y 5 soldados.
 func _ciudad_segura(juego: EstadoReino) -> void:
 	juego.oro += 100000
+	dar_materiales(juego)
 	juego.mejorar_edificio("castillo")
 	juego.mejorar_edificio("castillo")
 	juego.mejorar_edificio("barracas")
@@ -32,9 +33,18 @@ func prueba_la_ciudad_empieza_en_ruinas() -> void:
 func prueba_reconstruir_y_mejorar_cuesta_oro_y_el_castillo_limita() -> void:
 	var juego := _juego_nuevo()
 	verificar(not juego.mejorar_edificio("granja"), "Sin oro no se reconstruye")
-	verificar_igual(juego.motivo_sin_mejora("granja"), "No te alcanza el oro.", "Dice por qué")
+	verificar_igual(juego.motivo_sin_mejora("granja"), "Te faltan 100 de oro, 5 de madera y 2 de piedra.", "Dice qué falta")
 	juego.oro = 1000
+	verificar(not juego.mejorar_edificio("granja"), "Sin materiales tampoco")
+	verificar_igual(juego.motivo_sin_mejora("granja"), "Te faltan 5 de madera y 2 de piedra.", "Dice qué materiales faltan")
+	juego.sumar_material("madera", 7)
+	juego.sumar_material("piedra", 1)
+	verificar_igual(juego.motivo_sin_mejora("granja"), "Te falta 1 de piedra.", "Solo lo que falta")
+	juego.sumar_material("piedra", 1)
 	verificar(juego.mejorar_edificio("granja"), "Reconstruir la granja")
+	verificar_igual(juego.material("madera"), 2, "Gasta la madera")
+	verificar_igual(juego.material("piedra"), 0, "Y la piedra")
+	dar_materiales(juego)
 	verificar_igual(juego.oro, 1000 - DatosCiudad.costo_mejora("granja", 0), "Cobra la reconstrucción")
 	verificar_igual(juego.nivel_edificio("granja"), 1, "La granja queda en nivel 1")
 	verificar(not juego.mejorar_edificio("granja"), "No pasa del nivel del castillo")
@@ -53,6 +63,7 @@ func prueba_reconstruir_y_mejorar_cuesta_oro_y_el_castillo_limita() -> void:
 func prueba_soldados_caben_en_las_barracas_y_cuestan_oro() -> void:
 	var juego := _juego_nuevo()
 	juego.oro = 1000
+	dar_materiales(juego)
 	verificar(not juego.reclutar(), "Sin barracas no hay soldados")
 	juego.mejorar_edificio("barracas")
 	var oro := juego.oro
@@ -146,13 +157,14 @@ func prueba_negociacion_baja_el_precio_pero_nunca_por_debajo_de_la_venta() -> vo
 func prueba_ni_el_mercado_ni_la_herreria_dan_oro_gratis() -> void:
 	var juego := _juego_nuevo()
 	juego.oro = 1000000
+	dar_materiales(juego)
 	for edificio_id in ["castillo", "castillo", "herreria", "herreria", "herreria", "mercado", "mercado", "mercado"]:
 		juego.mejorar_edificio(edificio_id)
 	for puntos in [0, 30, 120, 500]:
 		juego.extra["negociacion"] = puntos
 		for calidad in DatosBotin.CALIDADES:
 			for nivel in [1, 3]:
-				var objeto := DatosBotin.generar(nivel, juego.rng, "peto", calidad)
+				var objeto := DatosBotin.generar(nivel, juego.rng, "peto" if nivel == 1 else "anillo", calidad)
 				var gasto := juego.precio_compra(objeto)
 				var mejorado := objeto
 				while juego.calidad_siguiente(mejorado) != "":
@@ -169,6 +181,7 @@ func prueba_la_herreria_sube_la_calidad_hasta_su_nivel() -> void:
 	verificar_igual(juego.calidad_siguiente(arma), "", "En ruinas no mejora")
 	verificar(not juego.mejorar_en_herreria("arma"), "No se puede")
 	juego.oro = 100000
+	dar_materiales(juego)
 	juego.mejorar_edificio("herreria")
 	var costo := juego.costo_herreria(arma)
 	verificar_igual(costo, roundi(DatosBotin.precio_venta({"calidad": "raro", "nivel": 1}) * DatosCiudad.COSTO_HERRERIA), "Cuesta según la calidad nueva")
@@ -206,6 +219,7 @@ func prueba_pasar_la_semana_hace_vivir_la_ciudad() -> void:
 func prueba_ya_no_atacan_la_ciudad() -> void:
 	var juego := _juego_nuevo()
 	juego.oro = 1000
+	dar_materiales(juego)
 	juego.mejorar_edificio("granja")
 	juego.mejorar_edificio("mercado")
 	var niveles := juego.edificios.duplicate()

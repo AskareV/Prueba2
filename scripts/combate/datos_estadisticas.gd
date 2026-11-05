@@ -63,14 +63,14 @@ const SUBS := {
 	"firmeza": {"nombre": "Firmeza", "descripcion": "Mucha resistencia al aturdimiento, al desmayo y a los empujones."},
 	"golpe_suerte": {"nombre": "Golpe de suerte", "descripcion": "Probabilidad de golpe crítico (más daño)."},
 	"buen_ojo": {"nombre": "Buen ojo",
-		"descripcion": "Mejor calidad y más oro en cofres y enemigos, y los enemigos sueltan objetos más seguido."},
+		"descripcion": "Mejor calidad y más oro y materiales en cofres, enemigos y zonas, y los enemigos sueltan objetos más seguido."},
 	"amuleto": {"nombre": "Amuleto",
 		"descripcion": "Cada punto suma 0,075 a todas las demás partes. Más días buenos y menos trampas en las zonas."},
 	"arcano": {"nombre": "Arcano", "descripcion": "Más daño mágico (bastón y hechizos) y curas más fuertes."},
 	"estudio": {"nombre": "Estudio", "descripcion": "Más experiencia ganada."},
 	"mago": {"nombre": "Mago", "descripcion": "Más maná máximo y más maná recuperado por turno."},
 	"negociacion": {"nombre": "Negociación",
-		"descripcion": "Vendes más caro (hasta ×1,6) y compras más barato en el mercado (hasta 40% menos)."},
+		"descripcion": "Vendes más caro (hasta ×1,6) y pagas menos oro (hasta 40%) en el mercado, los edificios, los soldados y la herrería."},
 	"liderazgo": {"nombre": "Liderazgo",
 		"descripcion": "Más pago al entrenar a la guardia. La moral de los soldados no tiene uso por ahora: ya no hay invasiones."},
 	"presencia": {"nombre": "Presencia",
@@ -106,6 +106,7 @@ const DESMAYO_POR_FIRMEZA := 0.06
 const CRITICO_POR_SUERTE := 0.015
 const CALIDAD_POR_BUEN_OJO := 0.05
 const ORO_POR_BUEN_OJO := 0.05
+const MATERIALES_POR_BUEN_OJO := 0.05
 const OBJETOS_POR_BUEN_OJO := 0.05
 const SUCESOS_POR_AMULETO := 0.05
 const MAGIA_POR_ARCANO := 0.03
@@ -115,10 +116,12 @@ const MANA_BASE := 20
 const MANA_POR_MAGO := 5
 const REGENERACION_BASE := 2.0
 const REGENERACION_POR_MAGO := 0.5
-## Con el tope de puntos, vender llega como mucho a ×1,6 y comprar baja como mucho
-## a ×0,6: lo más barato que vende el mercado (×2,4 del precio de venta) sigue
-## por encima, así que comprar y revender, o mejorar en la herrería y vender,
-## nunca da ganancia.
+## Con el tope de puntos, vender llega como mucho a ×1,6 y pagar baja como mucho
+## a ×0,6 (en el mercado, los edificios, los soldados y la herrería): lo más
+## barato que vende el mercado (×2,4 del precio de venta) y lo más barato que
+## cobra la herrería (×1,8 del precio de venta del objeto ya mejorado) siguen por
+## encima, así que comprar y revender, o mejorar en la herrería y vender, nunca
+## da ganancia.
 const VENTA_POR_NEGOCIACION := 0.03
 const COMPRA_POR_NEGOCIACION := 0.02
 ## Presencia que debe superar al "valor" del enemigo para atemorizarlo.

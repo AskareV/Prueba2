@@ -99,6 +99,7 @@ func prueba_descansar_cura_y_la_enfermeria_cura_mas() -> void:
 	# Con la enfermería al máximo, descansar cura todo.
 	var con_enfermeria := _juego_nuevo()
 	con_enfermeria.oro = 100000
+	dar_materiales(con_enfermeria)
 	for edificio_id in ["castillo", "castillo", "enfermeria", "enfermeria", "enfermeria"]:
 		verificar(con_enfermeria.mejorar_edificio(edificio_id), "Mejora %s" % edificio_id)
 	verificar_cerca(con_enfermeria.cura_al_descansar(), DatosCiudad.CURA_DESCANSO + DatosCiudad.CURA_ENFERMERIA[3],
@@ -121,8 +122,10 @@ func prueba_la_enfermeria_empieza_en_ruinas() -> void:
 	var juego := _juego_nuevo()
 	verificar(DatosCiudad.ORDEN.has("enfermeria"), "La enfermería es un edificio de la ciudad")
 	verificar_igual(juego.nivel_edificio("enfermeria"), 0, "Empieza en ruinas")
-	verificar_igual(juego.motivo_sin_mejora("enfermeria"), "No te alcanza el oro.", "Se reconstruye con oro")
+	verificar_igual(juego.motivo_sin_mejora("enfermeria"), "Te faltan 120 de oro, 3 de madera y 3 de piedra.",
+		"Se reconstruye con oro y materiales")
 	juego.oro = 1000
+	dar_materiales(juego)
 	verificar(juego.mejorar_edificio("enfermeria"), "Se reconstruye")
 	verificar_igual(juego.motivo_sin_mejora("enfermeria"), "Primero mejora el castillo.", "No supera al castillo")
 	verificar(DatosCiudad.efecto("enfermeria", 1).contains("%"), "Dice cuánto cura")
@@ -183,6 +186,7 @@ func prueba_las_pociones_salen_en_el_botin_y_en_el_mercado() -> void:
 		verificar(salieron > esperado * 0.7 and salieron < esperado * 1.3, "%s: unos %d de 2000 (salieron %d)" % [tipo, roundi(esperado), salieron])
 	var juego := _juego_nuevo()
 	juego.oro = 100000
+	dar_materiales(juego)
 	juego.mejorar_edificio("mercado")
 	var indice := -1
 	for i in juego.mercado.size():
@@ -207,7 +211,9 @@ func prueba_las_pociones_salen_en_el_botin_y_en_el_mercado() -> void:
 func prueba_la_partida_se_guarda_y_se_carga() -> void:
 	var juego := _juego_nuevo()
 	juego.oro = 1000
+	dar_materiales(juego)
 	juego.mejorar_edificio("castillo")
+	juego.materiales = {"madera": 7, "hierro": 2}
 	juego.oro = 1234
 	juego.semana = 7
 	juego.estres = 33.5
@@ -231,6 +237,7 @@ func prueba_la_partida_se_guarda_y_se_carga() -> void:
 	verificar_igual(cargado.inventario.size(), juego.inventario.size(), "El inventario")
 	verificar_cerca(cargado.valor_sub("fuerza_maxima"), juego.valor_sub("fuerza_maxima"), "Las características")
 	verificar_igual(cargado.nivel_edificio("castillo"), 2, "La ciudad")
+	verificar_igual(cargado.materiales, {"madera": 7, "hierro": 2}, "Los materiales")
 	verificar_igual(cargado.vida_perdida, juego.vida_perdida, "Las heridas")
 	verificar(cargado.fracturas.has("muslo_der"), "Las fracturas")
 	verificar_igual(cargado.mazmorra["pos"], Vector2i(3, 2), "La mazmorra en curso")

@@ -28,9 +28,14 @@ Arriba están las pestañas:
   Ninguna parte mejora más allá de +20.
 - **Inventario:** el botín. Tocas un objeto para equiparlo o venderlo (calidad
   normal, rara, épica o legendaria; vale más cuanto mejor es), o una poción, una
-  venda, un torniquete o una medicina para usarla.
+  venda, un torniquete o una medicina para usarla. El rey lleva **dos anillos**,
+  uno en cada mano: cada uno da algo que no dan las características (más vida
+  o maná, más crítico, menos sangrado o menos estrés). Arriba se ven los
+  **materiales** (madera, piedra y hierro), que se guardan aparte.
 - **Ciudad:** castillo, herrería, granja, mercado, barracas y enfermería, que se
-  tocan para reconstruirlos y mejorarlos. La ciudad se cuida sola: produce
+  tocan para reconstruirlos y mejorarlos con oro y **materiales** (salen en
+  cofres, enemigos y zonas). Negociación rebaja el oro de los edificios, los
+  soldados, la herrería y el mercado. La ciudad se cuida sola: produce
   comida y cobra impuestos (ya no hay invasiones). En el castillo se descansa
   (y te curas; más con la enfermería, que además para el sangrado por dentro y
   cura las infecciones).
@@ -126,9 +131,9 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | Archivo | Qué hace |
 |---|---|
 | `estado_reino.gd` | La partida (global `Juego`): semana, oro, estrés, inventario, equipo, salud del rey y la ciudad; guarda y carga la partida |
-| `datos_ciudad.gd` | Edificios de la ciudad, sus costos y efectos |
+| `datos_ciudad.gd` | Edificios de la ciudad, sus costos (oro y materiales) y efectos |
 | `vista_ciudad.gd` | Dibujo de la ciudad con los edificios que se tocan |
-| `datos_botin.gd` | Calidades, armas, armaduras, pociones, vendas, torniquetes y medicinas de botín, precios de venta |
+| `datos_botin.gd` | Calidades, armas, armaduras, anillos, pociones, vendas, torniquetes y medicinas de botín, materiales que se encuentran, precios de venta |
 | `datos_aventura.gd` | Mazmorras, zonas, sucesos de los siete días y la curación al caminar |
 | `generador_mazmorra.gd` | Crea el plano de cada mazmorra según la semana y la partida |
 | `datos_trabajos.gd` | Trabajos del rey |

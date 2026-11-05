@@ -32,7 +32,7 @@ func prueba_botin_generado_es_valido() -> void:
 	for nivel in range(1, 5):
 		for i in 200:
 			var objeto := DatosBotin.generar(nivel, rng)
-			verificar(DatosBotin.RANURAS.has(objeto["ranura"]), "Ranura válida")
+			verificar(DatosBotin.RANURAS.has(objeto["ranura"]) or DatosBotin.es_anillo(objeto), "Ranura válida")
 			verificar(DatosBotin.CALIDADES.has(objeto["calidad"]), "Calidad válida")
 			verificar(String(objeto["nombre"]) != "", "Tiene nombre")
 			verificar(int(objeto["precio"]) > 0, "Tiene precio")
@@ -40,6 +40,9 @@ func prueba_botin_generado_es_valido() -> void:
 				verificar(DatosBotin.ARMAS_BOTIN.has(objeto["base"]), "Base de arma válida")
 				verificar(objeto["danio_min"] <= objeto["danio_max"], "Daño mínimo <= máximo")
 				verificar(objeto["precision"] < 1.0, "Precisión menor que 100%")
+			elif DatosBotin.es_anillo(objeto):
+				verificar(DatosBotin.ANILLOS.has(objeto["anillo"]), "Anillo válido")
+				verificar(float(objeto["efecto"]) > 0.0, "El anillo hace algo")
 			else:
 				verificar(objeto["armadura"] >= 0 and objeto["resistencia_magica"] >= 0, "Armadura positiva")
 				verificar(objeto["armadura"] + objeto["resistencia_magica"] > 0, "La pieza protege algo")

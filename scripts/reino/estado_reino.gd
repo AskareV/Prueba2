@@ -53,9 +53,11 @@ var puntos_sub: Dictionary = {}
 var veces: Dictionary = {}
 var extra: Dictionary = {}
 
-## Ciudad (ver DatosCiudad): nivel de cada edificio (0 = en ruinas), comida,
-## soldados, lo que vende el mercado esta semana y el informe de la última semana.
+## Ciudad (ver DatosCiudad): nivel de cada edificio (0 = en ruinas), materiales
+## guardados ({material: cantidad}), comida, soldados, lo que vende el mercado
+## esta semana y el informe de la última semana.
 var edificios: Dictionary = {}
+var materiales: Dictionary = {}
 var comida := 0
 var soldados := 0
 var mercado: Array[Dictionary] = []
@@ -134,6 +136,7 @@ func nueva_partida(p_diestro: bool) -> void:
 	veces = {}
 	extra = {}
 	edificios = DatosCiudad.NIVEL_INICIAL.duplicate()
+	materiales = {}
 	comida = DatosCiudad.COMIDA_INICIAL
 	soldados = 0
 	mercado = []
@@ -162,7 +165,8 @@ func datos_guardado() -> Dictionary:
 		"expedicion": expedicion, "combate": combate, "aviso": aviso, "pestana": pestana,
 		"semilla": semilla, "siguiente_id": _siguiente_id, "rng_semilla": rng.seed, "rng_estado": rng.state,
 		"nivel": nivel, "xp": xp, "puntos_principales": puntos_principales, "puntos_sub": puntos_sub,
-		"veces": veces, "extra": extra, "edificios": edificios, "comida": comida, "soldados": soldados,
+		"veces": veces, "extra": extra, "edificios": edificios, "materiales": materiales, "comida": comida,
+		"soldados": soldados,
 		"mercado": mercado, "informe_ciudad": informe_ciudad,
 		"vida_perdida": vida_perdida, "mana_perdido": mana_perdido, "integridad": integridad,
 		"fracturas": fracturas, "organos": organos, "heridas": heridas, "resto_vida": resto_vida,
@@ -179,7 +183,8 @@ const TIPOS_GUARDADO := {
 	"aviso": TYPE_STRING, "pestana": TYPE_STRING, "semilla": TYPE_INT, "siguiente_id": TYPE_INT,
 	"rng_semilla": TYPE_INT, "rng_estado": TYPE_INT, "nivel": TYPE_INT, "xp": TYPE_INT,
 	"puntos_principales": TYPE_INT, "puntos_sub": TYPE_DICTIONARY, "veces": TYPE_DICTIONARY,
-	"extra": TYPE_DICTIONARY, "edificios": TYPE_DICTIONARY, "comida": TYPE_INT, "soldados": TYPE_INT,
+	"extra": TYPE_DICTIONARY, "edificios": TYPE_DICTIONARY, "materiales": TYPE_DICTIONARY, "comida": TYPE_INT,
+	"soldados": TYPE_INT,
 	"mercado": TYPE_ARRAY, "informe_ciudad": TYPE_DICTIONARY,
 	"vida_perdida": TYPE_INT, "mana_perdido": TYPE_FLOAT, "integridad": TYPE_DICTIONARY,
 	"fracturas": TYPE_DICTIONARY, "organos": TYPE_DICTIONARY, "heridas": TYPE_ARRAY, "resto_vida": TYPE_FLOAT,
@@ -254,6 +259,7 @@ func cargar(ruta := ARCHIVO) -> bool:
 	veces = datos.get("veces", veces)
 	extra = datos.get("extra", extra)
 	edificios = DatosCiudad.NIVEL_INICIAL.merged(datos.get("edificios", {}), true)
+	materiales = datos.get("materiales", {})
 	comida = int(datos.get("comida", comida))
 	soldados = int(datos.get("soldados", soldados))
 	mercado.assign(datos.get("mercado", mercado))
@@ -364,18 +370,45 @@ func vender(id: int) -> int:
 	return precio
 
 
-## Equipa un objeto del inventario; lo que había en esa ranura vuelve al inventario.
-func equipar(id: int) -> bool:
+## Equipa un objeto del inventario; lo que había en esa ranura vuelve al
+## inventario. Un anillo va en "ranura" (una de las dos manos) o, sin decirla, en
+## la primera mano libre (con las dos ocupadas, cambia el de la derecha).
+func equipar(id: int, ranura := "") -> bool:
 	var i := _indice(id)
 	if i < 0 or DatosBotin.es_consumible(inventario[i]):
 		return false
 	var objeto: Dictionary = inventario[i]
+	var posibles := DatosBotin.ranuras_de(objeto)
+	if ranura == "":
+		ranura = posibles[0]
+		for candidata in posibles:
+			if not equipo.has(candidata):
+				ranura = candidata
+				break
+	elif not posibles.has(ranura):
+		return false
 	inventario.remove_at(i)
-	var ranura: String = objeto["ranura"]
 	if equipo.has(ranura):
 		inventario.push_front(equipo[ranura])
 	equipo[ranura] = objeto
 	return true
+
+
+## Ranura del equipo donde está puesto el objeto con ese id ("" si no está puesto).
+func ranura_equipada(id: int) -> String:
+	for ranura in equipo:
+		if int(equipo[ranura].get("id", -1)) == id:
+			return ranura
+	return ""
+
+
+## Lo que dan los anillos puestos (ver DatosBotin.efectos_anillos).
+func efectos_anillos() -> Dictionary:
+	var anillos := []
+	for ranura in DatosBotin.RANURAS_ANILLO:
+		if equipo.has(ranura):
+			anillos.append(equipo[ranura])
+	return DatosBotin.efectos_anillos(anillos)
 
 
 ## Guarda en el inventario lo que hay en esa ranura. El arma no se puede quitar
@@ -412,11 +445,12 @@ func carga() -> float:
 	return total
 
 
-## El rey listo para combatir, con su arma, su armadura, sus características y
-## las heridas que todavía tiene (siempre con al menos 1 de vida).
+## El rey listo para combatir, con su arma, su armadura, sus anillos, sus
+## características y las heridas que todavía tiene (siempre con al menos 1 de vida).
 func crear_rey() -> Luchador:
 	var arma: Dictionary = equipo.get("arma", {})
 	var rey := DatosRivales.crear_rey(diestro, arma.get("base", "espada"), estadisticas())
+	rey.aplicar_anillos(efectos_anillos())
 	rey.arma_objeto = arma
 	rey.armadura = armadura_por_zona()
 	rey.carga = carga()
@@ -500,9 +534,10 @@ func _infectar(parte_id: String) -> void:
 		infeccion["etapa"] = maxi(int(infeccion["etapa"]), 1)
 
 
-## Vida máxima con toda la sangre.
+## Vida máxima con toda la sangre (Vitalidad y los anillos de vida la suben).
 func vida_maxima_sana() -> int:
-	return DatosEstadisticas.VIDA_BASE + DatosEstadisticas.vida_extra(puntos_de("vitalidad"))
+	return DatosEstadisticas.VIDA_BASE + DatosEstadisticas.vida_extra(puntos_de("vitalidad")) \
+		+ int(efectos_anillos()["vida"])
 
 
 ## Vida máxima ahora: la sangre perdida la baja en la misma proporción.
@@ -661,10 +696,10 @@ func partes_curadas(fraccion: float) -> float:
 ## Al caminar el rey se va curando: cada paso de la mazmorra (y cada día de una
 ## zona, que cuenta como varios pasos) cura un poco la vida, todas las partes a
 ## la vez, el maná y la sangre. Antes pierde la sangre de las heridas que siguen
-## sangrando (las leves paran solas). Devuelve true si se desangró por el camino:
-## entonces muere (ver morir).
+## sangrando (las leves paran solas; un anillo coagulante hace perder menos).
+## Devuelve true si se desangró por el camino: entonces muere (ver morir).
 func curar_al_caminar(pasos := 1.0) -> bool:
-	if perder_sangre(DatosHeridas.avanzar_sangrados(sangrados, roundi(pasos))):
+	if perder_sangre(DatosHeridas.avanzar_sangrados(sangrados, roundi(pasos)) * float(efectos_anillos()["sangrado"])):
 		morir()
 		return true
 	recuperar_sangre(DatosHeridas.SANGRE_MAX * DatosHeridas.SANGRE_POR_PASO * pasos * multiplicador_curacion())
@@ -904,6 +939,17 @@ func ganar_xp(cantidad: int) -> Dictionary:
 	return {"xp": ganada, "niveles": niveles}
 
 
+## Lo que trajo un cofre o un enemigo, para los mensajes: "12 de oro, 3 de
+## madera y una venda".
+func texto_botin(botin: Dictionary) -> String:
+	var textos: PackedStringArray = ["%d de oro" % botin["oro"]]
+	if not botin.get("material", {}).is_empty():
+		textos.append(DatosBotin.texto_material(botin["material"]))
+	if not botin.get("objeto", {}).is_empty():
+		textos.append(DatosBotin.texto_hallazgo(botin["objeto"]))
+	return DatosCiudad.enumerar(textos)
+
+
 ## Texto corto de la experiencia ganada para los mensajes ("+20 de experiencia").
 func texto_xp(resultado_xp: Dictionary) -> String:
 	var texto := "+%d de experiencia" % resultado_xp["xp"]
@@ -915,15 +961,16 @@ func texto_xp(resultado_xp: Dictionary) -> String:
 # --- Efectos de las características fuera del combate ---
 
 ## Estrés de caminar: un paso en la mazmorra o un día de marcha en una zona
-## (Cardio lo baja; la fiebre de una infección grave lo sube).
+## (Cardio y los anillos de calma lo bajan; la fiebre de una infección grave lo sube).
 func estres_de_paso(base: float) -> float:
 	return base * DatosEstadisticas.reduccion(puntos_de("cardio"), DatosEstadisticas.PASO_POR_CARDIO) \
-		* DatosHeridas.ESTRES_FIEBRE[peor_infeccion()]
+		* DatosHeridas.ESTRES_FIEBRE[peor_infeccion()] * float(efectos_anillos()["estres"])
 
 
-## Estrés de combates, trampas y trabajos (Compostura lo baja).
+## Estrés de combates, trampas y trabajos (Compostura y los anillos de calma lo bajan).
 func estres_mental(base: float) -> float:
-	return base * DatosEstadisticas.reduccion(puntos_de("compostura"), DatosEstadisticas.ESTRES_POR_COMPOSTURA)
+	return base * DatosEstadisticas.reduccion(puntos_de("compostura"), DatosEstadisticas.ESTRES_POR_COMPOSTURA) \
+		* float(efectos_anillos()["estres"])
 
 
 ## Oro de cofres y enemigos (Buen ojo lo sube).
@@ -940,6 +987,17 @@ func prob_botin_enemigo() -> float:
 ## Multiplicador de las calidades raras o mejores del botín (Buen ojo).
 func bonus_calidad() -> float:
 	return DatosEstadisticas.aumento(puntos_de("buen_ojo"), DatosEstadisticas.CALIDAD_POR_BUEN_OJO)
+
+
+## Multiplicador de los materiales encontrados (Buen ojo, como el oro).
+func multiplicador_materiales() -> float:
+	return DatosEstadisticas.aumento(puntos_de("buen_ojo"), DatosEstadisticas.MATERIALES_POR_BUEN_OJO)
+
+
+## Lo que se paga con la rebaja de Negociación (×1 a ×0,6): en el mercado, los
+## edificios, los soldados y la herrería.
+func rebaja_negociacion() -> float:
+	return DatosEstadisticas.reduccion(puntos_de("negociacion"), DatosEstadisticas.COMPRA_POR_NEGOCIACION)
 
 
 ## Lo que pagan por un objeto (Negociación lo sube).
@@ -963,34 +1021,86 @@ func pago_trabajo(oficio_id: String) -> int:
 # --- Botín ---
 
 ## Recompensa por vencer a un enemigo en un lugar de ese nivel: oro, experiencia
-## y, a veces, un objeto (ya guardado). El objeto es del nivel del lugar, y el
-## oro del enemigo se ajusta a ese nivel (un matón, de nivel 2, da más en un
-## lugar de nivel 3). Buen ojo mejora el oro, la calidad y lo seguido que sueltan
-## objetos. Devuelve {"oro", "objeto" (o vacío), "xp", "niveles"}.
+## y, a veces, materiales y un objeto (ya guardados). El objeto y los materiales
+## son del nivel del lugar, y el oro del enemigo se ajusta a ese nivel (un matón,
+## de nivel 2, da más en un lugar de nivel 3). Buen ojo mejora el oro, los
+## materiales, la calidad y lo seguido que sueltan objetos. Devuelve {"oro",
+## "material" ({"material", "cantidad"} o vacío), "objeto" (o vacío), "xp", "niveles"}.
 func recompensa_enemigo(enemigo_id: String, nivel_lugar: int) -> Dictionary:
 	var datos := DatosRivales.rival(enemigo_id)
 	var rango: Array = datos.get("oro", [3, 8])
 	var escala := float(nivel_lugar) / float(datos.get("nivel", 1))
 	var ganado := oro_hallado(roundi(rng.randi_range(rango[0], rango[1]) * escala))
 	oro += ganado
+	var material := {}
+	if rng.randf() < DatosBotin.PROB_MATERIAL_ENEMIGO:
+		material = hallar_material(nivel_lugar, DatosBotin.MATERIAL_ENEMIGO)
 	var objeto := {}
 	if rng.randf() < prob_botin_enemigo():
 		objeto = agregar(DatosBotin.generar_botin(nivel_lugar, rng, bonus_calidad()))
 	var resultado := ganar_xp(DatosAventura.XP_POR_VICTORIA * nivel_lugar)
 	resultado["oro"] = ganado
+	resultado["material"] = material
 	resultado["objeto"] = objeto
 	return resultado
 
 
-## Un cofre siempre trae un objeto (a veces una poción), algo de oro y un poco
-## de experiencia.
+## Un cofre siempre trae un objeto (a veces una poción), algo de oro, materiales
+## y un poco de experiencia.
 func abrir_cofre(nivel_lugar: int) -> Dictionary:
 	var ganado := oro_hallado(rng.randi_range(5, 15) * nivel_lugar)
 	oro += ganado
 	var resultado := ganar_xp(DatosAventura.XP_POR_COFRE * nivel_lugar)
 	resultado["oro"] = ganado
+	resultado["material"] = hallar_material(nivel_lugar, DatosBotin.MATERIAL_COFRE)
 	resultado["objeto"] = agregar(DatosBotin.generar_botin(nivel_lugar, rng, bonus_calidad()))
 	return resultado
+
+
+## Encuentra materiales de un lugar de ese nivel ("cantidad": ver
+## DatosBotin.sortear_material), con Buen ojo, y los guarda. Devuelve
+## {"material", "cantidad"}.
+func hallar_material(nivel_lugar: int, cantidad: Array) -> Dictionary:
+	var hallazgo := DatosBotin.sortear_material(nivel_lugar, rng, cantidad, multiplicador_materiales())
+	sumar_material(hallazgo["material"], hallazgo["cantidad"])
+	return hallazgo
+
+
+func material(material_id: String) -> int:
+	return int(materiales.get(material_id, 0))
+
+
+func sumar_material(material_id: String, cantidad: int) -> void:
+	materiales[material_id] = maxi(material(material_id) + cantidad, 0)
+
+
+## "Lo que falta" de esos materiales: {material: cantidad} (vacío si alcanza).
+func materiales_faltantes(pedidos: Dictionary) -> Dictionary:
+	var faltan := {}
+	for material_id in pedidos:
+		var falta := int(pedidos[material_id]) - material(material_id)
+		if falta > 0:
+			faltan[material_id] = falta
+	return faltan
+
+
+# --- Sucesos de las zonas (ver expedicion.gd) ---
+
+## Bolsa de oro de un suceso de una zona de ese nivel (Buen ojo la sube). Lo guarda.
+func suceso_oro(nivel_lugar: int) -> int:
+	var ganado := oro_hallado(rng.randi_range(5, 15) * nivel_lugar)
+	oro += ganado
+	return ganado
+
+
+## Objeto de un suceso de una zona (Buen ojo mejora la calidad). Lo guarda.
+func suceso_objeto(nivel_lugar: int) -> Dictionary:
+	return agregar(DatosBotin.generar_botin(nivel_lugar, rng, bonus_calidad()))
+
+
+## Materiales de un suceso de una zona (Buen ojo da más). Los guarda.
+func suceso_material(nivel_lugar: int) -> Dictionary:
+	return hallar_material(nivel_lugar, DatosBotin.MATERIAL_ZONA)
 
 
 # --- Trabajo ---
@@ -1025,24 +1135,49 @@ func nivel_edificio(edificio_id: String) -> int:
 	return int(edificios.get(edificio_id, 0))
 
 
-## Por qué no se puede mejorar ese edificio ahora ("" si se puede).
+## Oro para reconstruir o subir un nivel ese edificio, con la rebaja de
+## Negociación (-1 si ya está al máximo).
+func costo_edificio(edificio_id: String) -> int:
+	var costo := DatosCiudad.costo_mejora(edificio_id, nivel_edificio(edificio_id))
+	if costo < 0:
+		return -1
+	return roundi(costo * rebaja_negociacion())
+
+
+## Materiales que pide la próxima mejora de ese edificio (Negociación no los rebaja).
+func materiales_edificio(edificio_id: String) -> Dictionary:
+	return DatosCiudad.materiales_mejora(edificio_id, nivel_edificio(edificio_id))
+
+
+## Por qué no se puede mejorar ese edificio ahora ("" si se puede): "Te faltan
+## 50 de oro y 3 de madera."
 func motivo_sin_mejora(edificio_id: String) -> String:
 	var nivel_actual := nivel_edificio(edificio_id)
 	if nivel_actual >= DatosCiudad.NIVEL_MAXIMO:
 		return "Ya está al nivel máximo."
 	if edificio_id != "castillo" and nivel_actual >= nivel_edificio("castillo"):
 		return "Primero mejora el castillo."
-	if oro < DatosCiudad.costo_mejora(edificio_id, nivel_actual):
-		return "No te alcanza el oro."
-	return ""
+	var textos: PackedStringArray = []
+	if oro < costo_edificio(edificio_id):
+		textos.append("%d de oro" % (costo_edificio(edificio_id) - oro))
+	textos.append_array(DatosCiudad.textos_materiales(materiales_faltantes(materiales_edificio(edificio_id))))
+	if textos.is_empty():
+		return ""
+	# "Te falta 1 de piedra", pero "Te faltan 2 de piedra".
+	var verbo := "falta" if textos.size() == 1 and textos[0].begins_with("1 de ") else "faltan"
+	return "Te %s %s." % [verbo, DatosCiudad.enumerar(textos)]
 
 
-## Reconstruye (desde las ruinas) o sube un nivel un edificio, pagando el oro.
+## Reconstruye (desde las ruinas) o sube un nivel un edificio, pagando el oro
+## (con la rebaja de Negociación) y los materiales.
 func mejorar_edificio(edificio_id: String) -> bool:
 	if not DatosCiudad.EDIFICIOS.has(edificio_id) or motivo_sin_mejora(edificio_id) != "":
 		return false
 	var nivel_actual := nivel_edificio(edificio_id)
-	oro -= DatosCiudad.costo_mejora(edificio_id, nivel_actual)
+	oro -= costo_edificio(edificio_id)
+	var pedidos := materiales_edificio(edificio_id)
+	for material_id in pedidos:
+		sumar_material(material_id, -int(pedidos[material_id]))
 	edificios[edificio_id] = nivel_actual + 1
 	# Con más nivel el mercado vende más y mejores objetos desde ya.
 	if edificio_id == "mercado":
@@ -1054,14 +1189,19 @@ func soldados_maximos() -> int:
 	return DatosCiudad.SOLDADOS_MAXIMOS[nivel_edificio("barracas")]
 
 
+## Oro por soldado, con la rebaja de Negociación.
+func costo_soldado() -> int:
+	return roundi(DatosCiudad.COSTO_SOLDADO * rebaja_negociacion())
+
+
 func puede_reclutar() -> bool:
-	return soldados < soldados_maximos() and oro >= DatosCiudad.COSTO_SOLDADO
+	return soldados < soldados_maximos() and oro >= costo_soldado()
 
 
 func reclutar() -> bool:
 	if not puede_reclutar():
 		return false
-	oro -= DatosCiudad.COSTO_SOLDADO
+	oro -= costo_soldado()
 	soldados += 1
 	return true
 
@@ -1145,8 +1285,7 @@ func _renovar_mercado() -> void:
 ## Lo que cuesta comprar un objeto en el mercado (Negociación lo baja; por
 ## seguridad, nunca queda por debajo de lo que te pagarían al venderlo).
 func precio_compra(objeto: Dictionary) -> int:
-	var rebaja := DatosEstadisticas.reduccion(puntos_de("negociacion"), DatosEstadisticas.COMPRA_POR_NEGOCIACION)
-	return maxi(roundi(int(objeto["precio"]) * DatosCiudad.MARGEN_MERCADO * rebaja), precio_venta(objeto) + 1)
+	return maxi(roundi(int(objeto["precio"]) * DatosCiudad.MARGEN_MERCADO * rebaja_negociacion()), precio_venta(objeto) + 1)
 
 
 ## Compra el objeto "indice" del mercado (de una pila, uno) y lo guarda en el
@@ -1179,11 +1318,15 @@ func calidad_siguiente(objeto: Dictionary) -> String:
 
 
 ## Oro que cuesta mejorar ese objeto en la herrería (-1 si no se puede).
+## Negociación lo baja, pero por seguridad nunca queda por debajo de lo que te
+## pagarían por el objeto ya mejorado: mejorar y vender nunca da ganancia.
 func costo_herreria(objeto: Dictionary) -> int:
 	var siguiente := calidad_siguiente(objeto)
 	if siguiente == "":
 		return -1
-	return roundi(DatosBotin.precio_venta({"calidad": siguiente, "nivel": objeto["nivel"]}) * DatosCiudad.COSTO_HERRERIA)
+	var base := DatosBotin.precio_venta({"calidad": siguiente, "nivel": objeto["nivel"]})
+	return maxi(roundi(base * DatosCiudad.COSTO_HERRERIA * rebaja_negociacion()),
+		precio_venta(DatosBotin.con_calidad(objeto, siguiente)) + 1)
 
 
 ## Sube una calidad el objeto equipado en esa ranura.

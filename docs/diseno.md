@@ -382,8 +382,8 @@ combate* (la demo anterior). La pantalla del reino tiene pestañas arriba:
 | Pestaña | Contenido |
 |---|---|
 | **Rey** | Nivel, experiencia y las 7 características del rey (ver sección 8); los puntos se reparten con +, Confirmar y Deshacer. |
-| **Inventario** | Equipo puesto, mochila con el botín, las pociones, las vendas, los torniquetes y las medicinas; equipar, usarlos y vender. |
-| **Ciudad** | Seis edificios fijos que se reconstruyen y mejoran (ver 7.11). En el castillo se descansa. |
+| **Inventario** | Equipo puesto (arma, cuatro piezas de armadura y dos anillos), mochila con el botín, las pociones, las vendas, los torniquetes y las medicinas, y los materiales de la ciudad; equipar, usarlos y vender. |
+| **Ciudad** | Seis edificios fijos que se reconstruyen y mejoran con oro y materiales (ver 7.11). En el castillo se descansa. |
 | **Aventura** | Mapa con 4 mazmorras y 3 zonas. |
 | **Trabajo** | Trabajos dignos de un rey. |
 | **Salir** | Vuelve al menú principal (la partida sigue en *Continuar*). |
@@ -431,8 +431,8 @@ Como en *My Pet Protector*, adaptado al celular:
   la sangre, lo que sangra y las infecciones.
 - Si el rey se **desangra** por el camino, es como perder: lo traen al castillo
   (ver 7.12).
-- **Espadas cruzadas** = enemigo: empieza un combate. **Cofre** = oro y un
-  objeto. **H** = salida: al volver a pisarla se sale de la mazmorra.
+- **Espadas cruzadas** = enemigo: empieza un combate. **Cofre** = oro,
+  materiales y un objeto. **H** = salida: al volver a pisarla se sale de la mazmorra.
 - Ganar un combate: +3 de estrés. Perder: +50 y el rey vuelve al castillo.
   Huir: vuelve a la casilla anterior y el enemigo sigue ahí.
 - Con 70 de estrés el rey vuelve a casa en ese mismo paso, aunque vaya hacia
@@ -451,11 +451,15 @@ rey vuelve a casa.
 | Suceso | Probabilidad | Efecto |
 |---|---|---|
 | Combate | 30% | Un enemigo de la zona |
-| Nada | 25% | Día tranquilo |
-| Oro | 20% | 5 a 15 de oro × nivel de la zona |
-| Objeto | 10% | Un objeto de botín (a veces una poción, una venda, un torniquete o una medicina) |
+| Nada | 15% | Día tranquilo |
+| Oro | 20% | 5 a 15 de oro × nivel de la zona (Buen ojo da más) |
+| Objeto | 10% | Un objeto de botín, a veces una poción, una venda, un torniquete o una medicina (Buen ojo mejora la calidad) |
+| Materiales | 10% | 3 a 6 × nivel de la zona de madera, piedra o hierro (ver 7.5; Buen ojo da más) |
 | Descanso | 10% | −10 de estrés |
 | Trampa | 5% | +10 de estrés |
+
+Los materiales se agregaron quitándole 10 puntos a "Nada" (antes 25%): el resto
+de los sucesos sale igual que antes.
 
 *Volver a casa* termina la salida (y la semana) en cualquier momento; el botón
 "atrás" del celular no la termina mientras sigue en curso, para no perder la
@@ -466,15 +470,16 @@ Abajo a la izquierda, *Objetos*.
 
 ### 7.5 Botín y calidades
 
-- Enemigo vencido: oro y **40%** de soltar un objeto (Buen ojo lo sube). Cofre:
-  siempre un objeto y 5 a 15 de oro × nivel. El objeto es siempre del nivel del
-  lugar donde se encontró (de ahí salen su calidad y su material), y el oro de un
-  enemigo se ajusta a ese nivel (un matón, de nivel 2, da la mitad más en un
-  lugar de nivel 3).
+- Enemigo vencido: oro, **50%** de soltar materiales y **40%** de soltar un
+  objeto (Buen ojo lo sube). Cofre: siempre un objeto, materiales y 5 a 15 de
+  oro × nivel. El objeto es siempre del nivel del lugar donde se encontró (de ahí
+  salen su calidad y su material), y el oro de un enemigo se ajusta a ese nivel
+  (un matón, de nivel 2, da la mitad más en un lugar de nivel 3).
 - Un 35% del botín es un objeto para curarse (ver 7.12): **poción de curación**
-  20%, **venda** 8%, **torniquete** 3,5% y **medicina** 3,5%. El resto: 35%
-  **arma** (espada, maza, lanza o bastón) y 65% **armadura** (casco, peto,
-  brazales o grebas), de un tipo que depende del nivel del lugar (ver 7.6).
+  20%, **venda** 8%, **torniquete** 3,5% y **medicina** 3,5%. Del resto, un 15%
+  es un **anillo** (ver abajo); lo demás, 35% **arma** (espada, maza, lanza o
+  bastón) y 65% **armadura** (casco, peto, brazales o grebas), de un tipo que
+  depende del nivel del lugar (ver 7.6).
 - El material depende del nivel del lugar: bronce, hierro, acero, obsidiana.
   Cada nivel hace el arma un 25% más fuerte y la armadura más resistente.
 
@@ -486,6 +491,36 @@ Probabilidad de cada calidad según la dificultad del lugar:
 | Raro | 20% | 26% | 30% | 35% | ×1,15 | ×1,3 | +2% |
 | Épico | 4,5% | 8% | 12% | 19% | ×1,35 | ×1,7 | +4% |
 | Legendario | 0,5% | 1% | 3% | 6% | ×1,6 | ×2,2 | +6% |
+
+**Anillos.** El rey lleva **dos**, uno en cada mano (dos ranuras nuevas del
+equipo). Cada anillo da algo que **no dan las características**, más cuanto
+mejor es su calidad; el nivel del lugar solo cambia lo que pagan por él. Al
+equipar uno va a la mano libre; con las dos ocupadas, se elige cuál cambiar. La
+herrería también los mejora. Provisionales:
+
+| Anillo | Qué hace | Normal | Raro | Épico | Legendario |
+|---|---|---|---|---|---|
+| Anillo de vida | Vida máxima (se suma a la de Vitalidad) | +10 | +20 | +35 | +50 |
+| Anillo de maná | Maná máximo (se suma al de Mago) | +10 | +20 | +35 | +50 |
+| Anillo de críticos | Probabilidad de crítico (se suma a la de Golpe de suerte) | +3% | +6% | +10% | +15% |
+| Anillo coagulante | Sangre que pierdes por tus heridas, en combate y al caminar | −10% | −20% | −30% | −50% |
+| Anillo de calma | Todo el estrés: al caminar, en combates, trampas y trabajos | −5% | −10% | −15% | −25% |
+
+Dos anillos iguales se juntan: los de vida, maná y críticos se suman; con dos de
+sangrado o de calma, el segundo quita su parte de lo que deja el primero (dos
+legendarios de calma: −44%, no −50%).
+
+**Materiales: madera, piedra y hierro.** Sirven para reconstruir y mejorar los
+edificios (ver 7.11); se guardan aparte (no ocupan la mochila) y no se venden.
+Salen en cofres (siempre, 1 a 3 × nivel del lugar), enemigos vencidos (50%, 1 a
+2 × nivel) y el suceso de materiales de las zonas (3 a 6 × nivel). Buen ojo
+suma un 5% por punto, como al oro. En los lugares difíciles sale más hierro:
+
+| Material | Fácil | Fácil / medio | Medio | Difícil |
+|---|---|---|---|---|
+| Madera | 50% | 40% | 35% | 30% |
+| Piedra | 35% | 35% | 35% | 30% |
+| Hierro | 15% | 25% | 30% | 40% |
 
 ### 7.6 Armadura y resistencia mágica (como en League of Legends)
 
@@ -540,7 +575,8 @@ Probabilidad de cada calidad según la dificultad del lugar:
 
 En el Inventario se toca un objeto de la mochila y luego *Vender por N de oro*;
 hay que tocar otra vez para confirmar. Lo equipado no se vende (primero se
-quita o se cambia).
+quita o se cambia). Los anillos valen como las armas y las armaduras de su
+calidad y nivel; los materiales no se venden.
 
 | Calidad | Fácil | Fácil / medio | Medio | Difícil |
 |---|---|---|---|---|
@@ -595,7 +631,14 @@ características).
 ### 7.11 Ciudad
 
 La ciudad es **autosuficiente**: produce su comida y cobra impuestos sin el
-rey. El rey solo invierte oro. Todos los números son **provisionales**.
+rey. El rey invierte oro y **materiales** (madera, piedra y hierro, que solo se
+consiguen saliendo de aventura: ver 7.5), así que reconstruir la ciudad depende
+de las aventuras. Todos los números son **provisionales**.
+
+**Negociación** rebaja el oro (no los materiales) de los edificios, los soldados
+y la herrería como en el mercado: −2% por punto, hasta 40% menos con +20. En la
+herrería, como en el mercado, nunca baja de lo que te pagarían por el objeto
+(ya mejorado), así que mejorar y vender nunca da ganancia.
 
 **Ya no hay invasiones** (decidido): el peligro y los ataques se quitaron porque
 eran arbitrarios y no se explicaban. Los soldados, las barracas, la granja (que
@@ -604,17 +647,35 @@ se quieren **batallas campales** (ver 9).
 
 **Edificios fijos (seis).** Se tocan para abrir su ventana. La partida empieza
 con el castillo en pie y los demás **en ruinas** (nivel 0): hay que
-reconstruirlos con oro y después se mejoran hasta nivel 3. Ningún edificio puede
-tener más nivel que el castillo.
+reconstruirlos con oro y materiales y después se mejoran hasta nivel 3. Ningún
+edificio puede tener más nivel que el castillo. Si falta algo, la ventana dice
+qué ("Te faltan 50 de oro y 3 de hierro").
 
 | Edificio | Oro para nivel 1 / 2 / 3 | Qué hace (nivel 1 / 2 / 3) |
 |---|---|---|
 | Castillo | (empieza en 1) / 400 / 1000 | Ningún otro edificio puede tener más nivel que él. Aquí descansa el rey (y se cura) y se ve el estado de la ciudad. |
-| Herrería | 150 / 400 / 900 | Sube una calidad tu arma o armadura puesta, hasta rara / épica / legendaria (cuesta 3 veces el precio de venta base del objeto con la calidad nueva). |
+| Herrería | 150 / 400 / 900 | Sube una calidad tu arma, armadura o anillo puesto, hasta rara / épica / legendaria (cuesta 3 veces el precio de venta base del objeto con la calidad nueva, menos la rebaja de Negociación). |
 | Granja | 100 / 300 / 700 | 10 / 18 / 28 de comida por semana. |
 | Mercado | 120 / 350 / 800 | 15 / 30 / 50 de oro de impuestos por semana; vende 3 / 4 / 5 objetos de nivel 1 / 2 / 3 que cambian cada semana, y pilas de pociones (2 / 3 / 4), vendas (3 / 4 / 5), torniquetes (1 / 2 / 2) y medicinas (1 / 2 / 3), que se compran de a una. Precio: 4 veces el de venta base; Negociación lo baja hasta un 40% menos, y nunca por debajo de lo que te pagarían al venderlo. |
-| Barracas | 150 / 400 / 900 | Caben 5 / 10 / 15 soldados (40 de oro cada uno). Cada soldado come 2 de comida por semana. Por ahora no tienen uso. |
+| Barracas | 150 / 400 / 900 | Caben 5 / 10 / 15 soldados (40 de oro cada uno, menos la rebaja de Negociación). Cada soldado come 2 de comida por semana. Por ahora no tienen uso. |
 | Enfermería | 120 / 300 / 700 | Al descansar en el castillo recuperas el 60% / 80% / 100% de tu vida máxima y de tu sangre y 60 / 80 / 100 puntos de cada parte herida (sin ella, 40% y 40), y te para el sangrado por dentro y te cura las infecciones. |
+
+Materiales que pide cada nivel (madera / piedra / hierro), además del oro.
+Los lugares fáciles dan poco hierro, y los primeros niveles piden poco:
+
+| Edificio | Nivel 1 | Nivel 2 | Nivel 3 |
+|---|---|---|---|
+| Castillo | (empieza en 1) | 5 / 10 / 5 | 10 / 25 / 15 |
+| Herrería | 2 / 4 / 4 | 5 / 8 / 8 | 10 / 15 / 20 |
+| Granja | 5 / 2 / 0 | 10 / 5 / 0 | 20 / 10 / 5 |
+| Mercado | 4 / 3 / 0 | 8 / 8 / 2 | 15 / 15 / 10 |
+| Barracas | 3 / 3 / 2 | 8 / 6 / 6 | 15 / 15 / 15 |
+| Enfermería | 3 / 3 / 0 | 6 / 6 / 3 | 15 / 12 / 8 |
+
+Toda la ciudad a nivel 3 pide 144 de madera, 150 de piedra y 103 de hierro.
+Una mazmorra entera (todos los enemigos y cofres, sin Buen ojo) da en promedio
+unos 10 materiales la fácil, 20 la fácil / media, 30 la media y 50 la difícil;
+una zona de siete días, unos 5 / 9 / 14 (fácil / fácil-medio / medio).
 
 **La semana de la ciudad** (al pasar la semana):
 1. La granja produce y los soldados comen. Sin comida suficiente, se van
@@ -718,19 +779,19 @@ mínimo para entrar (ver 7.8).
 | Destreza | Precisión | +0,75% de acierto en todas las partes |
 | | Reflejos | −1% de acierto del rival en todas tus partes |
 | | Velocidad | +0,2 de rapidez en la barra de turnos (la base del rey es 13) y +2% de huir |
-| Aguante | Vitalidad | +5 de vida máxima (100 en la base) |
+| Aguante | Vitalidad | +5 de vida máxima (100 en la base; los anillos de vida suman aparte) |
 | | Cardio | −4% de estrés por cada paso en la mazmorra y cada día de marcha en una zona |
 | | Recuperación | +5% de toda la curación: al caminar y al descansar, también de la sangre (ver 7.12) |
 | Resiliencia | Compostura | −4% de estrés por combates (ganar o perder), trampas y trabajos |
 | | Resistencia | +3% de armadura y resistencia mágica del equipo; −3% de cualquier estado en contra (aturdir, desarmar, empujón) |
 | | Firmeza | −6% de quedar aturdido, −8% de ser empujado y aguanta más antes de desmayarse |
-| Suerte | Golpe de suerte | +1,5% de golpe crítico (×1,5 de daño, no cambia el acierto) |
-| | Buen ojo | +5% de probabilidad de calidades raras o mejores y +5% de oro, en cofres y enemigos; +5% de que un enemigo suelte un objeto |
-| | Amuleto | +0,075 a todas las demás partes; +5% de días buenos (oro, objeto, descanso) y −5% de trampas en las zonas |
+| Suerte | Golpe de suerte | +1,5% de golpe crítico (×1,5 de daño, no cambia el acierto; los anillos de críticos suman aparte) |
+| | Buen ojo | +5% de probabilidad de calidades raras o mejores y +5% de oro y de materiales, en cofres, enemigos y los sucesos de las zonas; +5% de que un enemigo suelte un objeto |
+| | Amuleto | +0,075 a todas las demás partes; +5% de días buenos (oro, objeto, materiales, descanso) y −5% de trampas en las zonas |
 | Inteligencia | Arcano | +3% de daño mágico (bastón y hechizos) y +1 de vida por cada Curación |
 | | Estudio | +5% de experiencia. Con +8 deja presidir el tribunal (ver 7.8) |
-| | Mago | +5 de maná máximo (20 en la base) y +0,5 de maná por turno (2 en la base) |
-| Carisma | Negociación | +3% al vender (como mucho ×1,6, con el tope) y −2% al comprar en el mercado (como mucho 40% menos, y nunca por debajo de lo que te pagarían al venderlo). Con +12 deja negociar con mercaderes (ver 7.8) |
+| | Mago | +5 de maná máximo (20 en la base; los anillos de maná suman aparte) y +0,5 de maná por turno (2 en la base) |
+| Carisma | Negociación | +3% al vender (como mucho ×1,6, con el tope) y −2% del oro que pagas en el mercado, los edificios, los soldados y la herrería (como mucho 40% menos; en el mercado y la herrería, nunca por debajo de lo que te pagarían al venderlo). Con +12 deja negociar con mercaderes (ver 7.8) |
 | | Liderazgo | Sube el pago de entrenar a la guardia (ver 7.8). La moral de los soldados quedó sin uso al quitar las invasiones |
 | | Presencia | Sube el pago de las audiencias y de cobrar impuestos, y con +5 deja cobrarlos (ver 7.8). Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −8% de acierto, −10% de daño y −5% de rapidez |
 

@@ -1,7 +1,8 @@
 class_name DatosBotin
 extends RefCounted
-## Botín del rey: armas y piezas de armadura con calidad normal, rara, épica o
-## legendaria, y pociones de curación. Todos los números son provisionales.
+## Botín del rey: armas, piezas de armadura y anillos con calidad normal, rara,
+## épica o legendaria, pociones y lo que trata las heridas, y los materiales de
+## la ciudad. Todos los números son provisionales.
 
 const CALIDADES := ["normal", "raro", "epico", "legendario"]
 
@@ -39,16 +40,21 @@ const PROB_CALIDAD := {
 const MATERIALES := ["de bronce", "de hierro", "de acero", "de obsidiana"]
 
 ## Ranuras de equipo. "zonas": zonas del cuerpo que protege esa pieza;
-## "genero" y "plural": para el nombre ("Grebas acolchadas").
+## "genero" y "plural": para el nombre ("Grebas acolchadas"). El rey lleva dos
+## anillos, uno en cada mano: un anillo ("ranura" "anillo") va en cualquiera de
+## las dos (ver RANURAS_ANILLO).
 const RANURAS := {
 	"arma": {"nombre": "Arma", "zonas": []},
 	"casco": {"nombre": "Casco", "zonas": ["cabeza"], "genero": "m", "plural": false},
 	"peto": {"nombre": "Peto", "zonas": ["torso"], "genero": "m", "plural": false},
 	"brazales": {"nombre": "Brazales", "zonas": ["brazo_der", "brazo_izq"], "genero": "m", "plural": true},
 	"grebas": {"nombre": "Grebas", "zonas": ["pierna_der", "pierna_izq"], "genero": "f", "plural": true},
+	"anillo_der": {"nombre": "Anillo derecho", "zonas": []},
+	"anillo_izq": {"nombre": "Anillo izquierdo", "zonas": []},
 }
-const ORDEN_RANURAS := ["arma", "casco", "peto", "brazales", "grebas"]
+const ORDEN_RANURAS := ["arma", "casco", "peto", "brazales", "grebas", "anillo_der", "anillo_izq"]
 const PIEZAS := ["casco", "peto", "brazales", "grebas"]
+const RANURAS_ANILLO := ["anillo_der", "anillo_izq"]
 
 ## Armadura base de cada pieza según el nivel (1 a 4), antes de la calidad.
 const ARMADURA_BASE := {
@@ -62,8 +68,42 @@ const ARMADURA_BASE := {
 
 ## Armas que pueden salir como botín (ver DatosArmas).
 const ARMAS_BOTIN := ["espada", "maza", "lanza", "baston"]
-## Probabilidad de que el botín sea un arma; si no, una pieza de armadura.
+## Del botín que se equipa: probabilidad de que sea un anillo y, si no, de que
+## sea un arma (si tampoco, es una pieza de armadura).
+const PROB_ANILLO := 0.15
 const PROB_ARMA := 0.35
+
+## Anillos: cada uno da algo que no dan las características, más cuanto mejor es
+## su calidad. "efecto": cuánto, por calidad (normal, raro, épico, legendario).
+## Vida y maná: puntos que suma a la vida o al maná máximo. Crítico:
+## probabilidad que suma a la de Golpe de suerte. Sangrado y estrés: parte que
+## quita de la sangre que pierde o del estrés que suma (con dos iguales, el
+## segundo quita su parte de lo que queda). Provisionales.
+const ANILLOS := {
+	"vida": {
+		"nombre": "Anillo de vida", "efecto": [10, 20, 35, 50], "corto": "Vida +%d",
+		"descripcion": "Más vida máxima (se suma a la de Vitalidad).",
+	},
+	"mana": {
+		"nombre": "Anillo de maná", "efecto": [10, 20, 35, 50], "corto": "Maná +%d",
+		"descripcion": "Más maná máximo (se suma al de Mago).",
+	},
+	"critico": {
+		"nombre": "Anillo de críticos", "efecto": [0.03, 0.06, 0.1, 0.15], "corto": "Crítico +%d%%",
+		"descripcion": "Más probabilidad de golpe crítico (se suma a la de Golpe de suerte).",
+	},
+	"sangrado": {
+		"nombre": "Anillo coagulante", "efecto": [0.1, 0.2, 0.3, 0.5], "corto": "Sangrado −%d%%",
+		"descripcion": "Pierdes menos sangre por tus heridas, en combate y al caminar.",
+	},
+	"estres": {
+		"nombre": "Anillo de calma", "efecto": [0.05, 0.1, 0.15, 0.25], "corto": "Estrés −%d%%",
+		"descripcion": "Sumas menos estrés: al caminar, en combates, trampas y trabajos.",
+	},
+}
+const ORDEN_ANILLOS := ["vida", "mana", "critico", "sangrado", "estres"]
+## Los que se miden en porcentaje (para mostrarlos).
+const ANILLOS_PORCENTAJE := ["critico", "sangrado", "estres"]
 ## Cuánto más fuerte es un arma por cada nivel del lugar.
 const MEJORA_POR_NIVEL := 0.25
 
@@ -102,6 +142,22 @@ const ORDEN_CONSUMIBLES := ["pocion", "venda", "torniquete", "medicina"]
 ## y cuánto sale cada uno (en %: suman PROB_CONSUMIBLE).
 const PROB_CONSUMIBLE := 0.35
 const PESO_CONSUMIBLE := {"pocion": 20.0, "venda": 8.0, "torniquete": 3.5, "medicina": 3.5}
+
+## Materiales de la ciudad (ver DatosCiudad.MATERIALES): probabilidad (%) de
+## cada uno, en el orden de DatosCiudad.ORDEN_MATERIALES (madera, piedra,
+## hierro), según el nivel del lugar: en los lugares difíciles sale más hierro.
+const PROB_MATERIAL := {
+	1: [50.0, 35.0, 15.0],
+	2: [40.0, 35.0, 25.0],
+	3: [35.0, 35.0, 30.0],
+	4: [30.0, 30.0, 40.0],
+}
+## Cuántos trae, por nivel del lugar: un cofre siempre trae de un material; un
+## enemigo vencido, a veces (PROB_MATERIAL_ENEMIGO); un suceso de las zonas, más.
+const MATERIAL_COFRE := [1, 3]
+const MATERIAL_ENEMIGO := [1, 2]
+const PROB_MATERIAL_ENEMIGO := 0.5
+const MATERIAL_ZONA := [3, 6]
 
 
 static func crear_consumible(tipo: String, cantidad := 1) -> Dictionary:
@@ -142,6 +198,28 @@ static func generar_botin(nivel: int, rng: RandomNumberGenerator, bonus_calidad 
 	return generar(nivel, rng, "", "", bonus_calidad)
 
 
+## Sortea un material según el nivel del lugar y cuántos trae: entre
+## cantidad[0] y cantidad[1] por el nivel, por "multiplicador" (Buen ojo).
+## Devuelve {"material": id, "cantidad": n}.
+static func sortear_material(nivel: int, rng: RandomNumberGenerator, cantidad: Array, multiplicador := 1.0) -> Dictionary:
+	nivel = clampi(nivel, 1, 4)
+	var tabla: Array = PROB_MATERIAL[nivel]
+	var tirada := rng.randf() * 100.0
+	var material_id: String = DatosCiudad.ORDEN_MATERIALES[-1]
+	for i in DatosCiudad.ORDEN_MATERIALES.size():
+		tirada -= float(tabla[i])
+		if tirada < 0.0:
+			material_id = DatosCiudad.ORDEN_MATERIALES[i]
+			break
+	var base := rng.randi_range(int(cantidad[0]), int(cantidad[1])) * nivel
+	return {"material": material_id, "cantidad": maxi(1, roundi(base * multiplicador))}
+
+
+## "3 de madera", para contar lo que se encontró.
+static func texto_material(hallazgo: Dictionary) -> String:
+	return DatosCiudad.texto_materiales({hallazgo["material"]: hallazgo["cantidad"]})
+
+
 ## "Espada de bronce (raro)" o "una poción de curación", para contar lo que se encontró.
 static func texto_hallazgo(objeto: Dictionary) -> String:
 	if es_consumible(objeto):
@@ -179,18 +257,27 @@ static func sortear_calidad(nivel: int, rng: RandomNumberGenerator, bonus := 1.0
 	return CALIDADES[-1]
 
 
-## Crea un objeto de botín. "ranura" vacía = arma o pieza al azar; "calidad"
-## vacía = se sortea (con "bonus_calidad", ver probabilidades). No tiene "id":
-## lo pone el inventario al guardarlo.
+## Crea un objeto de botín. "ranura" vacía = anillo, arma o pieza al azar
+## ("anillo" = un anillo al azar); "calidad" vacía = se sortea (con
+## "bonus_calidad", ver probabilidades). No tiene "id": lo pone el inventario al
+## guardarlo.
 static func generar(nivel: int, rng: RandomNumberGenerator, ranura := "", calidad := "", bonus_calidad := 1.0) -> Dictionary:
 	nivel = clampi(nivel, 1, 4)
 	if calidad == "":
 		calidad = sortear_calidad(nivel, rng, bonus_calidad)
 	if ranura == "":
-		ranura = "arma" if rng.randf() < PROB_ARMA else PIEZAS[rng.randi() % PIEZAS.size()]
+		var tirada := rng.randf()
+		if tirada < PROB_ANILLO:
+			ranura = "anillo"
+		elif tirada < PROB_ANILLO + (1.0 - PROB_ANILLO) * PROB_ARMA:
+			ranura = "arma"
+		else:
+			ranura = PIEZAS[rng.randi() % PIEZAS.size()]
 	var objeto := {"ranura": ranura, "calidad": calidad, "nivel": nivel}
 	if ranura == "arma":
 		_completar_arma(objeto, ARMAS_BOTIN[rng.randi() % ARMAS_BOTIN.size()])
+	elif ranura == "anillo":
+		_completar_anillo(objeto, ORDEN_ANILLOS[rng.randi() % ORDEN_ANILLOS.size()])
 	else:
 		_completar_pieza(objeto, DatosArmaduras.sortear(nivel, rng))
 	objeto["precio"] = precio_venta(objeto)
@@ -205,13 +292,15 @@ static func crear_arma(base: String, nivel: int, calidad: String) -> Dictionary:
 	return objeto
 
 
-## El mismo objeto con otra calidad: conserva su base, tipo, nivel e id
-## (para la herrería).
+## El mismo objeto con otra calidad: conserva su base, tipo (o el efecto del
+## anillo), nivel e id (para la herrería).
 static func con_calidad(objeto: Dictionary, calidad: String) -> Dictionary:
 	var nuevo := objeto.duplicate()
 	nuevo["calidad"] = calidad
 	if nuevo["ranura"] == "arma":
 		_completar_arma(nuevo, nuevo["base"])
+	elif es_anillo(nuevo):
+		_completar_anillo(nuevo, nuevo["anillo"])
 	else:
 		_completar_pieza(nuevo, nuevo["tipo"])
 	nuevo["precio"] = precio_venta(nuevo)
@@ -236,6 +325,59 @@ static func crear_pieza(ranura: String, tipo_id: String, nivel: int, calidad: St
 	_completar_pieza(objeto, tipo_id)
 	objeto["precio"] = precio_venta(objeto)
 	return objeto
+
+
+## Anillo de ese efecto (ver ANILLOS), con su nivel y calidad. El nivel solo
+## cambia lo que pagan por él; lo que hace depende de la calidad.
+static func crear_anillo(anillo_id: String, nivel: int, calidad: String) -> Dictionary:
+	var objeto := {"ranura": "anillo", "calidad": calidad, "nivel": clampi(nivel, 1, 4)}
+	_completar_anillo(objeto, anillo_id)
+	objeto["precio"] = precio_venta(objeto)
+	return objeto
+
+
+static func _completar_anillo(objeto: Dictionary, anillo_id: String) -> void:
+	var datos: Dictionary = ANILLOS[anillo_id]
+	objeto["anillo"] = anillo_id
+	objeto["nombre"] = datos["nombre"]
+	objeto["efecto"] = datos["efecto"][CALIDADES.find(objeto["calidad"])]
+
+
+static func es_anillo(objeto: Dictionary) -> bool:
+	return objeto.get("ranura", "") == "anillo"
+
+
+## Ranuras del equipo donde puede ir ese objeto: la suya o, un anillo, las dos
+## manos.
+static func ranuras_de(objeto: Dictionary) -> Array:
+	return RANURAS_ANILLO if es_anillo(objeto) else [objeto["ranura"]]
+
+
+## "Vida +20", "Crítico +6%": lo que hace un anillo, corto.
+static func texto_anillo(objeto: Dictionary) -> String:
+	var anillo_id: String = objeto["anillo"]
+	var valor := float(objeto["efecto"])
+	if ANILLOS_PORCENTAJE.has(anillo_id):
+		valor *= 100.0
+	return String(ANILLOS[anillo_id]["corto"]) % roundi(valor)
+
+
+## Lo que dan juntos esos anillos: {"vida", "mana": puntos que suman; "critico":
+## probabilidad que suma; "sangrado", "estres": multiplican la sangre que se
+## pierde y el estrés que se suma (1 = igual)}.
+static func efectos_anillos(anillos: Array) -> Dictionary:
+	var efectos := {"vida": 0, "mana": 0, "critico": 0.0, "sangrado": 1.0, "estres": 1.0}
+	for anillo in anillos:
+		var anillo_id: String = anillo["anillo"]
+		var valor := float(anillo["efecto"])
+		match anillo_id:
+			"vida", "mana":
+				efectos[anillo_id] = int(efectos[anillo_id]) + roundi(valor)
+			"critico":
+				efectos["critico"] = float(efectos["critico"]) + valor
+			"sangrado", "estres":
+				efectos[anillo_id] = float(efectos[anillo_id]) * (1.0 - valor)
+	return efectos
 
 
 ## Las piezas de antes de los tipos de armadura ("estilo" metal o runas) pasan a
@@ -302,7 +444,11 @@ static func describir(objeto: Dictionary, precio := -1) -> PackedStringArray:
 		lineas.append("Se vende por %d de oro (%s)" % [objeto["precio"] if precio < 0 else precio, de_a])
 		return lineas
 	lineas.append("%s · nivel %d" % [nombre_calidad(objeto["calidad"]), objeto["nivel"]])
-	if objeto["ranura"] == "arma":
+	if es_anillo(objeto):
+		lineas.append(texto_anillo(objeto))
+		lineas.append(ANILLOS[objeto["anillo"]]["descripcion"])
+		lineas.append("Llevas hasta dos anillos, uno en cada mano.")
+	elif objeto["ranura"] == "arma":
 		var tipo: Dictionary = DatosArmas.tipo_de(objeto["base"])
 		lineas.append("Daño %d–%d · %s" % [objeto["danio_min"], objeto["danio_max"], String(tipo["nombre"]).to_lower()])
 		lineas.append("Precisión %d%%" % roundi(float(objeto["precision"]) * 100.0))

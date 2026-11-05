@@ -483,21 +483,22 @@ func _objeto_elegido() -> Dictionary:
 func _crear_equipo() -> void:
 	var columna := VBoxContainer.new()
 	columna.position = Vector2(20, 0)
-	columna.add_theme_constant_override("separation", 8)
+	columna.add_theme_constant_override("separation", 6)
 	_contenido.add_child(columna)
 	columna.add_child(UIReino.etiqueta("Equipo", 24, UIReino.COLOR_TITULO))
 	for ranura in DatosBotin.ORDEN_RANURAS:
+		if DatosBotin.RANURAS_ANILLO.has(ranura):
+			continue
 		var objeto: Dictionary = Juego.equipo.get(ranura, {})
 		var nombre := "—" if objeto.is_empty() else String(objeto["nombre"])
-		var boton := UIReino.boton("%s: %s" % [DatosBotin.RANURAS[ranura]["nombre"], nombre],
-			_al_elegir_equipo.bind(ranura), Vector2(400, 60), 18)
-		boton.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		boton.clip_text = true
-		boton.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		var color := Color("#3a3f5c") if objeto.is_empty() else DatosBotin.color_calidad(objeto["calidad"])
-		Estilo.con_franja(boton, color)
-		boton.disabled = objeto.is_empty()
-		columna.add_child(boton)
+		columna.add_child(_boton_equipo(ranura, "%s: %s" % [DatosBotin.RANURAS[ranura]["nombre"], nombre], 400))
+	# Los dos anillos, uno en cada mano, en la misma fila.
+	var anillos := HBoxContainer.new()
+	anillos.add_theme_constant_override("separation", 8)
+	columna.add_child(anillos)
+	for ranura in DatosBotin.RANURAS_ANILLO:
+		var objeto: Dictionary = Juego.equipo.get(ranura, {})
+		anillos.add_child(_boton_equipo(ranura, "Anillo: —" if objeto.is_empty() else DatosBotin.texto_anillo(objeto), 196))
 	columna.add_child(UIReino.etiqueta("Frena (corte · perforación · contusión · magia)", 17, Estilo.TEXTO_SUAVE))
 	var armadura := Juego.armadura_por_zona()
 	for grupo in [["Cabeza", "cabeza"], ["Torso", "torso"], ["Brazos", "brazo_der"], ["Piernas", "pierna_der"]]:
@@ -516,10 +517,29 @@ func _crear_equipo() -> void:
 		columna.add_child(UIReino.etiqueta("Peso: −%d%% de rapidez" % roundi(100.0 * Juego.carga()), 17, Estilo.TEXTO_SUAVE))
 
 
+## Botón de una ranura del equipo (apagado si está vacía).
+func _boton_equipo(ranura: String, texto: String, ancho: float) -> Button:
+	var objeto: Dictionary = Juego.equipo.get(ranura, {})
+	var boton := UIReino.boton(texto, _al_elegir_equipo.bind(ranura), Vector2(ancho, 54), 18)
+	boton.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	boton.clip_text = true
+	boton.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var color := Color("#3a3f5c") if objeto.is_empty() else DatosBotin.color_calidad(objeto["calidad"])
+	Estilo.con_franja(boton, color)
+	boton.disabled = objeto.is_empty()
+	return boton
+
+
 func _crear_mochila() -> void:
 	var titulo := UIReino.etiqueta("Mochila (%d)" % Juego.inventario.size(), 24, UIReino.COLOR_TITULO)
 	titulo.position = Vector2(440, 0)
 	_contenido.add_child(titulo)
+	# Los materiales de la ciudad se guardan aparte: no ocupan la mochila.
+	var materiales := UIReino.etiqueta(_texto_materiales_guardados(), 17, Estilo.TEXTO_SUAVE)
+	materiales.position = Vector2(600, 6)
+	materiales.size = Vector2(280, 24)
+	materiales.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_contenido.add_child(materiales)
 	var desplazable := ScrollContainer.new()
 	desplazable.position = Vector2(440, 40)
 	desplazable.size = Vector2(440, 530)
@@ -556,6 +576,9 @@ func _crear_detalle() -> void:
 	columna.add_child(UIReino.parrafo(objeto["nombre"], 330, 24, DatosBotin.color_calidad(objeto["calidad"])))
 	for linea in DatosBotin.describir(objeto, Juego.precio_venta(objeto)):
 		columna.add_child(UIReino.parrafo(linea, 330, 18, Estilo.TEXTO))
+	if _seleccion.has("ranura") and DatosBotin.RANURAS_ANILLO.has(_seleccion["ranura"]):
+		columna.add_child(UIReino.parrafo("Lo llevas en la mano %s." % ("derecha" if _seleccion["ranura"] == "anillo_der" else "izquierda"),
+			330, 17))
 	if _seleccion.has("ranura"):
 		var quitar := UIReino.boton("Quitar", _al_quitar, Vector2(330, 62), 22)
 		quitar.disabled = _seleccion["ranura"] == "arma"
@@ -576,6 +599,13 @@ func _crear_detalle() -> void:
 		usar.disabled = not Juego.sirve(tipo)
 		Estilo.con_franja(usar, datos["color"])
 		columna.add_child(usar)
+	elif DatosBotin.es_anillo(objeto) and DatosBotin.RANURAS_ANILLO.all(func(ranura: String) -> bool: return Juego.equipo.has(ranura)):
+		# Con las dos manos ocupadas, elige cuál cambiar.
+		for ranura in DatosBotin.RANURAS_ANILLO:
+			var puesto: Dictionary = Juego.equipo[ranura]
+			var cambiar := UIReino.boton("Cambiar por: %s" % DatosBotin.texto_anillo(puesto), _al_equipar.bind(ranura), Vector2(330, 56), 19)
+			Estilo.con_franja(cambiar, DatosBotin.color_calidad(puesto["calidad"]))
+			columna.add_child(cambiar)
 	else:
 		columna.add_child(UIReino.boton("Equipar", _al_equipar, Vector2(330, 62), 22))
 	var texto_venta := ("Vender %s por %%d de oro" % _uno(objeto["ranura"]) if es_consumible else "Vender por %d de oro") % Juego.precio_venta(objeto)
@@ -596,11 +626,12 @@ func _al_elegir_mochila(id: int) -> void:
 	_mostrar_pestana("inventario")
 
 
-func _al_equipar() -> void:
+## "ranura": la mano donde va un anillo ("" = la primera libre).
+func _al_equipar(ranura := "") -> void:
 	var objeto := _objeto_elegido()
-	if objeto.is_empty() or not Juego.equipar(objeto["id"]):
+	if objeto.is_empty() or not Juego.equipar(objeto["id"], ranura):
 		return
-	_seleccion = {"ranura": objeto["ranura"]}
+	_seleccion = {"ranura": Juego.ranura_equipada(objeto["id"])}
 	_avisar("Equipaste: %s." % objeto["nombre"])
 	_mostrar_pestana("inventario")
 
@@ -647,6 +678,14 @@ func _al_usar_objeto() -> void:
 	_mostrar_pestana("inventario")
 
 
+## "Madera 5 · Piedra 3 · Hierro 0": los materiales guardados para la ciudad.
+func _texto_materiales_guardados() -> String:
+	var textos: PackedStringArray = []
+	for material_id in DatosCiudad.ORDEN_MATERIALES:
+		textos.append("%s %d" % [DatosCiudad.MATERIALES[material_id]["nombre"], Juego.material(material_id)])
+	return " · ".join(textos)
+
+
 ## "una" o "uno", según el objeto (para "Tomar una", "Vender uno").
 func _uno(tipo: String) -> String:
 	return "una" if String(DatosBotin.CONSUMIBLES[tipo]["uno"]).begins_with("una ") else "uno"
@@ -668,6 +707,7 @@ func _crear_ciudad() -> void:
 	fila.add_child(UIReino.etiqueta("Comida %d (%s por semana)" % [
 		Juego.comida, _con_signo(Juego.produccion_comida() - Juego.consumo_comida())], 20))
 	fila.add_child(UIReino.etiqueta("Impuestos +%d por semana" % Juego.impuestos(), 20))
+	fila.add_child(UIReino.etiqueta(_texto_materiales_guardados(), 20))
 	var vista := VistaCiudad.new()
 	vista.position = Vector2(20, 40)
 	vista.size = Vector2(1240, 532)
@@ -735,13 +775,20 @@ func _dibujar_edificio() -> void:
 	izquierda.add_child(UIReino.parrafo("Ahora: " + DatosCiudad.efecto(edificio_id, nivel), 480, 17))
 	if nivel < DatosCiudad.NIVEL_MAXIMO:
 		izquierda.add_child(UIReino.parrafo("Con nivel %d: %s" % [nivel + 1, DatosCiudad.efecto(edificio_id, nivel + 1)], 480, 17))
-		var costo := DatosCiudad.costo_mejora(edificio_id, nivel)
-		var texto := "Reconstruir (%d de oro)" % costo if nivel <= 0 else "Mejorar a nivel %d (%d de oro)" % [nivel + 1, costo]
-		var mejorar := UIReino.boton(texto, _al_mejorar_edificio, Vector2(480, 64), 22)
+		# Lo que cuesta: el oro (con la rebaja de Negociación) y los materiales.
+		var costos: PackedStringArray = ["%d oro" % Juego.costo_edificio(edificio_id)]
+		var pedidos := Juego.materiales_edificio(edificio_id)
+		for material_id in DatosCiudad.ORDEN_MATERIALES:
+			if int(pedidos.get(material_id, 0)) > 0:
+				costos.append("%d %s" % [pedidos[material_id], String(DatosCiudad.MATERIALES[material_id]["nombre"]).to_lower()])
+		var texto := "Reconstruir" if nivel <= 0 else "Mejorar a nivel %d" % (nivel + 1)
+		var mejorar := UIReino.boton("%s\n%s" % [texto, " · ".join(costos)], _al_mejorar_edificio, Vector2(480, 80), 20)
 		var motivo := Juego.motivo_sin_mejora(edificio_id)
 		mejorar.disabled = motivo != ""
 		Estilo.con_franja(mejorar, datos["color"])
 		izquierda.add_child(mejorar)
+		if _frase_rebaja() != "":
+			izquierda.add_child(UIReino.parrafo(_frase_rebaja().strip_edges(), 480, 16))
 		if motivo != "":
 			izquierda.add_child(UIReino.parrafo(motivo, 480, 17, Color("#ef9a9a")))
 	izquierda.add_child(UIReino.boton("Cerrar", _cerrar_lugar, Vector2(480, 56), 21))
@@ -758,6 +805,12 @@ func _dibujar_edificio() -> void:
 			_detalle_barracas(derecha, nivel)
 		"enfermeria":
 			_detalle_enfermeria(derecha, nivel)
+
+
+## " Negociación te rebaja el oro un 20%." o "" sin rebaja.
+func _frase_rebaja() -> String:
+	var rebaja := roundi((1.0 - Juego.rebaja_negociacion()) * 100.0)
+	return " Negociación te rebaja el oro un %d%%." % rebaja if rebaja > 0 else ""
 
 
 func _detalle_castillo(columna: VBoxContainer) -> void:
@@ -827,19 +880,20 @@ func _resumen_semana(informe: Dictionary) -> String:
 func _detalle_herreria(columna: VBoxContainer, nivel: int) -> void:
 	columna.add_child(UIReino.etiqueta("Mejorar tu equipo", 24, UIReino.COLOR_TITULO))
 	if nivel <= 0:
-		columna.add_child(UIReino.parrafo("Reconstrúyela para mejorar la calidad de tus armas y armaduras.", 540, 18))
+		columna.add_child(UIReino.parrafo("Reconstrúyela para mejorar la calidad de tus armas, armaduras y anillos.", 540, 18))
 		return
-	columna.add_child(UIReino.parrafo("Sube una calidad lo que llevas puesto (hasta calidad %s)." % DatosCiudad.CALIDAD_FEMENINA[
-		DatosCiudad.CALIDAD_MAXIMA_HERRERIA[nivel]], 540, 17))
+	columna.add_child(UIReino.parrafo("Sube una calidad lo que llevas puesto (hasta calidad %s).%s" % [DatosCiudad.CALIDAD_FEMENINA[
+		DatosCiudad.CALIDAD_MAXIMA_HERRERIA[nivel]], _frase_rebaja()], 540, 17))
 	for ranura in DatosBotin.ORDEN_RANURAS:
 		if not Juego.equipo.has(ranura):
 			continue
 		var objeto: Dictionary = Juego.equipo[ranura]
 		var costo := Juego.costo_herreria(objeto)
+		# Una línea por objeto: con los dos anillos son siete y tienen que caber.
 		var texto: String = "%s (%s)" % [objeto["nombre"], DatosBotin.nombre_calidad(objeto["calidad"]).to_lower()]
-		texto += "\nYa no se puede mejorar aquí" if costo < 0 else "\nA calidad %s: %d de oro" % [
+		texto += ": ya no se mejora aquí" if costo < 0 else ": a %s por %d de oro" % [
 			DatosCiudad.CALIDAD_FEMENINA[Juego.calidad_siguiente(objeto)], costo]
-		var boton := UIReino.boton(texto, _al_mejorar_objeto.bind(ranura), Vector2(540, 62), 17)
+		var boton := UIReino.boton(texto, _al_mejorar_objeto.bind(ranura), Vector2(540, 48), 17)
 		boton.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		boton.clip_text = true
 		boton.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -869,7 +923,8 @@ func _detalle_mercado(columna: VBoxContainer, nivel: int) -> void:
 	if nivel <= 0:
 		columna.add_child(UIReino.parrafo("Reconstrúyelo para cobrar impuestos y comprar objetos.", 540, 18))
 		return
-	columna.add_child(UIReino.parrafo("Cobra %d de oro de impuestos por semana. Lo que vende cambia cada semana. Lo que compras va al Inventario, y ahí también se vende." % Juego.impuestos(), 540, 17))
+	columna.add_child(UIReino.parrafo("Cobra %d de oro de impuestos por semana. Lo que vende cambia cada semana. Lo que compras va al Inventario, y ahí también se vende.%s" % [
+		Juego.impuestos(), _frase_rebaja()], 540, 17))
 	if Juego.mercado.is_empty():
 		columna.add_child(UIReino.parrafo("Ya compraste todo lo de esta semana.", 540, 18))
 	# Las pociones, vendas, torniquetes y medicinas van de a dos por fila, para
@@ -893,6 +948,8 @@ func _detalle_mercado(columna: VBoxContainer, nivel: int) -> void:
 		else:
 			if objeto["ranura"] == "arma":
 				dato = DatosBotin.describir(objeto)[1]
+			elif DatosBotin.es_anillo(objeto):
+				dato = DatosBotin.texto_anillo(objeto)
 			else:
 				dato = "Arm. %d · Res. mág. %d" % [objeto["armadura"], objeto["resistencia_magica"]]
 			texto += "Toca otra vez para comprar por %d de oro" % precio if i == _compra_pendiente else "%s · %d de oro" % [dato, precio]
@@ -916,15 +973,15 @@ func _detalle_barracas(columna: VBoxContainer, nivel: int) -> void:
 	if nivel <= 0:
 		columna.add_child(UIReino.parrafo("Reconstrúyelas para reclutar soldados. Por ahora no tienen uso: ya no hay invasiones.", 540, 18))
 		return
-	columna.add_child(UIReino.parrafo("Tienes %d de %d soldados. Cada uno come %d de comida por semana. Por ahora no tienen uso: ya no hay invasiones." % [
-		Juego.soldados, Juego.soldados_maximos(), DatosCiudad.COMIDA_POR_SOLDADO], 540, 18))
-	var reclutar := UIReino.boton("Reclutar un soldado (%d de oro)" % DatosCiudad.COSTO_SOLDADO, _al_reclutar, Vector2(540, 64), 21)
+	columna.add_child(UIReino.parrafo("Tienes %d de %d soldados. Cada uno come %d de comida por semana. Por ahora no tienen uso: ya no hay invasiones.%s" % [
+		Juego.soldados, Juego.soldados_maximos(), DatosCiudad.COMIDA_POR_SOLDADO, _frase_rebaja()], 540, 18))
+	var reclutar := UIReino.boton("Reclutar un soldado (%d de oro)" % Juego.costo_soldado(), _al_reclutar, Vector2(540, 64), 21)
 	reclutar.disabled = not Juego.puede_reclutar()
 	Estilo.con_franja(reclutar, DatosCiudad.edificio("barracas")["color"])
 	columna.add_child(reclutar)
 	if Juego.soldados >= Juego.soldados_maximos():
 		columna.add_child(UIReino.parrafo("No caben más: mejora las barracas.", 540, 17, Color("#ef9a9a")))
-	elif Juego.oro < DatosCiudad.COSTO_SOLDADO:
+	elif Juego.oro < Juego.costo_soldado():
 		columna.add_child(UIReino.parrafo("No te alcanza el oro.", 540, 17, Color("#ef9a9a")))
 
 

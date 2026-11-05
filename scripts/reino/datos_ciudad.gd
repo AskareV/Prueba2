@@ -1,14 +1,26 @@
 class_name DatosCiudad
 extends RefCounted
 ## Ciudad del reino (provisional): seis edificios fijos que se reconstruyen y
-## mejoran con oro. La ciudad se cuida sola: produce su comida y cobra impuestos.
+## mejoran con oro y materiales (madera, piedra y hierro, que se encuentran al
+## salir de aventura). La ciudad se cuida sola: produce su comida y cobra impuestos.
 ## Ya no hay invasiones: los soldados no tienen uso por ahora (más adelante,
 ## quizá batallas campales). Todos los números son provisionales.
 
 const NIVEL_MAXIMO := 3
 const ORDEN := ["castillo", "herreria", "granja", "mercado", "barracas", "enfermeria"]
 
+## Materiales para reconstruir y mejorar los edificios. Salen en el botín de
+## cofres, enemigos y zonas (ver DatosBotin.sortear_material) y se guardan aparte:
+## no ocupan la mochila ni se venden.
+const MATERIALES := {
+	"madera": {"nombre": "Madera", "color": Color("#a1887f")},
+	"piedra": {"nombre": "Piedra", "color": Color("#b0bec5")},
+	"hierro": {"nombre": "Hierro", "color": Color("#90a4ae")},
+}
+const ORDEN_MATERIALES := ["madera", "piedra", "hierro"]
+
 ## "costos": oro para pasar al nivel 1, 2 y 3 (el nivel 0 es "en ruinas").
+## "materiales": lo que pide además cada uno de esos niveles.
 ## "articulo": el nombre con su artículo, para las frases ("la granja").
 ## "posicion": dónde se dibuja en la ciudad (fracción del ancho y del alto).
 const EDIFICIOS := {
@@ -16,31 +28,41 @@ const EDIFICIOS := {
 		"nombre": "Castillo", "articulo": "el castillo", "color": Color("#ffd54f"), "posicion": Vector2(0.5, 0.36),
 		"descripcion": "El centro de la ciudad: ningún otro edificio puede tener más nivel que él. Aquí descansa el rey.",
 		"costos": [0, 400, 1000],
+		"materiales": [{}, {"madera": 5, "piedra": 10, "hierro": 5}, {"madera": 10, "piedra": 25, "hierro": 15}],
 	},
 	"herreria": {
 		"nombre": "Herrería", "articulo": "la herrería", "color": Color("#ff8a65"), "posicion": Vector2(0.16, 0.42),
-		"descripcion": "Mejora la calidad de tus armas y armaduras.",
+		"descripcion": "Mejora la calidad de tus armas, armaduras y anillos.",
 		"costos": [150, 400, 900],
+		"materiales": [{"madera": 2, "piedra": 4, "hierro": 4}, {"madera": 5, "piedra": 8, "hierro": 8},
+			{"madera": 10, "piedra": 15, "hierro": 20}],
 	},
 	"granja": {
 		"nombre": "Granja", "articulo": "la granja", "color": Color("#9ccc65"), "posicion": Vector2(0.2, 0.79),
 		"descripcion": "Produce la comida de la ciudad cada semana. Los soldados comen; sin comida, se van.",
 		"costos": [100, 300, 700],
+		"materiales": [{"madera": 5, "piedra": 2}, {"madera": 10, "piedra": 5}, {"madera": 20, "piedra": 10, "hierro": 5}],
 	},
 	"mercado": {
 		"nombre": "Mercado", "articulo": "el mercado", "color": Color("#4fc3f7"), "posicion": Vector2(0.8, 0.79),
 		"descripcion": "Cobra impuestos cada semana y vende objetos que cambian cada semana. Negociación baja los precios.",
 		"costos": [120, 350, 800],
+		"materiales": [{"madera": 4, "piedra": 3}, {"madera": 8, "piedra": 8, "hierro": 2},
+			{"madera": 15, "piedra": 15, "hierro": 10}],
 	},
 	"barracas": {
 		"nombre": "Barracas", "articulo": "las barracas", "color": Color("#ef5350"), "posicion": Vector2(0.84, 0.4),
 		"descripcion": "Aquí se reclutan soldados. Por ahora no tienen uso: ya no hay invasiones.",
 		"costos": [150, 400, 900],
+		"materiales": [{"madera": 3, "piedra": 3, "hierro": 2}, {"madera": 8, "piedra": 6, "hierro": 6},
+			{"madera": 15, "piedra": 15, "hierro": 15}],
 	},
 	"enfermeria": {
 		"nombre": "Enfermería", "articulo": "la enfermería", "color": Color("#f48fb1"), "posicion": Vector2(0.5, 0.8),
-		"descripcion": "Cuida al rey: al descansar en el castillo le para el sangrado por dentro y le cura las infecciones; con más nivel, cura más sus heridas.",
+		"descripcion": "Cuida al rey: hace que descansar en el castillo cure más.",
 		"costos": [120, 300, 700],
+		"materiales": [{"madera": 3, "piedra": 3}, {"madera": 6, "piedra": 6, "hierro": 3},
+			{"madera": 15, "piedra": 12, "hierro": 8}],
 	},
 }
 
@@ -73,6 +95,7 @@ const CURA_ENFERMERIA := [0.0, 0.2, 0.4, 0.6]
 
 # --- Soldados y comida ---
 
+## Oro por soldado, antes de la rebaja de Negociación.
 const COSTO_SOLDADO := 40
 const COMIDA_POR_SOLDADO := 2
 const COMIDA_INICIAL := 20
@@ -80,7 +103,7 @@ const COMIDA_INICIAL := 20
 ## Precio en el mercado: el precio de venta por esto, rebajado por Negociación.
 const MARGEN_MERCADO := 4.0
 ## Mejorar la calidad en la herrería: el precio de venta base del objeto ya
-## mejorado por esto.
+## mejorado por esto, rebajado por Negociación.
 const COSTO_HERRERIA := 3.0
 
 
@@ -93,6 +116,37 @@ static func costo_mejora(edificio_id: String, nivel: int) -> int:
 	if nivel >= NIVEL_MAXIMO:
 		return -1
 	return int(EDIFICIOS[edificio_id]["costos"][nivel])
+
+
+## Materiales para pasar de "nivel" a "nivel + 1": {material: cantidad} (vacío si
+## no pide o ya está al máximo).
+static func materiales_mejora(edificio_id: String, nivel: int) -> Dictionary:
+	if nivel >= NIVEL_MAXIMO:
+		return {}
+	return EDIFICIOS[edificio_id]["materiales"][nivel]
+
+
+## ["8 de madera", "2 de hierro"]: cada material con su cantidad, en el orden de
+## ORDEN_MATERIALES (sin los que no están).
+static func textos_materiales(materiales: Dictionary) -> PackedStringArray:
+	var textos: PackedStringArray = []
+	for material_id in ORDEN_MATERIALES:
+		var cantidad := int(materiales.get(material_id, 0))
+		if cantidad > 0:
+			textos.append("%d de %s" % [cantidad, String(MATERIALES[material_id]["nombre"]).to_lower()])
+	return textos
+
+
+## "8 de madera, 8 de piedra y 2 de hierro" ("" si no hay nada).
+static func texto_materiales(materiales: Dictionary) -> String:
+	return enumerar(textos_materiales(materiales))
+
+
+## "a", "a y b", "a, b y c".
+static func enumerar(textos: PackedStringArray) -> String:
+	if textos.size() <= 1:
+		return "".join(textos)
+	return ", ".join(textos.slice(0, textos.size() - 1)) + " y " + textos[textos.size() - 1]
 
 
 ## Qué hace el edificio con ese nivel, en una línea.
