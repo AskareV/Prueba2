@@ -18,6 +18,8 @@ const MAGIA := 6
 var _rng := RandomNumberGenerator.new()
 ## Parte que el bot planea atacar (elegida como la IA de los rivales).
 var _plan := ""
+## En el combate de prueba de la victoria el bot solo ataca (no huye ni se defiende).
+var _solo_atacar := false
 
 
 func _initialize() -> void:
@@ -43,6 +45,24 @@ func _initialize() -> void:
 					resultados[final] = int(resultados.get(final, 0)) + 1
 				else:
 					print("  NO TERMINÓ: %s con %s" % [rival_id, arma_id])
+	# El final con victoria se prueba siempre: el bot pelea al azar y a veces no
+	# gana ninguno (huye o pierde), así que entonces juega otro combate con el
+	# rival a punto de caer y atacando siempre.
+	var intentos := 0
+	while int(resultados.get("¡Victoria!", 0)) == 0 and intentos < 3:
+		intentos += 1
+		partida.set("rival", DatosRivales.ORDEN[0])
+		partida.set("arma", "espada")
+		partida.set("diestro", true)
+		_solo_atacar = true
+		var final := await _jugar_un_combate(true)
+		_solo_atacar = false
+		total += 1
+		if final != "":
+			terminados += 1
+			resultados[final] = int(resultados.get(final, 0)) + 1
+		else:
+			print("  NO TERMINÓ: el combate de prueba de la victoria")
 	print("Combates terminados: %d de %d %s" % [terminados, total, str(resultados)])
 	var victorias: int = resultados.get("¡Victoria!", 0)
 	if victorias == 0:
@@ -51,9 +71,13 @@ func _initialize() -> void:
 
 
 ## Devuelve el título del resultado ("¡Victoria!", "Derrota", "Escapaste") o "" si no terminó.
-func _jugar_un_combate() -> String:
+## "rival_a_punto_de_caer": el rival empieza con 1 de vida (para probar la victoria).
+func _jugar_un_combate(rival_a_punto_de_caer := false) -> String:
 	var escena: Control = load(ESCENA).instantiate()
 	root.add_child(escena)
+	if rival_a_punto_de_caer:
+		var enemigo: Luchador = escena.get("_enemigo")
+		enemigo.vida = 1
 	var cuadros := 0
 	while int(escena.get("_estado")) != FIN and cuadros < MAX_CUADROS:
 		await process_frame
@@ -84,6 +108,9 @@ func _jugar_un_combate() -> String:
 
 func _elegir_accion(escena: Control) -> void:
 	var jugador: Luchador = escena.get("_jugador")
+	if _solo_atacar:
+		escena.call("_al_pulsar_atacar")
+		return
 	var tirada := _rng.randf()
 	if tirada < 0.04:
 		escena.call("_mostrar_estado")
