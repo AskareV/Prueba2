@@ -337,3 +337,33 @@ func prueba_ninguna_parte_mejora_mas_alla_del_tope() -> void:
 	verificar_cerca(juego.prob_botin_enemigo(), minf(DatosAventura.PROB_BOTIN_ENEMIGO
 		* (1.0 + DatosEstadisticas.OBJETOS_POR_BUEN_OJO * DatosEstadisticas.TOPE_PUNTOS), 1.0), "Buen ojo: más objetos, con tope")
 	juego.free()
+
+
+## Piel dura: la Resistencia da armadura natural en todo el cuerpo, igual
+## contra todo daño, aunque no lleve nada; la armadura puesta rinde más y se suma.
+func prueba_resistencia_da_piel_dura() -> void:
+	var juego := _juego_nuevo()
+	var sin_puntos := juego.crear_rey()
+	verificar_cerca(sin_puntos.armadura_natural(), 0.0, "Sin puntos no hay piel dura")
+	verificar_cerca(sin_puntos.proteccion("torso", "cortante"), 0.0, "Ni protección sin armadura")
+	juego.extra["resistencia"] = 20
+	var rey := juego.crear_rey()
+	var natural := DatosEstadisticas.ARMADURA_NATURAL_POR_RESISTENCIA * 20.0
+	verificar_cerca(rey.armadura_natural(), natural, "Con +20, 30 de armadura natural")
+	for zona_id in DatosCuerpo.ZONAS:
+		for tipo_arma in ["cortante", "punzante", "contundente", "arcano"]:
+			verificar_cerca(rey.proteccion(zona_id, tipo_arma), natural, "Igual en %s contra %s" % [zona_id, tipo_arma])
+	verificar_igual(DatosBotin.porcentaje_reduccion(natural), 23, "Frena el 23% sin armadura")
+	# Con armadura, la del equipo rinde ×1,6 y la piel dura se suma.
+	var peto := DatosBotin.crear_pieza("peto", "malla", 2, "normal")
+	juego.equipar(juego.agregar(peto)["id"])
+	rey = juego.crear_rey()
+	var esperada := float(peto["armadura"]) * DatosArmaduras.eficacia("malla", "cortante") \
+		* DatosEstadisticas.aumento(20.0, DatosEstadisticas.ARMADURA_POR_RESISTENCIA) + natural
+	verificar_cerca(rey.proteccion("torso", "cortante"), esperada, "La del peto rinde más y se suma la piel dura")
+	# En combate, el mismo golpe le hace menos daño.
+	var orco := DatosRivales.crear_rival("orco")
+	verificar(MotorCombate.multiplicador_golpe(orco, rey, "craneo") < MotorCombate.multiplicador_golpe(orco, sin_puntos, "craneo"),
+		"Un golpe a la cabeza (sin casco) le hace menos daño")
+	verificar_cerca(orco.armadura_natural(), 0.0, "Los enemigos no tienen piel dura")
+	juego.free()

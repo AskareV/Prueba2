@@ -801,7 +801,7 @@ mínimo para entrar (ver 7.8).
 | | Cardio | −4% de estrés por cada paso en la mazmorra y cada día de marcha en una zona |
 | | Recuperación | +5% de toda la curación: al caminar y al descansar, también de la sangre (ver 7.12) |
 | Resiliencia | Compostura | −4% de estrés por combates (ganar o perder), trampas y trabajos |
-| | Resistencia | +3% de armadura y resistencia mágica del equipo; −3% de cualquier estado en contra (aturdir, desarmar, empujón) |
+| | Resistencia | **Piel dura:** +1,5 de armadura natural en todo el cuerpo, igual contra todo daño (también la magia), aunque no lleves armadura: con +20, 30, que frena el 23%. Además, +3% de armadura y resistencia mágica del equipo (la piel dura se suma después) y −3% de cualquier estado en contra (aturdir, desarmar, empujón) |
 | | Firmeza | −6% de quedar aturdido, −8% de ser empujado y aguanta más antes de desmayarse |
 | Suerte | Golpe de suerte | +1,5% de golpe crítico (×1,5 de daño, no cambia el acierto; los anillos de críticos suman aparte) |
 | | Buen ojo | +5% de probabilidad de calidades raras o mejores y +5% de oro y de materiales, en cofres, enemigos y los sucesos de las zonas; +5% de que un enemigo suelte un objeto |

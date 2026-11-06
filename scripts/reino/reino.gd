@@ -500,19 +500,23 @@ func _crear_equipo() -> void:
 		var objeto: Dictionary = Juego.equipo.get(ranura, {})
 		anillos.add_child(_boton_equipo(ranura, "Anillo: —" if objeto.is_empty() else DatosBotin.texto_anillo(objeto), 196))
 	columna.add_child(UIReino.etiqueta("Frena (corte · perforación · contusión · magia)", 17, Estilo.TEXTO_SUAVE))
+	# Lo que frena de verdad cada zona: la armadura puesta, con lo que suma la
+	# Resistencia (rinde más y da piel dura, aunque no lleves nada).
 	var armadura := Juego.armadura_por_zona()
+	var rey := Juego.crear_rey()
 	for grupo in [["Cabeza", "cabeza"], ["Torso", "torso"], ["Brazos", "brazo_der"], ["Piernas", "pierna_der"]]:
-		if not armadura.has(grupo[1]):
-			columna.add_child(UIReino.etiqueta("%s: nada" % grupo[0], 17))
+		var nombre: String = grupo[0]
+		if armadura.has(grupo[1]):
+			nombre += ", " + String(DatosArmaduras.tipo(armadura[grupo[1]]["tipo"])["nombre"]).to_lower()
+		elif rey.armadura_natural() > 0.0:
+			nombre += ", piel dura"
+		else:
+			columna.add_child(UIReino.etiqueta("%s: nada" % nombre, 17))
 			continue
-		var valores: Dictionary = armadura[grupo[1]]
 		var porcentajes: PackedStringArray = []
-		for tipo_arma in ["cortante", "punzante", "contundente"]:
-			porcentajes.append("%d%%" % DatosBotin.porcentaje_reduccion(
-				float(valores["fisica"]) * DatosArmaduras.eficacia(valores["tipo"], tipo_arma)))
-		porcentajes.append("%d%%" % DatosBotin.porcentaje_reduccion(valores["magica"]))
-		columna.add_child(UIReino.etiqueta("%s, %s: %s" % [grupo[0], String(DatosArmaduras.tipo(valores["tipo"])["nombre"]).to_lower(),
-			" · ".join(porcentajes)], 17))
+		for tipo_arma in ["cortante", "punzante", "contundente", "arcano"]:
+			porcentajes.append("%d%%" % DatosBotin.porcentaje_reduccion(rey.proteccion(grupo[1], tipo_arma)))
+		columna.add_child(UIReino.etiqueta("%s: %s" % [nombre, " · ".join(porcentajes)], 17))
 	if Juego.carga() > 0.0:
 		columna.add_child(UIReino.etiqueta("Peso: −%d%% de rapidez" % roundi(100.0 * Juego.carga()), 17, Estilo.TEXTO_SUAVE))
 

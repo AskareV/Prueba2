@@ -59,7 +59,7 @@ const SUBS := {
 		"descripcion": "Te curas más rápido: al caminar por mazmorras y zonas y al descansar en el castillo."},
 	"compostura": {"nombre": "Compostura", "descripcion": "Menos estrés por combates, trampas y trabajos."},
 	"resistencia": {"nombre": "Resistencia",
-		"descripcion": "Un poco de resistencia a todo (aturdir, desarmar, empujones) y tu armadura rinde más."},
+		"descripcion": "Piel dura: armadura natural en todo el cuerpo, contra todo daño, aunque no lleves nada. Además tu armadura rinde más y resistes un poco todo (aturdir, desarmar, empujones)."},
 	"firmeza": {"nombre": "Firmeza", "descripcion": "Mucha resistencia al aturdimiento, al desmayo y a los empujones."},
 	"golpe_suerte": {"nombre": "Golpe de suerte", "descripcion": "Probabilidad de golpe crítico (más daño)."},
 	"buen_ojo": {"nombre": "Buen ojo",
@@ -100,6 +100,9 @@ const PASO_POR_CARDIO := 0.04
 const ESTRES_POR_COMPOSTURA := 0.04
 const ARMADURA_POR_RESISTENCIA := 0.03
 const ESTADOS_POR_RESISTENCIA := 0.03
+## Piel dura: armadura natural por punto de Resistencia en todo el cuerpo, igual
+## contra corte, perforación, contusión y magia (con +20, 30: frena el 23%).
+const ARMADURA_NATURAL_POR_RESISTENCIA := 1.5
 const ATURDIR_POR_FIRMEZA := 0.06
 const EMPUJON_POR_FIRMEZA := 0.08
 const DESMAYO_POR_FIRMEZA := 0.06

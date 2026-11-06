@@ -263,13 +263,20 @@ func pagar_ataque() -> void:
 ## Armadura que protege esa zona contra ese tipo de arma (ver DatosArmas.TIPOS):
 ## la resistencia mágica frena la magia y la armadura lo demás, según su tipo
 ## (ver DatosArmaduras: la malla frena muy bien un corte y poco un mazazo). La
-## Resistencia la hace rendir más.
+## Resistencia la hace rendir más y además suma su piel dura (ver armadura_natural).
 func proteccion(zona_id: String, tipo_arma: String) -> float:
 	var datos: Dictionary = armadura.get(zona_id, {})
 	var valor_armadura := float(datos.get("magica", 0.0))
 	if not DatosArmas.es_magico(tipo_arma):
 		valor_armadura = float(datos.get("fisica", 0.0)) * DatosArmaduras.eficacia(String(datos.get("tipo", "")), tipo_arma)
-	return valor_armadura * DatosEstadisticas.aumento(puntos("resistencia"), DatosEstadisticas.ARMADURA_POR_RESISTENCIA)
+	return valor_armadura * DatosEstadisticas.aumento(puntos("resistencia"), DatosEstadisticas.ARMADURA_POR_RESISTENCIA) \
+		+ armadura_natural()
+
+
+## Piel dura: la armadura natural que da la Resistencia en todo el cuerpo, igual
+## contra todo daño, aunque no lleve nada (los enemigos, sin características, no tienen).
+func armadura_natural() -> float:
+	return DatosEstadisticas.ARMADURA_NATURAL_POR_RESISTENCIA * puntos("resistencia")
 
 
 func puede_empunar(lado: String) -> bool:
