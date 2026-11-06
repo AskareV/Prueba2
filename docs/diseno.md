@@ -911,6 +911,10 @@ del arma queda inútil, el combate siguiente empieza con la otra mano:
   encontrar a todos (con el laberinto de antes pasaba casi lo mismo: 5,1% y
   55%). Con Cardio +10 la limpia el 60%. Antes la página medía con un rey que
   conocía el plano y la madriguera parecía más fácil (1000 salidas por caso).
+- Las filas "Parejo" se midieron antes de la piel dura de Resistencia: ese rey
+  tiene Resistencia +4 a +6 (6 a 9 de piel dura, un 6% a 8% menos de daño), así
+  que hoy le va un poco mejor que en las tablas. Las demás filas no cambian (no
+  tienen puntos en Resiliencia).
 - Con los 3 puntos por principal y el tope de +20, el rey "parejo" de nivel 1
   le gana al verdugo el 44% (antes de esos cambios, el 97%).
 - Poner los 15 puntos en Fuerza rinde mucho menos que repartirlos entre Fuerza,
