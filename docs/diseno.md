@@ -413,7 +413,7 @@ Banderín **oscuro** = mazmorra; banderín **rojo** = zona de siete días.
 | Madriguera goblin | Mazmorra | Fácil | Goblins, goblins lanceros, chamanes goblin | 1 |
 | Guarida de bandidos | Mazmorra | Fácil / medio | Ladrones, matones, bandidos | 1,2 |
 | Fortaleza orca | Mazmorra | Medio | Orcos, orcos guerreros, cazadores y chamanes | 1,4 |
-| Ciudadela maldita | Mazmorra | Difícil | Caballeros negros, cultistas, verdugos | 1,6 |
+| Ciudadela maldita | Mazmorra | Difícil | Caballeros negros, lanceros negros, cultistas, verdugos | 1,6 |
 | Bosque sombrío | Zona | Fácil | Goblins, goblins lanceros, chamanes goblin, ladrones | 5 por día |
 | Ruinas del castillo | Zona | Fácil / medio | Ladrones, matones, bandidos, chamanes goblin | 5 por día |
 | Paso de la montaña | Zona | Medio | Orcos cazadores, guerreros y chamanes; matones | 5 por día |
@@ -425,8 +425,9 @@ Como en *My Pet Protector*, adaptado al celular:
 - Cuadrícula de 15 × 9. Se mueve con la **cruceta** o **tocando una casilla
   vecina** (en computadora, también con las flechas del teclado).
 - Cada paso suma estrés, **descubre las cuatro casillas vecinas** y cura un
-  poco al rey (ver 7.12). La que sigue negra después de descubrirla es un
-  **muro**. Arriba se ven el estrés y la vida; a la derecha, *Objetos* (abre
+  poco al rey (ver 7.12). Lo descubierto que no es suelo es **pared** (roca,
+  troncos o piedra, según la mazmorra); lo que todavía no se vio queda oscuro.
+  Arriba se ven el estrés y la vida; a la derecha, *Objetos* (abre
   la lista de pociones, vendas, torniquetes y medicinas), y debajo de la cruceta,
   la sangre, lo que sangra y las infecciones.
 - Si el rey se **desangra** por el camino, es como perder: lo traen al castillo
@@ -439,7 +440,24 @@ Como en *My Pet Protector*, adaptado al celular:
   un enemigo (no empieza la pelea).
 - La primera vez se muestra una ayuda con la leyenda (botón **?**).
 - Cada mazmorra tiene 5 o 6 enemigos y 3 o 4 cofres, nunca a menos de 3 pasos
-  de la H. Los cofres prefieren los callejones sin salida.
+  de la H.
+
+**Cada mazmorra se arma y se ve a su manera** (pedido). El plano se genera
+solo cada semana (no hay planos hechos a mano), pero cada una tiene su estilo:
+
+| Mazmorra | Estilo | Cómo se arma | Cómo se ve | Cofres |
+|---|---|---|---|---|
+| Madriguera goblin | Cueva natural | Túneles que crecen desde la entrada como raíces, doblando al azar y sin tocarse nunca (no hay atajos), con cámaras en algunas puntas y recovecos a los costados | Tierra con piedritas, roca que asoma en los bordes, hongos y algún hueso | En los callejones |
+| Guarida de bandidos | Mina abandonada | Tres galerías rectas a distintas alturas, unidas en zigzag por pozos en sus puntas (a veces otro pozo por el medio), nichos y uno o dos campamentos | Roca con vetas de hierro, vigas de madera, rieles en la galería más larga, fogata y mantas | En los nichos y campamentos |
+| Fortaleza orca | Fuerte de troncos | La empalizada alrededor; adentro, el patio partido en tres corrales por dos empalizadas con un portón cada una (uno arriba y otro abajo: hay que dar la vuelta), chozas de 3 × 3 o 4 × 3 con su puerta y atalayas en las esquinas | Troncos con punta, techos de paja, pisos de tablas, portones abiertos y pasto | Dentro de las chozas |
+| Ciudadela maldita | Castillo de un reino enemigo | De la H baja la entrada hasta un pasillo largo; arriba y abajo hay salas de piedra en fila, unidas por puertas, y casi siempre solo la de la punta da al pasillo (hay que recorrerlas). La mitad de las veces, abajo en el medio, un salón del trono con salas a los lados | Losas, muros de sillares, alfombra roja con borde dorado, puertas, antorchas, estandartes y el trono | En las salas |
+
+Los planos están pensados para que limpiar una mazmorra pida caminar más o menos
+lo mismo que el laberinto de antes, así el estrés sigue igual de exigente.
+Jugando con la niebla (yendo al enemigo o cofre que se ve y, si no se ve
+ninguno, a lo más cercano sin descubrir), limpiarla y volver a la H pide de
+media (300 planos): cueva 91 pasos, mina 85, fuerte 83 y castillo 96; el
+laberinto de antes pedía unos 95 en todas.
 
 ### 7.4 Zonas de siete días
 
@@ -563,8 +581,8 @@ suma un 5% por punto, como al oro. En los lugares difíciles sale más hierro:
   Las piezas guardadas de antes de los tipos pasan a ser de malla (las de
   metal) o con runas.
 - Los enemigos también llevan armadura, cada uno de su tipo: goblin lancero,
-  ladrón, orco cazador y verdugo, cuero; matón, acolchada; orco guerrero, malla;
-  caballero negro, placas; chamanes y cultista, runas. Su valor está puesto para
+  ladrón, orco cazador y verdugo, cuero; matón, acolchada; orco guerrero y
+  lancero negro, malla; caballero negro, placas; chamanes y cultista, runas. Su valor está puesto para
   que contra la espada frenen lo mismo que antes de los tipos: contra la maza,
   la malla del orco guerrero frena mucho menos, y contra la lanza, el cuero.
   Su rapidez ya incluye lo que pesa su armadura.
@@ -799,13 +817,13 @@ Ninguna parte mejora más allá de +20 puntos (ver 8.1). Ningún multiplicador
 que reduce estrés, estados o trampas baja de un 30% de lo normal, y el acierto
 nunca baja de 5% ni pasa de 95%. Coraje de los
 enemigos: goblins 2–3, ladrón 3, bandido 4, matón y lancero 5, orcos 5–6,
-cultista 8, caballero negro y verdugo 9.
+cultista y lancero negro 8, caballero negro y verdugo 9.
 
 ### 8.3 Rapidez de los enemigos
 
 | Rápidos | Normales | Lentos |
 |---|---|---|
-| Goblin 16, ladrón 16, goblin lancero 15, chamán goblin 14, orco cazador 14 | Cultista 13 (y los rivales de la demo, como el rey) | Caballero negro 12, chamán orco 12, orco guerrero 11, matón 11, verdugo 10 |
+| Goblin 16, ladrón 16, goblin lancero 15, chamán goblin 14, orco cazador 14 | Cultista 13, lancero negro 13 (y los rivales de la demo, como el rey) | Caballero negro 12, chamán orco 12, orco guerrero 11, matón 11, verdugo 10 |
 
 El rey empieza con 13; cada punto de Velocidad suma 0,2, y la armadura pesada
 le resta (ver 7.6). Para huir también

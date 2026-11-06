@@ -163,7 +163,7 @@ func _crear_ayuda(area: Control) -> void:
 	var leyenda := Leyenda.new()
 	leyenda.custom_minimum_size = Vector2(640, 64)
 	columna.add_child(leyenda)
-	columna.add_child(UIReino.parrafo("Lo que sigue negro al lado tuyo es un muro. Para salir, vuelve a pisar la H. La mazmorra se reinicia cada semana.", 640, 18))
+	columna.add_child(UIReino.parrafo("Al caminar descubres las casillas de alrededor: lo que no es suelo es pared (roca, troncos o piedra, según la mazmorra). Para salir, vuelve a pisar la H. La mazmorra se reinicia cada semana.", 640, 18))
 	var listo := UIReino.boton("Entendido", _ocultar_ayuda, Vector2(240, 64), 22)
 	listo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	columna.add_child(listo)

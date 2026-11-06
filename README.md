@@ -42,7 +42,10 @@ Arriba están las pestañas:
 - **Aventura:** mapa con 4 mazmorras (banderín oscuro) y 3 zonas de siete días
   (banderín rojo). En la mazmorra te mueves con la cruceta o tocando una casilla
   vecina; cada paso suma estrés, las espadas son enemigos, los cofres dan botín
-  y la **H** es la salida. Las mazmorras se reinician cada semana. Las
+  y la **H** es la salida. Las mazmorras se reinician cada semana, y cada una
+  se arma y se ve a su manera: la de los goblins es una cueva, la de los
+  bandidos una mina abandonada, la de los orcos un fuerte de troncos y la
+  ciudadela el castillo de un reino enemigo. Las
   **heridas duran** de un combate a otro: al caminar te curas un poco, y hay
   pociones. Lo que **sangra** sigue sangrando al caminar (vendas y torniquetes
   lo paran) y las heridas abiertas pueden **infectarse** con los días.
@@ -135,9 +138,9 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | `vista_ciudad.gd` | Dibujo de la ciudad con los edificios que se tocan |
 | `datos_botin.gd` | Calidades, armas, armaduras, anillos, pociones, vendas, torniquetes y medicinas de botín, materiales que se encuentran, precios de venta |
 | `datos_aventura.gd` | Mazmorras, zonas, sucesos de los siete días y la curación al caminar |
-| `generador_mazmorra.gd` | Crea el plano de cada mazmorra según la semana y la partida |
+| `generador_mazmorra.gd` | Crea el plano de cada mazmorra según la semana y la partida, con el estilo de cada una (cueva, mina, fuerte o castillo) |
 | `datos_trabajos.gd` | Trabajos del rey |
-| `mapa_reino.gd`, `tablero_mazmorra.gd` | Dibujo del mapa de aventura y de la cuadrícula de la mazmorra |
+| `mapa_reino.gd`, `tablero_mazmorra.gd` | Dibujo del mapa de aventura y de la cuadrícula de la mazmorra (con el aspecto de cada estilo) |
 | `ui_reino.gd` | Botones, paneles y barras compartidos por las pantallas del reino |
 | `reino.gd`, `mazmorra.gd`, `expedicion.gd`, `menu_principal.gd` | Pantallas |
 

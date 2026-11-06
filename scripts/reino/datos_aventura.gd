@@ -8,29 +8,31 @@ const ESTRES_MAXIMO := 70.0
 
 ## "nivel": 1 fácil, 2 fácil/medio, 3 medio, 4 difícil (calidad del botín).
 ## "posicion": lugar en el mapa, en fracciones del ancho y alto.
+## "estilo" (solo las mazmorras): cómo se arma su plano y cómo se ve: "cueva",
+## "mina", "fuerte" o "castillo" (ver GeneradorMazmorra).
 const MAZMORRAS := {
 	"madriguera_goblin": {
-		"nombre": "Madriguera goblin", "dificultad": "Fácil", "nivel": 1,
-		"descripcion": "Túneles estrechos donde se esconden goblins. Son pequeños y casi no usan armadura: buen lugar para empezar.",
+		"nombre": "Madriguera goblin", "dificultad": "Fácil", "nivel": 1, "estilo": "cueva",
+		"descripcion": "Cuevas naturales donde se esconden goblins. Son pequeños y casi no usan armadura: buen lugar para empezar.",
 		"enemigos": ["goblin", "goblin", "goblin_lancero", "chaman_goblin"],
 		"cantidad_enemigos": 5, "cofres": 3, "estres_por_paso": 1.0, "posicion": Vector2(0.2, 0.68),
 	},
 	"guarida_bandidos": {
-		"nombre": "Guarida de bandidos", "dificultad": "Fácil / medio", "nivel": 2,
-		"descripcion": "Una cueva usada por una banda de ladrones y matones. Guardan lo que roban en los caminos.",
+		"nombre": "Guarida de bandidos", "dificultad": "Fácil / medio", "nivel": 2, "estilo": "mina",
+		"descripcion": "Una mina abandonada donde acampa una banda de ladrones y matones. Guardan lo que roban en los caminos.",
 		"enemigos": ["ladron", "ladron", "maton", "bandido"],
 		"cantidad_enemigos": 5, "cofres": 3, "estres_por_paso": 1.2, "posicion": Vector2(0.46, 0.38),
 	},
 	"fortaleza_orca": {
-		"nombre": "Fortaleza orca", "dificultad": "Medio", "nivel": 3,
-		"descripcion": "Un fuerte de madera y piedra tomado por orcos. Los guerreros llevan armadura y los chamanes lanzan magia.",
+		"nombre": "Fortaleza orca", "dificultad": "Medio", "nivel": 3, "estilo": "fuerte",
+		"descripcion": "Un fuerte de troncos tomado por orcos: una empalizada con chozas adentro. Los guerreros llevan armadura y los chamanes lanzan magia.",
 		"enemigos": ["orco_guerrero", "orco_cazador", "orco", "chaman_orco"],
 		"cantidad_enemigos": 6, "cofres": 3, "estres_por_paso": 1.4, "posicion": Vector2(0.76, 0.3),
 	},
 	"ciudadela_maldita": {
-		"nombre": "Ciudadela maldita", "dificultad": "Difícil", "nivel": 4,
-		"descripcion": "Ruinas de un castillo donde un culto oscuro guarda tesoros antiguos. Mucha armadura y mucha magia.",
-		"enemigos": ["caballero_negro", "cultista", "verdugo"],
+		"nombre": "Ciudadela maldita", "dificultad": "Difícil", "nivel": 4, "estilo": "castillo",
+		"descripcion": "El castillo de un reino enemigo: salas de piedra y pasillos guardados por caballeros negros, lanceros, cultistas y verdugos. Mucha armadura y mucha magia.",
+		"enemigos": ["caballero_negro", "lancero_negro", "cultista", "verdugo"],
 		"cantidad_enemigos": 6, "cofres": 4, "estres_por_paso": 1.6, "posicion": Vector2(0.84, 0.74),
 	},
 }
