@@ -163,8 +163,8 @@ static var ENEMIGOS := {
 		},
 	},
 	"lancero_negro": {
-		"nombre": "Lancero negro", "articulo": "el", "vida": 115, "diestro": true, "arma": "lanza",
-		"rapidez": 13, "coraje": 8, "personalidad": "preciso", "nivel": 4, "oro": [24, 38], "danio": [16, 20], "precision": 0.88,
+		"nombre": "Lancero negro", "articulo": "el", "vida": 105, "diestro": true, "arma": "lanza",
+		"rapidez": 13, "coraje": 8, "personalidad": "preciso", "nivel": 4, "oro": [24, 38], "danio": [14, 18], "precision": 0.86,
 		"armadura": {"cabeza": [20, 8], "torso": [26, 10], "brazos": [12, 5], "piernas": [12, 5]}, "tipo_armadura": "malla",
 		"aspecto": {
 			"piel": Color("#d7ccc8"), "torso": Color("#263238"), "hombros": Color("#455a64"),

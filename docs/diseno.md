@@ -892,14 +892,25 @@ del arma queda inútil, el combate siguiente empieza con la otra mano:
 | Nivel 5, equipo nivel 2 raro | Parejo | 100% | 98% | 0% | 0% |
 | | Guerrero | 100% | 100% | 44% | 1% |
 | Nivel 10, equipo nivel 3 raro | Parejo | 100% | 100% | 80% | 0% |
-| | Guerrero | 100% | 100% | 94% | 66% |
+| | Guerrero | 100% | 100% | 94% | 54% |
 
 - **El tipo de armadura importa:** con malla en vez de acolchada (frena mal las
   mazas y pesa: −8% de rapidez con las cuatro piezas), el rey guerrero de nivel
   5 limpia la fortaleza orca el 15% de las veces (con acolchada, el 44%), y el
-  de nivel 10, la ciudadela el 44% (con acolchada, el 66%). En un combate, el
+  de nivel 10, la ciudadela el 42% (con acolchada, el 54%). En un combate, el
   rey sin puntos de nivel 5 le gana al orco guerrero el 31% con malla y el 57%
   con acolchada.
+- **Los lanceros negros de la ciudadela:** un rey de nivel medio le gana a uno
+  el 95% de los combates sueltos, pero su lanza deja heridas y órganos dañados
+  que duran al combate siguiente. Desde que están, el rey guerrero de nivel 10
+  limpia la ciudadela el 54% de las veces (antes, el 66%; con 1000 intentos, 59%
+  contra 64%).
+- **Con la niebla la madriguera cuesta más de lo que parecía:** jugando como
+  en el juego (el rey solo conoce lo que descubrió), sin puntos solo la limpia
+  el 3,8% de las veces y el 72% de las salidas terminan por estrés antes de
+  encontrar a todos (con el laberinto de antes pasaba casi lo mismo: 5,1% y
+  55%). Con Cardio +10 la limpia el 60%. Antes la página medía con un rey que
+  conocía el plano y la madriguera parecía más fácil (1000 salidas por caso).
 - Con los 3 puntos por principal y el tope de +20, el rey "parejo" de nivel 1
   le gana al verdugo el 44% (antes de esos cambios, el 97%).
 - Poner los 15 puntos en Fuerza rinde mucho menos que repartirlos entre Fuerza,
