@@ -246,6 +246,32 @@ func prueba_el_botin_de_un_enemigo_es_del_nivel_del_lugar() -> void:
 	juego.free()
 
 
+## Un jefe da el triple de experiencia y siempre suelta un objeto. Un enemigo
+## que huye da su experiencia pero se lleva su oro.
+func prueba_jefes_y_enemigos_que_huyen() -> void:
+	var juego := EstadoReino.new()
+	juego.nueva_partida(true)
+	juego.rng.seed = 5
+	for mazmorra_id in DatosAventura.ORDEN_MAZMORRAS:
+		var lugar: Dictionary = DatosAventura.MAZMORRAS[mazmorra_id]
+		var nivel := int(lugar["nivel"])
+		for i in 10:
+			var botin := juego.recompensa_enemigo(lugar["jefe"], nivel)
+			verificar(not botin["objeto"].is_empty(), "El jefe de %s siempre suelta un objeto" % mazmorra_id)
+			verificar_igual(botin["xp"], DatosAventura.XP_POR_VICTORIA * nivel * DatosAventura.XP_JEFE,
+				"El triple de experiencia (%s)" % mazmorra_id)
+			var comun: String = lugar["enemigos"][0]
+			verificar(int(botin["oro"]) > int(DatosRivales.rival(comun)["oro"][1]), "Y más oro que los suyos (%s)" % mazmorra_id)
+	var oro_antes := juego.oro
+	var xp_antes := juego.xp
+	var nivel_antes := juego.nivel
+	var resultado := juego.experiencia_enemigo("goblin", 1)
+	verificar_igual(resultado["xp"], DatosAventura.XP_POR_VICTORIA, "El que huye da su experiencia")
+	verificar_igual(juego.oro, oro_antes, "Pero se lleva su oro")
+	verificar(juego.xp > xp_antes or juego.nivel > nivel_antes, "La experiencia se suma")
+	juego.free()
+
+
 func prueba_el_estres_llega_justo_al_maximo() -> void:
 	var juego := EstadoReino.new()
 	juego.nueva_partida(true)

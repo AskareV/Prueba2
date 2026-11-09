@@ -1111,7 +1111,10 @@ func _al_elegir_lugar(lugar_id: String) -> void:
 	var tipo := "Mazmorra" if es_mazmorra else "Zona: siete días de sucesos al azar"
 	columna.add_child(UIReino.etiqueta("%s · %s" % [tipo, datos["dificultad"]], 20, UIReino.COLOR_AVISO))
 	columna.add_child(UIReino.parrafo(datos["descripcion"], 680, 19, Estilo.TEXTO))
-	columna.add_child(UIReino.parrafo("Enemigos: %s." % DatosAventura.nombres_enemigos(lugar_id), 680, 18))
+	var enemigos := "Enemigos: %s." % DatosAventura.nombres_enemigos(lugar_id)
+	if DatosAventura.nombre_jefe(lugar_id) != "":
+		enemigos += " Al final espera el %s." % DatosAventura.nombre_jefe(lugar_id)
+	columna.add_child(UIReino.parrafo(enemigos, 680, 18))
 	if es_mazmorra:
 		columna.add_child(UIReino.parrafo("Cada paso suma estrés; con %d vuelves a casa. La mazmorra se reinicia cada semana." % roundi(DatosAventura.ESTRES_MAXIMO), 680, 17))
 	var vida := "Tu vida: %d / %d." % [Juego.vida_actual(), Juego.vida_maxima()]

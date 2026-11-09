@@ -200,7 +200,8 @@ func _recorrer_mazmorra() -> void:
 			continue
 		peleas += 1
 		var resultado := await _pelear(peleas == 1)
-		if resultado == "victoria":
+		# Si se rinde o huye de miedo, también deja la mazmorra.
+		if resultado in ["victoria", "rendicion", "escapo"]:
 			victorias += 1
 		if resultado == "derrota":
 			# Perder saca al rey de la mazmorra y termina la semana.
@@ -922,6 +923,25 @@ func _recorrer_continuar() -> void:
 		return
 	_verificar(_juego.combate.is_empty() and not _juego.mazmorra["plano"]["enemigos"].has(celda),
 		"Un combate ya terminado se cuenta al volver")
+	# Un enemigo que huyó de miedo deja la mazmorra con su oro: solo da experiencia.
+	plano = _juego.mazmorra["plano"]
+	var jefe: Vector2i = plano.get("jefe", Vector2i(-1, -1))
+	celda = plano["enemigos"].keys().filter(func(c: Vector2i) -> bool: return c != jefe)[0]
+	var oro_antes := _juego.oro
+	var xp_antes := _juego.xp
+	var nivel_antes := _juego.nivel
+	_juego.combate = {"origen": "mazmorra", "escena": MAZMORRA, "rival": plano["enemigos"][celda], "celda": celda,
+		"resultado": "escapo"}
+	change_scene_to_file(MENU)
+	menu = await _esperar_escena(MENU)
+	if menu == null:
+		return
+	menu.call("_al_continuar")
+	mazmorra = await _esperar_escena(MAZMORRA)
+	if mazmorra == null:
+		return
+	_verificar(not _juego.mazmorra["plano"]["enemigos"].has(celda) and _juego.oro == oro_antes
+		and (_juego.xp > xp_antes or _juego.nivel > nivel_antes), "El que huye deja la mazmorra con su oro y da experiencia")
 	# La demo con un combate pendiente: no es del reino y no lo toca.
 	celda = _juego.mazmorra["plano"]["enemigos"].keys()[0]
 	var pendiente := {"origen": "mazmorra", "escena": MAZMORRA, "rival": _juego.mazmorra["plano"]["enemigos"][celda],

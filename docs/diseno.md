@@ -235,6 +235,13 @@ definamos armas y daño.
   mitad de daño), Magia (ver 8.4), **Objeto** (en el reino: una poción, una venda,
   un torniquete o una medicina; gasta el turno), cambiar o recoger el arma, y
   Huir.
+- **Miedo** (en el reino; ver Presencia en 8.2): un enemigo **atemorizado** que
+  va perdiendo (le queda un cuarto de la vida o menos, y menos que al rey, en
+  proporción) puede **darse por vencido** al empezar su turno (15% cada vez).
+  Si es más rápido que el rey, **huye**; si no, **se rinde**. Las piernas
+  heridas lo frenan: si se las inutilizas, se rinde. Rendirse es una victoria
+  con todo su botín; el que huye da la experiencia, pero se lleva su oro. Los
+  **jefes** (ver 6.4) nunca se dan por vencidos.
 - **Orden de turnos por velocidad** (como la barra de *Champions of Chaos*):
   cada luchador avanza según su rapidez y actúa el que llega primero. Con la
   misma rapidez se alternan; el bastante más rápido actúa **dos veces seguidas**
@@ -339,6 +346,18 @@ pueden hacerte retroceder un tercio de turno (orco y matón 10%, orco guerrero
 15%, verdugo 20%; Firmeza y Resistencia lo bajan). Los que saben magia (ver
 8.4) la usan.
 
+**Jefes** (pedido): uno al final de cada mazmorra (ver 7.3). Son más fuertes que
+los suyos, tienen mucho más **coraje** (hace falta mucha más Presencia para
+atemorizarlos; ver 8.2) y, aunque queden atemorizados, nunca huyen ni se rinden.
+Provisionales:
+
+| Jefe | Mazmorra | Vida | Arma | Armadura | Rapidez | Coraje | Oro |
+|---|---|---|---|---|---|---|---|
+| Jefe goblin (astuto) | Madriguera goblin | 60 | Espada 8–11 | Cuero en cabeza y torso | 15 | 8 | 25–40 |
+| Capitán bandido (astuto) | Guarida de bandidos | 95 | Espada 12–16 | Cuero en cabeza y torso | 13 | 11 | 45–70 |
+| Caudillo orco (bruto) | Fortaleza orca | 135 | Maza 20–24, empuja 20% | Malla entera | 11 | 14 | 70–100 |
+| Rey negro (preciso) | Ciudadela maldita | 145 | Espada 20–24 | Placas enteras | 12 | 17 | 100–150 |
+
 ### 6.5 Equilibrio (simulado)
 
 Victorias del rey (sin características) en 600 combates simulados por casilla
@@ -432,15 +451,25 @@ Como en *My Pet Protector*, adaptado al celular:
   la sangre, lo que sangra y las infecciones.
 - Si el rey se **desangra** por el camino, es como perder: lo traen al castillo
   (ver 7.12).
-- **Espadas cruzadas** = enemigo: empieza un combate. **Cofre** = oro,
-  materiales y un objeto. **H** = salida: al volver a pisarla se sale de la mazmorra.
+- **Espadas cruzadas** = enemigo: empieza un combate. **Calavera** sobre las
+  espadas = el **jefe**. **Cofre** = oro, materiales y un objeto. **H** =
+  salida: al volver a pisarla se sale de la mazmorra.
 - Ganar un combate: +3 de estrés. Perder: +50 y el rey vuelve al castillo.
-  Huir: vuelve a la casilla anterior y el enemigo sigue ahí.
+  Huir: vuelve a la casilla anterior y el enemigo sigue ahí. Si el enemigo se
+  rinde, es como ganarle; si huye de miedo (ver 6), también deja la mazmorra
+  (+3 de estrés) y da la experiencia, pero se lleva su oro.
 - Con 70 de estrés el rey vuelve a casa en ese mismo paso, aunque vaya hacia
   un enemigo (no empieza la pelea).
 - La primera vez se muestra una ayuda con la leyenda (botón **?**).
-- Cada mazmorra tiene 5 o 6 enemigos y 3 o 4 cofres, nunca a menos de 3 pasos
-  de la H.
+- Cada mazmorra tiene 5 o 6 enemigos (uno es el jefe) y 3 o 4 cofres, nunca a
+  menos de 3 pasos de la H.
+- **Jefes** (pedido): al final de cada mazmorra, en su lugar, espera su jefe
+  (ver 6.4): el **jefe goblin** en la cámara más honda de la cueva (si la cueva
+  no tiene cámaras, en el callejón más lejos), el **capitán bandido** en el
+  campamento más lejos de la mina, el **caudillo orco** en la choza más lejos
+  del fuerte y el **rey negro** en el trono de la ciudadela. Da el triple de
+  experiencia, más oro y siempre suelta un objeto. No hace falta vencerlo para
+  salir. En el mapa, el panel del lugar dice quién espera al final.
 
 **Cada mazmorra se arma y se ve a su manera** (pedido). El plano se genera
 solo cada semana (no hay planos hechos a mano), pero cada una tiene su estilo:
@@ -448,15 +477,15 @@ solo cada semana (no hay planos hechos a mano), pero cada una tiene su estilo:
 | Mazmorra | Estilo | Cómo se arma | Cómo se ve | Cofres |
 |---|---|---|---|---|
 | Madriguera goblin | Cueva natural | Túneles que crecen desde la entrada como raíces, doblando al azar y sin tocarse nunca (no hay atajos), con cámaras en algunas puntas y recovecos a los costados | Tierra con piedritas, roca que asoma en los bordes, hongos y algún hueso | En los callejones |
-| Guarida de bandidos | Mina abandonada | Tres galerías rectas a distintas alturas, unidas en zigzag por pozos en sus puntas (a veces otro pozo por el medio), nichos y uno o dos campamentos | Roca con vetas de hierro, vigas de madera, rieles en la galería más larga, fogata y mantas | En los nichos y campamentos |
+| Guarida de bandidos | Mina abandonada | Tres galerías rectas a distintas alturas, unidas en zigzag por pozos en sus puntas (a veces otro pozo por el medio), nichos y uno o dos campamentos en la punta de una galería | Roca con vetas de hierro, vigas de madera, rieles en la galería más larga, fogata y mantas | En los nichos y campamentos |
 | Fortaleza orca | Fuerte de troncos | La empalizada alrededor; adentro, el patio partido en tres corrales por dos empalizadas con un portón cada una (uno arriba y otro abajo: hay que dar la vuelta), chozas de 3 × 3 o 4 × 3 con su puerta y atalayas en las esquinas | Troncos con punta, techos de paja, pisos de tablas, portones abiertos y pasto | Dentro de las chozas |
-| Ciudadela maldita | Castillo de un reino enemigo | De la H baja la entrada hasta un pasillo largo; arriba y abajo hay salas de piedra en fila, unidas por puertas, y casi siempre solo la de la punta da al pasillo (hay que recorrerlas). La mitad de las veces, abajo en el medio, un salón del trono con salas a los lados | Losas, muros de sillares, alfombra roja con borde dorado, puertas, antorchas, estandartes y el trono | En las salas |
+| Ciudadela maldita | Castillo de un reino enemigo | De la H baja la entrada hasta un pasillo largo; arriba hay salas de piedra en fila, unidas por puertas, y casi siempre solo la de la punta da al pasillo (hay que recorrerlas). Abajo en el medio, el salón del trono, que no da al pasillo: se entra por la sala de un costado, y la del otro costado queda detrás | Losas, muros de sillares, alfombra roja con borde dorado, puertas, antorchas, estandartes y el trono | En las salas |
 
 Los planos están pensados para que limpiar una mazmorra pida caminar más o menos
 lo mismo que el laberinto de antes, así el estrés sigue igual de exigente.
 Jugando con la niebla (yendo al enemigo o cofre que se ve y, si no se ve
 ninguno, a lo más cercano sin descubrir), limpiarla y volver a la H pide de
-media (300 planos): cueva 91 pasos, mina 85, fuerte 83 y castillo 96; el
+media (300 planos): cueva 91 pasos, mina 87, fuerte 85 y castillo 95; el
 laberinto de antes pedía unos 95 en todas.
 
 ### 7.4 Zonas de siete días
@@ -488,8 +517,9 @@ Abajo a la izquierda, *Objetos*.
 
 ### 7.5 Botín y calidades
 
-- Enemigo vencido: oro, **50%** de soltar materiales y **40%** de soltar un
-  objeto (Buen ojo lo sube). Cofre: siempre un objeto, materiales y 5 a 15 de
+- Enemigo vencido (o que se rindió): oro, **50%** de soltar materiales y **40%**
+  de soltar un objeto (Buen ojo lo sube); un jefe, siempre. El que huye de
+  miedo no deja nada. Cofre: siempre un objeto, materiales y 5 a 15 de
   oro × nivel. El objeto es siempre del nivel del lugar donde se encontró (de ahí
   salen su calidad y su material), y el oro de un enemigo se ajusta a ese nivel
   (un matón, de nivel 2, da la mitad más en un lugar de nivel 3).
@@ -779,8 +809,8 @@ números son **provisionales**.
   puntos de más no hacen nada.
 - En la pestaña **Rey** se toca **+**, y los puntos quedan en verde hasta tocar
   **Confirmar** (o **Deshacer**). La pestaña muestra "Rey (+)" si hay puntos.
-- **Experiencia:** 10 × nivel del lugar por vencer a un enemigo y 4 × nivel por
-  abrir un cofre. Subir del nivel N al siguiente pide 50 × N. Sin nivel máximo.
+- **Experiencia:** 10 × nivel del lugar por vencer a un enemigo (también si se
+  rinde o huye; un jefe da el triple) y 4 × nivel por abrir un cofre. Subir del nivel N al siguiente pide 50 × N. Sin nivel máximo.
 - **Amuleto:** cada punto suyo por encima de 3 suma **0,075 a las otras 20 partes**
   (como mucho 1,5, con el tope).
 
@@ -811,23 +841,27 @@ mínimo para entrar (ver 7.8).
 | | Mago | +5 de maná máximo (20 en la base; los anillos de maná suman aparte) y +0,5 de maná por turno (2 en la base) |
 | Carisma | Negociación | +3% al vender (como mucho ×1,6, con el tope) y −2% del oro que pagas en el mercado, los edificios, los soldados y la herrería (como mucho 40% menos; en el mercado y la herrería, nunca por debajo de lo que te pagarían al venderlo). Con +12 deja negociar con mercaderes (ver 7.8) |
 | | Liderazgo | Sube el pago de entrenar a la guardia (ver 7.8). La moral de los soldados quedó sin uso al quitar las invasiones |
-| | Presencia | Sube el pago de las audiencias y de cobrar impuestos, y con +5 deja cobrarlos (ver 7.8). Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −8% de acierto, −10% de daño y −5% de rapidez |
+| | Presencia | Sube el pago de las audiencias y de cobrar impuestos, y con +5 deja cobrarlos (ver 7.8). Si tu Presencia supera por 3 o más el **coraje** del enemigo, queda **atemorizado** todo el combate: −8% de acierto, −10% de daño y −5% de rapidez, y si va perdiendo puede huir o rendirse (ver 6). Cuenta como mucho hasta el tope (23) |
 
 Ninguna parte mejora más allá de +20 puntos (ver 8.1). Ningún multiplicador
 que reduce estrés, estados o trampas baja de un 30% de lo normal, y el acierto
 nunca baja de 5% ni pasa de 95%. Coraje de los
 enemigos: goblins 2–3, ladrón 3, bandido 4, matón y lancero 5, orcos 5–6,
-cultista y lancero negro 8, caballero negro y verdugo 9.
+cultista y lancero negro 8, caballero negro y verdugo 9. Los jefes, mucho más:
+jefe goblin 8, capitán bandido 11, caudillo orco 14 y rey negro 17 (hace falta
+Presencia +17 para atemorizarlo).
 
 ### 8.3 Rapidez de los enemigos
 
 | Rápidos | Normales | Lentos |
 |---|---|---|
-| Goblin 16, ladrón 16, goblin lancero 15, chamán goblin 14, orco cazador 14 | Cultista 13, lancero negro 13 (y los rivales de la demo, como el rey) | Caballero negro 12, chamán orco 12, orco guerrero 11, matón 11, verdugo 10 |
+| Goblin 16, ladrón 16, goblin lancero 15, jefe goblin 15, chamán goblin 14, orco cazador 14 | Cultista 13, lancero negro 13, capitán bandido 13 (y los rivales de la demo, como el rey) | Caballero negro 12, rey negro 12, chamán orco 12, orco guerrero 11, caudillo orco 11, matón 11, verdugo 10 |
 
 El rey empieza con 13; cada punto de Velocidad suma 0,2, y la armadura pesada
 le resta (ver 7.6). Para huir también
-cuenta quién es más rápido: cada punto de rapidez de ventaja suma un 2%.
+cuenta quién es más rápido: cada punto de rapidez de ventaja suma un 2%. Un
+enemigo atemorizado que se da por vencido huye solo si es más rápido que el rey;
+si no, se rinde (ver 6).
 
 ### 8.4 Maná y hechizos (provisionales)
 
@@ -882,39 +916,62 @@ acierto nuevo y los órganos):
 **Una mazmorra entera**, con las heridas, los órganos dañados y lo que sangra de
 un combate al siguiente, 6 pasos de cura entre combates (sangrando también) y
 sin pociones ni vendas (300 intentos; % de veces que vence a todos). Si la mano
-del arma queda inútil, el combate siguiente empieza con la otra mano:
+del arma queda inútil, el combate siguiente empieza con la otra mano. Los
+enemigos comunes salen al azar y el **jefe va al final**; entre paréntesis, la
+misma medida sin jefe (todos comunes, como antes). Con * no se volvió a medir:
+ya era 0% o 100% sin jefe:
 
 | Rey | Reparto | Madriguera goblin | Guarida de bandidos | Fortaleza orca | Ciudadela maldita |
 |---|---|---|---|---|---|
-| Nivel 1, sin armadura | Sin puntos | 14% | 0% | 0% | 0% |
-| | Parejo | 100% | 2% | 0% | 0% |
-| | Guerrero | 100% | 45% | 0% | 0% |
-| Nivel 5, equipo nivel 2 raro | Parejo | 100% | 98% | 0% | 0% |
-| | Guerrero | 100% | 100% | 44% | 1% |
-| Nivel 10, equipo nivel 3 raro | Parejo | 100% | 100% | 80% | 0% |
-| | Guerrero | 100% | 100% | 94% | 54% |
+| Nivel 1, sin armadura | Sin puntos | 9% (10%) | 0% | 0%* | 0%* |
+| | Parejo | 100% (100%) | 3% (13%) | 0%* | 0%* |
+| | Guerrero | 100% (100%) | 27% (39%) | 0% | 0%* |
+| Nivel 5, equipo nivel 2 raro | Parejo | 100% | 99% (100%) | 0% | 0% |
+| | Guerrero | 100%* | 100% (100%) | 31% (45%) | 0% (1%) |
+| Nivel 10, equipo nivel 3 raro | Parejo | 100%* | 100% | 85% (88%) | 1% (3%) |
+| | Guerrero | 100%* | 100% | 95% (94%) | 41% (57%) |
 
-- **El tipo de armadura importa:** con malla en vez de acolchada (frena mal las
-  mazas y pesa: −8% de rapidez con las cuatro piezas), el rey guerrero de nivel
-  5 limpia la fortaleza orca el 15% de las veces (con acolchada, el 44%), y el
-  de nivel 10, la ciudadela el 42% (con acolchada, el 54%). En un combate, el
+- **Los jefes:** sano, el rey casi siempre le gana a su jefe (del 97% al 100%
+  con los reyes que limpian bien esa mazmorra), pero llega con las heridas de
+  todo lo anterior. El rey guerrero de nivel 10 le gana al rey negro el 52% de
+  las veces que llega a él; por eso la ciudadela baja del 57% al 41%, la
+  fortaleza (guerrero de nivel 5) del 45% al 31% y la guarida (guerrero de
+  nivel 1) del 39% al 27%. Los más débiles casi nunca pueden con el jefe: el
+  rey parejo de nivel 1 llega al capitán bandido la mitad de las veces y le gana
+  el 5%. En el juego hay pociones y se puede salir sin pelear con el jefe.
+- **El miedo:** con Presencia +10, el rey de referencia de la página (nivel 1,
+  sin armadura) le gana al orco guerrero el 26% (antes de que los atemorizados
+  pudieran rendirse o huir, el 20%) y al orco de la demo el 69% (antes, el
+  62%). Primero se probó con la mitad de la vida y 25% por turno: le ganaba al
+  orco guerrero el 83%, porque el orco huía antes de vencerlo, y se dejó en un
+  cuarto de la vida, 15%, solo si va perdiendo, y que huya solo el más rápido.
+  En la madriguera (rey parejo de nivel 1) y en la fortaleza (parejo de nivel
+  10), 1 de cada 5 combates termina con el enemigo rindiéndose o huyendo.
+
+- **El tipo de armadura importa** (medido antes de los jefes): con malla en vez
+  de acolchada (frena mal las mazas y pesa: −8% de rapidez con las cuatro
+  piezas), el rey guerrero de nivel 5 limpia la fortaleza orca el 15% de las
+  veces (con acolchada, el 44%), y el de nivel 10, la ciudadela el 42% (con
+  acolchada, el 54%). En un combate, el
   rey sin puntos de nivel 5 le gana al orco guerrero el 31% con malla y el 57%
   con acolchada.
 - **Los lanceros negros de la ciudadela:** un rey de nivel medio le gana a uno
   el 95% de los combates sueltos, pero su lanza deja heridas y órganos dañados
-  que duran al combate siguiente. Desde que están, el rey guerrero de nivel 10
-  limpia la ciudadela el 54% de las veces (antes, el 66%; con 1000 intentos, 59%
-  contra 64%).
-- **Con la niebla la madriguera cuesta más de lo que parecía:** jugando como
+  que duran al combate siguiente. Desde que están (y antes de los jefes), el rey
+  guerrero de nivel 10 limpia la ciudadela el 54% de las veces (antes, el 66%;
+  con 1000 intentos, 59% contra 64%).
+- **Con la niebla la madriguera cuesta más de lo que parecía** (medido antes
+  de los jefes): jugando como
   en el juego (el rey solo conoce lo que descubrió), sin puntos solo la limpia
   el 3,8% de las veces y el 72% de las salidas terminan por estrés antes de
   encontrar a todos (con el laberinto de antes pasaba casi lo mismo: 5,1% y
   55%). Con Cardio +10 la limpia el 60%. Antes la página medía con un rey que
   conocía el plano y la madriguera parecía más fácil (1000 salidas por caso).
-- Las filas "Parejo" se midieron antes de la piel dura de Resistencia: ese rey
-  tiene Resistencia +4 a +6 (6 a 9 de piel dura, un 6% a 8% menos de daño), así
-  que hoy le va un poco mejor que en las tablas. Las demás filas no cambian (no
-  tienen puntos en Resiliencia).
+- Las filas "Parejo" de la tabla de un combate se midieron antes de la piel
+  dura de Resistencia: ese rey tiene Resistencia +4 a +6 (6 a 9 de piel dura, un
+  6% a 8% menos de daño), así que hoy le va un poco mejor. Las demás filas no
+  cambian (no tienen puntos en Resiliencia). La tabla de la mazmorra entera ya
+  es de después.
 - Con los 3 puntos por principal y el tope de +20, el rey "parejo" de nivel 1
   le gana al verdugo el 44% (antes de esos cambios, el 97%).
 - Poner los 15 puntos en Fuerza rinde mucho menos que repartirlos entre Fuerza,

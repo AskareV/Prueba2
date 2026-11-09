@@ -2,9 +2,9 @@ extends Control
 ## Exploración de una mazmorra (como en My Pet Protector, adaptada al celular):
 ## cada paso suma estrés, descubre las casillas de alrededor y cura un poco al
 ## rey (las heridas de un combate siguen en el siguiente). Al pisar un enemigo
-## empieza un combate; un cofre da botín; volver a pisar la H saca de la
-## mazmorra. Con 70 de estrés el rey vuelve a casa. Al salir termina la semana
-## y la mazmorra se reinicia.
+## (o al jefe, al final) empieza un combate; un cofre da botín; volver a pisar
+## la H saca de la mazmorra. Con 70 de estrés el rey vuelve a casa. Al salir
+## termina la semana y la mazmorra se reinicia.
 
 const ESCENA_REINO := "res://escenas/reino.tscn"
 const ESCENA_COMBATE := "res://escenas/combate.tscn"
@@ -163,7 +163,7 @@ func _crear_ayuda(area: Control) -> void:
 	var leyenda := Leyenda.new()
 	leyenda.custom_minimum_size = Vector2(640, 64)
 	columna.add_child(leyenda)
-	columna.add_child(UIReino.parrafo("Al caminar descubres las casillas de alrededor: lo que no es suelo es pared (roca, troncos o piedra, según la mazmorra). Para salir, vuelve a pisar la H. La mazmorra se reinicia cada semana.", 640, 18))
+	columna.add_child(UIReino.parrafo("Al caminar descubres las casillas de alrededor: lo que no es suelo es pared (roca, troncos o piedra, según la mazmorra). Al final espera el jefe. Para salir, vuelve a pisar la H. La mazmorra se reinicia cada semana.", 640, 18))
 	var listo := UIReino.boton("Entendido", _ocultar_ayuda, Vector2(240, 64), 22)
 	listo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	columna.add_child(listo)
@@ -291,11 +291,20 @@ func _procesar_combate() -> void:
 	Juego.combate = {}
 	var nombre: String = DatosRivales.rival(combate["rival"])["nombre"]
 	match String(combate["resultado"]):
-		"victoria":
+		"victoria", "rendicion":
 			Juego.mazmorra["plano"]["enemigos"].erase(combate["celda"])
 			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_VICTORIA))
 			var botin := Juego.recompensa_enemigo(combate["rival"], int(_datos["nivel"]))
-			_mensaje("Venciste al %s: %s. %s." % [nombre, Juego.texto_botin(botin), Juego.texto_xp(botin)])
+			var texto := "El %s se rindió y te dio %s. %s." if combate["resultado"] == "rendicion" \
+				else "Venciste al %s: %s. %s."
+			_mensaje(texto % [nombre, Juego.texto_botin(botin), Juego.texto_xp(botin)])
+			_comprobar_estres()
+		"escapo":
+			# Huyó de miedo: ya no está en la mazmorra, pero se llevó su oro.
+			Juego.mazmorra["plano"]["enemigos"].erase(combate["celda"])
+			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_VICTORIA))
+			var xp := Juego.experiencia_enemigo(combate["rival"], int(_datos["nivel"]))
+			_mensaje("El %s huyó de miedo con su oro. %s." % [nombre, Juego.texto_xp(xp)])
 			_comprobar_estres()
 		"derrota":
 			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_DERROTA))
@@ -367,16 +376,18 @@ class Flecha:
 		draw_colored_polygon(puntos, Color("#eef0ff"))
 
 
-## Leyenda de la ayuda: enemigo, tesoro y salida.
+## Leyenda de la ayuda: enemigo, jefe, tesoro y salida.
 class Leyenda:
 	extends Control
 
 	func _draw() -> void:
 		var fuente := get_theme_default_font()
 		var y := size.y / 2.0
-		TableroMazmorra.dibujar_espadas(self, Vector2(40, y), 20.0)
-		draw_string(fuente, Vector2(72, y + 8), "Enemigo", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#ffb74d"))
-		TableroMazmorra.dibujar_cofre(self, Vector2(260, y), 20.0)
-		draw_string(fuente, Vector2(292, y + 8), "Tesoro", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#ffb74d"))
-		draw_string(fuente, Vector2(452, y + 12), "H", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, TableroMazmorra.COLOR_SALIDA)
-		draw_string(fuente, Vector2(482, y + 8), "Salida", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#ffb74d"))
+		TableroMazmorra.dibujar_espadas(self, Vector2(30, y), 20.0)
+		draw_string(fuente, Vector2(60, y + 8), "Enemigo", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#ffb74d"))
+		TableroMazmorra.dibujar_jefe(self, Vector2(205, y), 20.0)
+		draw_string(fuente, Vector2(237, y + 8), "Jefe", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#ffb74d"))
+		TableroMazmorra.dibujar_cofre(self, Vector2(345, y), 20.0)
+		draw_string(fuente, Vector2(375, y + 8), "Tesoro", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#ffb74d"))
+		draw_string(fuente, Vector2(500, y + 12), "H", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, TableroMazmorra.COLOR_SALIDA)
+		draw_string(fuente, Vector2(530, y + 8), "Salida", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("#ffb74d"))

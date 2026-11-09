@@ -32,6 +32,11 @@ const MULTIPLICADOR_CRITICO := 1.5
 const ATEMORIZADO_ACIERTO := 0.92
 const ATEMORIZADO_DANIO := 0.9
 const ATEMORIZADO_RAPIDEZ := 0.95
+## Un enemigo atemorizado que va perdiendo (le queda esta parte de la vida o
+## menos, y menos que al rey) puede darse por vencido al empezar cada uno de sus
+## turnos, con esta probabilidad (ver darse_por_vencido).
+const VIDA_PARA_RENDIRSE := 0.25
+const PROB_DARSE_POR_VENCIDO := 0.15
 ## Huir: cuánto suma (o resta) cada punto de rapidez de ventaja sobre el que persigue.
 const HUIDA_POR_RAPIDEZ := 0.02
 ## Ciego (sin los dos ojos): acierta esta parte de lo normal.
@@ -483,6 +488,24 @@ static func lanzar_hechizo_a(lanzador: Luchador, defensor: Luchador, hechizo_id:
 	return resultado
 
 
-## La Presencia del rey supera de lejos el coraje del rival.
+## La Presencia del rey supera de lejos el coraje del rival (la Presencia cuenta
+## como mucho hasta el tope, como todas las partes).
 static func puede_atemorizar(rey: Luchador, rival: Luchador) -> bool:
-	return rey.tiene_estadisticas and rey.valor_de("presencia") >= rival.coraje + DatosEstadisticas.VENTAJA_PARA_ATEMORIZAR
+	var presencia := DatosEstadisticas.BASE + rey.puntos("presencia")
+	return rey.tiene_estadisticas and presencia >= rival.coraje + DatosEstadisticas.VENTAJA_PARA_ATEMORIZAR
+
+
+## Al empezar su turno, un enemigo atemorizado que va perdiendo (con un cuarto de
+## la vida o menos, y menos que el rey, en proporción) puede darse por vencido:
+## si es más rápido que el rey, huye; si no, se rinde (sabe que no puede
+## escapar; las piernas heridas lo frenan). Los jefes nunca. Devuelve "huida",
+## "rendicion" o "" (sigue peleando); quien llama lo guarda en Luchador.abandono.
+static func darse_por_vencido(luchador: Luchador, rival: Luchador, rng: RandomNumberGenerator) -> String:
+	if not luchador.atemorizado or luchador.jefe or luchador.es_jugador or luchador.fuera_de_combate():
+		return ""
+	var su_vida := float(luchador.vida) / luchador.vida_max_sana
+	if su_vida > VIDA_PARA_RENDIRSE or su_vida >= float(rival.vida) / rival.vida_max_sana:
+		return ""
+	if rng.randf() >= PROB_DARSE_POR_VENCIDO:
+		return ""
+	return "huida" if luchador.rapidez_efectiva() > rival.rapidez_efectiva() else "rendicion"

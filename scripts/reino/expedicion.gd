@@ -215,10 +215,16 @@ func _procesar_combate() -> void:
 	Juego.combate = {}
 	var nombre: String = DatosRivales.rival(combate["rival"])["nombre"]
 	match String(combate["resultado"]):
-		"victoria":
+		"victoria", "rendicion":
 			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_VICTORIA))
 			var botin := Juego.recompensa_enemigo(combate["rival"], int(_datos["nivel"]))
-			_registrar("Victoria", "Venciste al %s: %s. %s." % [nombre, Juego.texto_botin(botin), Juego.texto_xp(botin)])
+			var texto := "El %s se rindió y te dio %s. %s." if combate["resultado"] == "rendicion" \
+				else "Venciste al %s: %s. %s."
+			_registrar("Victoria", texto % [nombre, Juego.texto_botin(botin), Juego.texto_xp(botin)])
+		"escapo":
+			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_VICTORIA))
+			var xp := Juego.experiencia_enemigo(combate["rival"], int(_datos["nivel"]))
+			_registrar("Huyó", "El %s huyó de miedo con su oro. %s." % [nombre, Juego.texto_xp(xp)])
 		"derrota":
 			Juego.sumar_estres(Juego.estres_mental(DatosAventura.ESTRES_DERROTA))
 			_registrar("Derrota", "El %s te venció." % nombre)

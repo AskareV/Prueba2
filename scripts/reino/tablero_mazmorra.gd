@@ -7,8 +7,9 @@ extends Control
 ## patio, las chozas y las atalayas; el castillo, losas, muros de piedra, la
 ## alfombra, puertas, antorchas y estandartes. En el laberinto de antes, el
 ## suelo es piedra clara y un muro sigue oscuro aunque esté al lado.
-## Espadas cruzadas = enemigo, cofre = tesoro, H = salida. Tocar una casilla
-## vecina pide moverse hacia ella. Todo es dibujo de código, provisional.
+## Espadas cruzadas = enemigo, calavera sobre las espadas = el jefe, cofre =
+## tesoro, H = salida. Tocar una casilla vecina pide moverse hacia ella. Todo es
+## dibujo de código, provisional.
 
 signal mover(direccion: Vector2i)
 
@@ -482,7 +483,10 @@ func _dibujar_contenido(celda: Vector2i, rect: Rect2) -> void:
 		draw_string(fuente, centro + Vector2(-medida.x / 2.0, tamano * 0.35), "H", HORIZONTAL_ALIGNMENT_LEFT, -1,
 			tamano, COLOR_SALIDA)
 	elif plano["enemigos"].has(celda):
-		dibujar_espadas(self, centro, lado * 0.32)
+		if celda == plano.get("jefe", Vector2i(-1, -1)):
+			dibujar_jefe(self, centro, lado * 0.32)
+		else:
+			dibujar_espadas(self, centro, lado * 0.32)
 	elif plano["cofres"].has(celda):
 		dibujar_cofre(self, centro, lado * 0.3)
 
@@ -510,6 +514,28 @@ static func dibujar_espadas(lienzo: CanvasItem, centro: Vector2, radio: float) -
 		var guarda := mango.lerp(punta, 0.28)
 		var normal := (punta - mango).normalized().orthogonal() * radio * 0.35
 		lienzo.draw_line(guarda - normal, guarda + normal, Color("#5d4037"), 4.0, true)
+
+
+## Jefe: una calavera sobre las espadas cruzadas, con un halo rojo. Estática
+## para usarla también en la leyenda.
+static func dibujar_jefe(lienzo: CanvasItem, centro: Vector2, radio: float) -> void:
+	lienzo.draw_circle(centro, radio * 1.25, Color(0.85, 0.1, 0.1, 0.35))
+	dibujar_espadas(lienzo, centro, radio * 1.1)
+	var hueso := Color("#f3ecd9")
+	var sombra := Color("#2b2320")
+	var craneo := centro + Vector2(0, -radio * 0.12)
+	lienzo.draw_circle(craneo, radio * 0.6, sombra)
+	lienzo.draw_circle(craneo, radio * 0.52, hueso)
+	var mandibula := Rect2(centro + Vector2(-radio * 0.3, radio * 0.22), Vector2(radio * 0.6, radio * 0.32))
+	lienzo.draw_rect(mandibula.grow(radio * 0.07), sombra)
+	lienzo.draw_rect(mandibula, hueso)
+	for lado_x in [-1.0, 1.0]:
+		lienzo.draw_circle(craneo + Vector2(radio * 0.21 * lado_x, radio * 0.02), radio * 0.15, sombra)
+	lienzo.draw_colored_polygon(PackedVector2Array([craneo + Vector2(0, radio * 0.14),
+		craneo + Vector2(-radio * 0.08, radio * 0.3), craneo + Vector2(radio * 0.08, radio * 0.3)]), sombra)
+	for i in 3:
+		var x := mandibula.position.x + mandibula.size.x * (i + 1) / 4.0
+		lienzo.draw_line(Vector2(x, mandibula.position.y), Vector2(x, mandibula.end.y), sombra, 1.5)
 
 
 ## Cofre (tesoro). Estática para usarla también en la leyenda.

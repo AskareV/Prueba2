@@ -45,7 +45,12 @@ Arriba están las pestañas:
   y la **H** es la salida. Las mazmorras se reinician cada semana, y cada una
   se arma y se ve a su manera: la de los goblins es una cueva, la de los
   bandidos una mina abandonada, la de los orcos un fuerte de troncos y la
-  ciudadela el castillo de un reino enemigo. Las
+  ciudadela el castillo de un reino enemigo. Al final de cada una espera su
+  **jefe** (la calavera): el jefe goblin en la cámara más honda, el capitán
+  bandido en su campamento, el caudillo orco en una choza y el rey negro en su
+  trono. Es más fuerte, casi no se deja intimidar y da más botín. Un enemigo
+  atemorizado por tu **Presencia** que va perdiendo puede **huir** (se lleva
+  su oro) o **rendirse** (te da su botín); los jefes, nunca. Las
   **heridas duran** de un combate a otro: al caminar te curas un poco, y hay
   pociones. Lo que **sangra** sigue sangrando al caminar (vendas y torniquetes
   lo paran) y las heridas abiertas pueden **infectarse** con los días.
@@ -118,12 +123,12 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | `datos_armaduras.gd` | Tipos de armadura: cuánto frena cada uno cada daño y cuánto pesa |
 | `datos_heridas.gd` | Sangrado e infecciones: cuánto sangra cada herida, estados por la sangre perdida, vendas y torniquetes, etapas de las infecciones |
 | `datos_armas.gd` | Las armas (espada, maza, lanza y bastón mágico) y sus números provisionales |
-| `datos_rivales.gd` | Rivales de la demo, enemigos del reino y aspecto del rey |
+| `datos_rivales.gd` | Rivales de la demo, enemigos del reino (con los jefes de las mazmorras) y aspecto del rey |
 | `datos_estadisticas.gd` | Las 7 características del rey, sus partes y cuánto vale cada punto |
 | `orden_turnos.gd` | Barra de turnos por velocidad |
 | `datos_hechizos.gd` | Maná, bastón y hechizos |
 | `luchador.gd` | Estado de un combatiente: vida, integridad de cada parte, lateralidad |
-| `motor_combate.gd` | Reglas: acierto, daño, armadura, fracturas, sangrado, órganos, ceguera, desarme, aturdimiento, desmayo, empujones, huir y hechizos |
+| `motor_combate.gd` | Reglas: acierto, daño, armadura, fracturas, sangrado, órganos, ceguera, desarme, aturdimiento, desmayo, empujones, huir, atemorizar (y que el enemigo huya o se rinda) y hechizos |
 | `ia_enemigo.gd` | Cómo deciden los rivales: el plan de su personalidad, a veces improvisan, se defienden y, si saben, lanzan hechizos |
 | `figura.gd` / `plantilla_humanoide.gd` | Dibujo del cuerpo por partes, heridas y animaciones |
 | `fondo_mazmorra.gd`, `antorchas.gd`, `vineta.gd` | Fondo de piedra, antorchas y oscurecido de los bordes |
@@ -138,7 +143,7 @@ Los detalles están en la sección 7 de [`docs/diseno.md`](docs/diseno.md).
 | `vista_ciudad.gd` | Dibujo de la ciudad con los edificios que se tocan |
 | `datos_botin.gd` | Calidades, armas, armaduras, anillos, pociones, vendas, torniquetes y medicinas de botín, materiales que se encuentran, precios de venta |
 | `datos_aventura.gd` | Mazmorras, zonas, sucesos de los siete días y la curación al caminar |
-| `generador_mazmorra.gd` | Crea el plano de cada mazmorra según la semana y la partida, con el estilo de cada una (cueva, mina, fuerte o castillo) |
+| `generador_mazmorra.gd` | Crea el plano de cada mazmorra según la semana y la partida, con el estilo de cada una (cueva, mina, fuerte o castillo) y el jefe en su lugar |
 | `datos_trabajos.gd` | Trabajos del rey |
 | `mapa_reino.gd`, `tablero_mazmorra.gd` | Dibujo del mapa de aventura y de la cuadrícula de la mazmorra (con el aspecto de cada estilo) |
 | `ui_reino.gd` | Botones, paneles y barras compartidos por las pantallas del reino |

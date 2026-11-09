@@ -40,8 +40,9 @@ static func combatir(arma_id: String, rival_id: String, estrategia: String, dies
 	}
 
 
-## Pelea hasta que uno cae, con la barra de turnos por velocidad como en la
-## escena. Devuelve cuántos turnos jugó el rey (como mucho MAX_TURNOS).
+## Pelea hasta que uno cae (o el rival huye o se rinde), con la barra de turnos
+## por velocidad como en la escena. Devuelve cuántos turnos jugó el rey (como
+## mucho MAX_TURNOS).
 static func pelear(rey: Luchador, rival: Luchador, estrategia: String, rng: RandomNumberGenerator,
 		racha := {"rey": [0, 0], "rival": [0, 0]}) -> int:
 	var orden := OrdenTurnos.new(rey, rival)
@@ -60,6 +61,11 @@ static func pelear(rey: Luchador, rival: Luchador, estrategia: String, rng: Rand
 		if inicio["pierde_turno"]:
 			actor.defendiendo = false
 		elif not actor.fuera_de_combate():
+			# Atemorizado y perdiendo, el rival puede huir o rendirse (no si está aturdido).
+			if not es_rey and not actor.aturdido:
+				actor.abandono = MotorCombate.darse_por_vencido(actor, rey, rng)
+				if actor.abandono != "":
+					break
 			_actuar_contando(actor, rival if es_rey else rey, rng, turno, estrategia if es_rey else "ia",
 				racha["rey" if es_rey else "rival"], orden)
 		if rey.fuera_de_combate() or rival.fuera_de_combate():

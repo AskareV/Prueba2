@@ -64,7 +64,8 @@ func prueba_todos_los_estilos_se_pueden_recorrer() -> void:
 				for x in [0, GeneradorMazmorra.ANCHO - 1]:
 					verificar(not GeneradorMazmorra.es_suelo(celdas, Vector2i(x, y)), "Borde cerrado (%s)" % mazmorra_id)
 			for celda in plano["enemigos"]:
-				verificar(datos["enemigos"].has(plano["enemigos"][celda]), "Enemigo de la mazmorra (%s)" % mazmorra_id)
+				var enemigo_id: String = plano["enemigos"][celda]
+				verificar(datos["enemigos"].has(enemigo_id) or enemigo_id == datos["jefe"], "Enemigo de la mazmorra (%s)" % mazmorra_id)
 				verificar(not plano["cofres"].has(celda), "Enemigo y cofre no comparten casilla")
 			for celda in plano["enemigos"].keys() + plano["cofres"].keys():
 				verificar(alcanzables.get(celda, 0) >= GeneradorMazmorra.DISTANCIA_MINIMA, "Lejos de la H (%s)" % mazmorra_id)
@@ -96,7 +97,9 @@ func prueba_la_mina_tiene_galerias_rectas_unidas_en_zigzag() -> void:
 			var mejor := 0
 			for x in GeneradorMazmorra.ANCHO:
 				var que: String = aspecto.get(Vector2i(x, y), "")
-				var en_galeria := que == "galeria" or que == "riel" or (que == "pozo" and GeneradorMazmorra.es_suelo(plano["celdas"], Vector2i(x - 1, y)))
+				# La punta de una galería puede ser parte de un campamento.
+				var en_galeria := que in ["galeria", "riel", "campamento"] \
+					or (que == "pozo" and GeneradorMazmorra.es_suelo(plano["celdas"], Vector2i(x - 1, y)))
 				seguidas = seguidas + 1 if en_galeria else 0
 				mejor = maxi(mejor, seguidas)
 			if mejor >= 8:
@@ -140,11 +143,75 @@ func prueba_el_castillo_tiene_pasillo_salas_y_puertas() -> void:
 		var puertas := aspecto.values().count("puerta")
 		verificar(puertas >= 4, "Puertas entre salas y al pasillo (%d)" % puertas)
 		verificar(aspecto.values().count("sala") >= 8, "Salas de piedra")
+		# Siempre hay salón del trono, y no da al pasillo: se entra por una sala.
+		var trono := Vector2i(GeneradorMazmorra.ANCHO / 2, GeneradorMazmorra.ALTO - 2)
+		verificar_igual(aspecto.get(trono, ""), "trono", "Siempre hay trono")
+		verificar(not _distancias_sin(plano, "sala").has(trono), "Al trono se llega pasando por una sala")
 		for celda in plano["cofres"]:
 			cofres += 1
 			if aspecto.get(celda, "") in ["sala", "salon"]:
 				cofres_en_salas += 1
 	verificar(cofres_en_salas >= cofres * 0.95, "Los cofres están en las salas (%d de %d)" % [cofres_en_salas, cofres])
+
+
+## Pasos desde la entrada sin pisar las casillas de ese aspecto.
+func _distancias_sin(plano: Dictionary, evitar: String) -> Dictionary:
+	var distancias := {plano["entrada"]: 0}
+	var cola: Array[Vector2i] = [plano["entrada"]]
+	while not cola.is_empty():
+		var actual: Vector2i = cola.pop_front()
+		for d in DIRS:
+			var siguiente: Vector2i = actual + d
+			if GeneradorMazmorra.es_suelo(plano["celdas"], siguiente) and not distancias.has(siguiente) \
+					and plano["aspecto"].get(siguiente, "") != evitar:
+				distancias[siguiente] = distancias[actual] + 1
+				cola.append(siguiente)
+	return distancias
+
+
+## Cada mazmorra tiene un jefe al final, en su lugar: la cámara más honda de la
+## cueva, el campamento más lejano de la mina, la choza más lejana del fuerte y
+## el trono del castillo. Cuenta como uno de los enemigos y no comparte casilla.
+func prueba_cada_mazmorra_tiene_su_jefe_al_final() -> void:
+	var lugares := {"madriguera_goblin": "camara", "guarida_bandidos": "campamento", "fortaleza_orca": "interior",
+		"ciudadela_maldita": "trono"}
+	for mazmorra_id in DatosAventura.ORDEN_MAZMORRAS:
+		var datos: Dictionary = DatosAventura.MAZMORRAS[mazmorra_id]
+		verificar(DatosRivales.ENEMIGOS[datos["jefe"]].get("jefe", false), "El jefe de %s es un jefe" % mazmorra_id)
+		var que: String = lugares[mazmorra_id]
+		var en_su_lugar := 0
+		var lejos := 0.0
+		var planos := _planos(mazmorra_id)
+		for plano in planos:
+			var jefe: Vector2i = plano["jefe"]
+			verificar_igual(plano["enemigos"].get(jefe, ""), datos["jefe"], "El jefe está en su casilla (%s)" % mazmorra_id)
+			verificar_igual(plano["enemigos"].values().count(datos["jefe"]), 1, "Un solo jefe (%s)" % mazmorra_id)
+			verificar(not plano["cofres"].has(jefe), "El jefe no está sobre un cofre (%s)" % mazmorra_id)
+			var distancias := GeneradorMazmorra.distancias_desde(plano["celdas"], plano["entrada"])
+			if plano["aspecto"].get(jefe, "") == que:
+				en_su_lugar += 1
+			for celda in plano["aspecto"]:
+				if plano["aspecto"][celda] == que:
+					verificar(distancias.get(celda, 0) <= distancias[jefe], "Ninguno de su lugar queda más lejos (%s)" % mazmorra_id)
+			var mas_lejos := 0
+			for celda in distancias:
+				mas_lejos = maxi(mas_lejos, distancias[celda])
+			lejos += float(distancias[jefe]) / mas_lejos
+		# Casi todas las cuevas tienen alguna cámara; si no, el jefe espera en el
+		# callejón más lejos.
+		var minimo := 0.8 if mazmorra_id == "madriguera_goblin" else 1.0
+		verificar(en_su_lugar >= planos.size() * minimo, "%s: el jefe en su lugar (%d de %d)" % [mazmorra_id, en_su_lugar, planos.size()])
+		verificar(lejos / planos.size() >= 0.6, "%s: el jefe queda lejos de la entrada (%.0f%% de lo más lejos)" % [
+			mazmorra_id, 100.0 * lejos / planos.size()])
+
+
+func prueba_la_mina_tiene_campamentos() -> void:
+	var con_campamento := 0
+	for plano in _planos("guarida_bandidos"):
+		if plano["aspecto"].values().has("campamento"):
+			con_campamento += 1
+			verificar(plano["aspecto"].values().has("fogata"), "Cada campamento tiene su fogata")
+	verificar(con_campamento >= PLANOS * 0.95, "Casi todas las minas tienen campamento (%d de %d)" % [con_campamento, PLANOS])
 
 
 func prueba_la_mina_y_el_fuerte_guardan_los_cofres_en_su_lugar() -> void:

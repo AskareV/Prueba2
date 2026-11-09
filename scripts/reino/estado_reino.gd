@@ -1020,14 +1020,17 @@ func pago_trabajo(oficio_id: String) -> int:
 
 # --- Botín ---
 
-## Recompensa por vencer a un enemigo en un lugar de ese nivel: oro, experiencia
-## y, a veces, materiales y un objeto (ya guardados). El objeto y los materiales
-## son del nivel del lugar, y el oro del enemigo se ajusta a ese nivel (un matón,
-## de nivel 2, da más en un lugar de nivel 3). Buen ojo mejora el oro, los
-## materiales, la calidad y lo seguido que sueltan objetos. Devuelve {"oro",
-## "material" ({"material", "cantidad"} o vacío), "objeto" (o vacío), "xp", "niveles"}.
+## Recompensa por vencer a un enemigo en un lugar de ese nivel (o porque se
+## rindió): oro, experiencia y, a veces, materiales y un objeto (ya guardados).
+## El objeto y los materiales son del nivel del lugar, y el oro del enemigo se
+## ajusta a ese nivel (un matón, de nivel 2, da más en un lugar de nivel 3).
+## Buen ojo mejora el oro, los materiales, la calidad y lo seguido que sueltan
+## objetos. Un jefe da más experiencia y siempre suelta un objeto. Devuelve
+## {"oro", "material" ({"material", "cantidad"} o vacío), "objeto" (o vacío),
+## "xp", "niveles"}.
 func recompensa_enemigo(enemigo_id: String, nivel_lugar: int) -> Dictionary:
 	var datos := DatosRivales.rival(enemigo_id)
+	var es_jefe: bool = datos.get("jefe", false)
 	var rango: Array = datos.get("oro", [3, 8])
 	var escala := float(nivel_lugar) / float(datos.get("nivel", 1))
 	var ganado := oro_hallado(roundi(rng.randi_range(rango[0], rango[1]) * escala))
@@ -1036,13 +1039,22 @@ func recompensa_enemigo(enemigo_id: String, nivel_lugar: int) -> Dictionary:
 	if rng.randf() < DatosBotin.PROB_MATERIAL_ENEMIGO:
 		material = hallar_material(nivel_lugar, DatosBotin.MATERIAL_ENEMIGO)
 	var objeto := {}
-	if rng.randf() < prob_botin_enemigo():
+	if es_jefe or rng.randf() < prob_botin_enemigo():
 		objeto = agregar(DatosBotin.generar_botin(nivel_lugar, rng, bonus_calidad()))
-	var resultado := ganar_xp(DatosAventura.XP_POR_VICTORIA * nivel_lugar)
+	var resultado := experiencia_enemigo(enemigo_id, nivel_lugar)
 	resultado["oro"] = ganado
 	resultado["material"] = material
 	resultado["objeto"] = objeto
 	return resultado
+
+
+## Experiencia por un enemigo (vencido o que huyó) en un lugar de ese nivel, ya
+## sumada: si huyó, no da nada más (se lleva su oro). Devuelve {"xp", "niveles"}.
+func experiencia_enemigo(enemigo_id: String, nivel_lugar: int) -> Dictionary:
+	var xp_base := DatosAventura.XP_POR_VICTORIA * nivel_lugar
+	if DatosRivales.rival(enemigo_id).get("jefe", false):
+		xp_base *= DatosAventura.XP_JEFE
+	return ganar_xp(xp_base)
 
 
 ## Un cofre siempre trae un objeto (a veces una poción), algo de oro, materiales

@@ -1,6 +1,8 @@
 extends "res://pruebas/base_prueba.gd"
 ## Características del rey, niveles, barra de turnos por velocidad, maná y hechizos.
 
+const Simulacion := preload("res://pruebas/simulacion.gd")
+
 
 func _juego_nuevo() -> EstadoReino:
 	var juego := EstadoReino.new()
@@ -273,6 +275,90 @@ func prueba_atemorizar_con_presencia() -> void:
 	goblin.atemorizado = true
 	verificar(MotorCombate.prob_acierto(goblin, rey, "abdomen") < normal, "Atemorizado acierta menos")
 	verificar(MotorCombate.multiplicador_golpe(goblin, rey, "abdomen") < danio, "Atemorizado pega menos")
+
+
+## Los jefes tienen mucho más coraje que los enemigos de su mazmorra: lo que
+## atemoriza a los suyos no los atemoriza a ellos, pero con la Presencia del tope
+## sí. La Presencia de más allá del tope no cuenta.
+func prueba_los_jefes_resisten_el_atemorizar() -> void:
+	for mazmorra_id in DatosAventura.ORDEN_MAZMORRAS:
+		var lugar: Dictionary = DatosAventura.MAZMORRAS[mazmorra_id]
+		var jefe := DatosRivales.crear_rival(lugar["jefe"])
+		verificar(jefe.jefe, "%s es un jefe" % jefe.nombre)
+		var mas_valiente := 0.0
+		for enemigo_id in lugar["enemigos"]:
+			mas_valiente = maxf(mas_valiente, DatosRivales.crear_rival(enemigo_id).coraje)
+		var justo := DatosRivales.crear_rey(true, "espada",
+			{"presencia": mas_valiente + DatosEstadisticas.VENTAJA_PARA_ATEMORIZAR})
+		verificar(not MotorCombate.puede_atemorizar(justo, jefe), "Lo que atemoriza a los suyos no atemoriza al %s" % jefe.nombre)
+		var tope := DatosRivales.crear_rey(true, "espada", {"presencia": DatosEstadisticas.BASE + DatosEstadisticas.TOPE_PUNTOS})
+		verificar(MotorCombate.puede_atemorizar(tope, jefe), "Con la Presencia del tope sí se atemoriza al %s" % jefe.nombre)
+	var valiente := DatosRivales.crear_rival("goblin")
+	valiente.coraje = DatosEstadisticas.TOPE_PUNTOS + 1.0
+	var pasado := DatosRivales.crear_rey(true, "espada", {"presencia": 60.0})
+	verificar(not MotorCombate.puede_atemorizar(pasado, valiente), "La Presencia de más allá del tope no cuenta")
+
+
+## Atemorizado y perdiendo (con un cuarto de la vida o menos, y menos que el rey),
+## un enemigo puede darse por vencido al empezar su turno: si es más rápido que
+## el rey huye y, si no, se rinde. Sano, ganando, sin miedo o si es un jefe, nunca.
+func prueba_atemorizado_huye_o_se_rinde() -> void:
+	var rng := rng_fijo()
+	var veces := 2000
+	var rey := DatosRivales.crear_rey(true, "espada")
+	var contar := func(luchador: Luchador) -> Dictionary:
+		var cuenta := {"": 0, "huida": 0, "rendicion": 0}
+		for i in veces:
+			cuenta[MotorCombate.darse_por_vencido(luchador, rey, rng)] += 1
+		return cuenta
+	var goblin := DatosRivales.crear_rival("goblin")
+	goblin.atemorizado = true
+	verificar_igual(contar.call(goblin)[""], veces, "Sano no se da por vencido")
+	goblin.vida = floori(goblin.vida_max_sana * MotorCombate.VIDA_PARA_RENDIRSE)
+	var herido: Dictionary = contar.call(goblin)
+	verificar_cerca(float(herido["huida"]) / veces, MotorCombate.PROB_DARSE_POR_VENCIDO, "Perdiendo, a veces huye", 0.03)
+	verificar_igual(herido["rendicion"], 0, "Más rápido que el rey, huye en vez de rendirse")
+	rey.vida = floori(rey.vida_max_sana * 0.1)
+	verificar_igual(contar.call(goblin)[""], veces, "Si el rey está peor que él, sigue peleando")
+	rey.vida = rey.vida_max_sana
+	for parte_id in ["muslo_der", "muslo_izq"]:
+		goblin.integridad[parte_id] = 0.0
+	verificar(goblin.rapidez_efectiva() < rey.rapidez_efectiva(), "Sin piernas es más lento que el rey")
+	var sin_piernas: Dictionary = contar.call(goblin)
+	verificar_igual(sin_piernas["huida"], 0, "Y ya no puede huir")
+	verificar_cerca(float(sin_piernas["rendicion"]) / veces, MotorCombate.PROB_DARSE_POR_VENCIDO, "Se rinde", 0.03)
+	var orco := DatosRivales.crear_rival("orco_guerrero")
+	orco.atemorizado = true
+	orco.vida = 10
+	var lento: Dictionary = contar.call(orco)
+	verificar(lento["huida"] == 0 and lento["rendicion"] > 0, "Uno más lento que el rey se rinde, no huye")
+	goblin.atemorizado = false
+	verificar_igual(contar.call(goblin)[""], veces, "Sin miedo, pelea hasta el final")
+	var jefe := DatosRivales.crear_rival("jefe_goblin")
+	jefe.atemorizado = true
+	jefe.vida = 1
+	verificar_igual(contar.call(jefe)[""], veces, "Un jefe nunca se da por vencido")
+	goblin.abandono = "huida"
+	verificar(goblin.fuera_de_combate(), "El que huyó o se rindió queda fuera de combate")
+
+
+## En un combate entero, un enemigo atemorizado a veces huye o se rinde y ahí
+## termina el combate (con él todavía en pie); uno sin miedo, nunca.
+func prueba_el_combate_termina_si_el_rival_se_da_por_vencido() -> void:
+	var rng := rng_fijo(77)
+	var abandonos := 0
+	for i in 200:
+		var rey := DatosRivales.crear_rey(true, "espada", {"presencia": 12.0})
+		var orco := DatosRivales.crear_rival("orco")
+		Simulacion.pelear(rey, orco, "ia", rng)
+		if orco.abandono != "":
+			abandonos += 1
+			verificar(orco.vida > 0 and not rey.fuera_de_combate(), "Se dio por vencido con vida y el combate terminó")
+	verificar(abandonos > 0, "A veces huye o se rinde (%d de 200)" % abandonos)
+	for i in 100:
+		var orco := DatosRivales.crear_rival("orco")
+		Simulacion.pelear(DatosRivales.crear_rey(true, "espada"), orco, "ia", rng)
+		verificar_igual(orco.abandono, "", "Sin miedo, nunca")
 
 
 func prueba_baston_gasta_mana() -> void:

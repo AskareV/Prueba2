@@ -25,6 +25,11 @@ const TURNOS_A_MOSTRAR := 6
 const COLOR_JUGADOR := Color("#42a5f5")
 const COLOR_RIVAL := Color("#ef5350")
 const COLOR_CURA := Color("#81c784")
+## Resultado del combate si el rival se dio por vencido (ver Luchador.abandono):
+## si se rinde es una victoria con todo su botín; si huye, "escapo" (se lleva su
+## oro). Va a Juego.combate["resultado"], como "victoria", "derrota" y "huida"
+## (huyó el rey).
+const RESULTADO_DE_ABANDONO := {"rendicion": "rendicion", "huida": "escapo"}
 
 var _rng := RandomNumberGenerator.new()
 var _jugador: Luchador
@@ -407,6 +412,10 @@ func _actuar_rival() -> void:
 		_texto_flotante(_figura_enemigo, "craneo", "Aturdido", COLOR_AVISO)
 		await _pausa(0.9)
 		return
+	_enemigo.abandono = MotorCombate.darse_por_vencido(_enemigo, _jugador, _rng)
+	if _enemigo.abandono != "":
+		await _rival_se_da_por_vencido()
+		return
 	var decision := IAEnemigo.decidir(_enemigo, _jugador, _rng)
 	match decision["accion"]:
 		"recoger":
@@ -430,6 +439,25 @@ func _actuar_rival() -> void:
 			await _atacar(_enemigo, _jugador, parte_id)
 		"hechizo":
 			await _hechizo_del_rival(decision)
+
+
+## El rival, atemorizado y perdiendo, huye (sale corriendo por la derecha) o se
+## rinde (ver MotorCombate.darse_por_vencido). Después termina el combate.
+func _rival_se_da_por_vencido() -> void:
+	var nombre := _mayuscula(_enemigo.con_articulo())
+	_actualizar_paneles()
+	if _enemigo.abandono == "huida":
+		_agregar_mensaje("%s, aterrado, sale corriendo." % nombre)
+		_texto_flotante(_figura_enemigo, "craneo", "¡Huye!", COLOR_AVISO)
+		await _pausa(0.6)
+		var tween := create_tween()
+		tween.tween_property(_figura_enemigo, "position:x", _figura_enemigo.position.x + 700.0, 0.8).set_ease(Tween.EASE_IN)
+		await tween.finished
+		_figura_enemigo.visible = false
+	else:
+		_agregar_mensaje("%s, aterrado y sin poder escapar de ti, tira el arma y se rinde." % nombre)
+		_texto_flotante(_figura_enemigo, "craneo", "¡Se rinde!", COLOR_AVISO)
+		await _pausa(0.9)
 
 
 ## Un rival que sabe magia lanza un hechizo (ver IAEnemigo.elegir_hechizo).
@@ -499,7 +527,10 @@ func _comprobar_fin() -> bool:
 	_boton_menu.disabled = true
 	_boton_estado.disabled = true
 	await _pausa(1.1)
-	_mostrar_fin("victoria" if _enemigo.fuera_de_combate() else "derrota")
+	var resultado := "derrota"
+	if _enemigo.fuera_de_combate():
+		resultado = RESULTADO_DE_ABANDONO.get(_enemigo.abandono, "victoria")
+	_mostrar_fin(resultado)
 	return true
 
 
@@ -1414,15 +1445,21 @@ func _mostrar_fin(resultado: String) -> void:
 	var color := Color.WHITE
 	var motivo := ""
 	match resultado:
-		"victoria":
+		"victoria", "rendicion":
 			titulo = "¡Victoria!"
 			color = Color("#ffd54f")
 			motivo = "%s ya no puede seguir."
-			if _enemigo.muerto:
+			if resultado == "rendicion":
+				motivo = "%s se rindió."
+			elif _enemigo.muerto:
 				motivo = "%s se desangró."
 			elif _enemigo.desmayado:
 				motivo = "%s quedó inconsciente."
 			motivo = motivo % _mayuscula(_enemigo.con_articulo())
+		"escapo":
+			titulo = "¡Huyó!"
+			color = Color("#a5d6a7")
+			motivo = "%s salió corriendo de miedo." % _mayuscula(_enemigo.con_articulo())
 		"derrota":
 			titulo = "Derrota"
 			color = Color("#ef5350")

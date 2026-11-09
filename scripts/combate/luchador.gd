@@ -45,6 +45,11 @@ var defendiendo := false
 var desmayado := false
 ## Su presencia lo supera: acierta y pega menos y es más lento (ver MotorCombate).
 var atemorizado := false
+## Jefe de una mazmorra: aunque esté atemorizado, nunca huye ni se rinde.
+var jefe := false
+## Atemorizado y perdiendo, se dio por vencido: "huida" o "rendicion" (ver
+## MotorCombate.darse_por_vencido). Queda fuera de combate.
+var abandono := ""
 
 ## Subcaracterísticas (ver DatosEstadisticas): sub -> valor. Las que faltan valen
 ## la base, que no cambia nada. Solo el rey las tiene ("tiene_estadisticas").
@@ -132,7 +137,7 @@ func _init(p_nombre: String, p_vida_max: int, p_diestro: bool, p_arma: String, p
 
 
 func fuera_de_combate() -> bool:
-	return vida <= 0 or desmayado or muerto
+	return vida <= 0 or desmayado or muerto or abandono != ""
 
 
 # --- Características ---

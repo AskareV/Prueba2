@@ -10,29 +10,31 @@ const ESTRES_MAXIMO := 70.0
 ## "posicion": lugar en el mapa, en fracciones del ancho y alto.
 ## "estilo" (solo las mazmorras): cómo se arma su plano y cómo se ve: "cueva",
 ## "mina", "fuerte" o "castillo" (ver GeneradorMazmorra).
+## "jefe" (solo las mazmorras): el enemigo que espera al final, en su lugar (ver
+## GeneradorMazmorra.LUGAR_DEL_JEFE). Cuenta como uno de "cantidad_enemigos".
 const MAZMORRAS := {
 	"madriguera_goblin": {
 		"nombre": "Madriguera goblin", "dificultad": "Fácil", "nivel": 1, "estilo": "cueva",
 		"descripcion": "Cuevas naturales donde se esconden goblins. Son pequeños y casi no usan armadura: buen lugar para empezar.",
-		"enemigos": ["goblin", "goblin", "goblin_lancero", "chaman_goblin"],
+		"enemigos": ["goblin", "goblin", "goblin_lancero", "chaman_goblin"], "jefe": "jefe_goblin",
 		"cantidad_enemigos": 5, "cofres": 3, "estres_por_paso": 1.0, "posicion": Vector2(0.2, 0.68),
 	},
 	"guarida_bandidos": {
 		"nombre": "Guarida de bandidos", "dificultad": "Fácil / medio", "nivel": 2, "estilo": "mina",
 		"descripcion": "Una mina abandonada donde acampa una banda de ladrones y matones. Guardan lo que roban en los caminos.",
-		"enemigos": ["ladron", "ladron", "maton", "bandido"],
+		"enemigos": ["ladron", "ladron", "maton", "bandido"], "jefe": "capitan_bandido",
 		"cantidad_enemigos": 5, "cofres": 3, "estres_por_paso": 1.2, "posicion": Vector2(0.46, 0.38),
 	},
 	"fortaleza_orca": {
 		"nombre": "Fortaleza orca", "dificultad": "Medio", "nivel": 3, "estilo": "fuerte",
 		"descripcion": "Un fuerte de troncos tomado por orcos: una empalizada con chozas adentro. Los guerreros llevan armadura y los chamanes lanzan magia.",
-		"enemigos": ["orco_guerrero", "orco_cazador", "orco", "chaman_orco"],
+		"enemigos": ["orco_guerrero", "orco_cazador", "orco", "chaman_orco"], "jefe": "caudillo_orco",
 		"cantidad_enemigos": 6, "cofres": 3, "estres_por_paso": 1.4, "posicion": Vector2(0.76, 0.3),
 	},
 	"ciudadela_maldita": {
 		"nombre": "Ciudadela maldita", "dificultad": "Difícil", "nivel": 4, "estilo": "castillo",
 		"descripcion": "El castillo de un reino enemigo: salas de piedra y pasillos guardados por caballeros negros, lanceros, cultistas y verdugos. Mucha armadura y mucha magia.",
-		"enemigos": ["caballero_negro", "lancero_negro", "cultista", "verdugo"],
+		"enemigos": ["caballero_negro", "lancero_negro", "cultista", "verdugo"], "jefe": "rey_negro",
 		"cantidad_enemigos": 6, "cofres": 4, "estres_por_paso": 1.6, "posicion": Vector2(0.84, 0.74),
 	},
 }
@@ -77,8 +79,11 @@ const PROB_BOTIN_ENEMIGO := 0.4
 const ESTRES_VICTORIA := 3.0
 const ESTRES_DERROTA := 50.0
 ## Experiencia por vencer a un enemigo y por abrir un cofre, por nivel del lugar.
+## Un jefe da XP_JEFE veces la de un enemigo y siempre suelta un objeto. Si un
+## enemigo huye, da su experiencia pero se lleva su oro.
 const XP_POR_VICTORIA := 10
 const XP_POR_COFRE := 4
+const XP_JEFE := 3
 ## Al caminar el rey se va curando (ver EstadoReino.curar_al_caminar): cada paso
 ## cura esta parte de la vida máxima (y ×100 de integridad a cada parte, 1 punto)
 ## y este maná. Un día de marcha en una zona cuenta como PASOS_POR_DIA pasos.
@@ -130,6 +135,12 @@ static func sortear_suceso(rng: RandomNumberGenerator, puntos_amuleto := 0.0) ->
 		if tirada < 0.0:
 			return suceso
 	return "nada"
+
+
+## Nombre del jefe de una mazmorra ("" si el lugar no tiene).
+static func nombre_jefe(lugar_id: String) -> String:
+	var jefe_id: String = lugar(lugar_id).get("jefe", "")
+	return "" if jefe_id == "" else String(DatosRivales.rival(jefe_id)["nombre"])
 
 
 ## Nombres de los enemigos de un lugar, sin repetir: "goblins, chamanes..."

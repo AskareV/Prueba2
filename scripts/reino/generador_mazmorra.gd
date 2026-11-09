@@ -13,8 +13,8 @@ extends RefCounted
 ##   patio partido en tres corrales por empalizadas con un portón, con chozas
 ##   (cada una con su puerta) y atalayas.
 ## - "castillo": el castillo de un reino enemigo: un pasillo con alfombra y
-##   salas de piedra en fila, unidas por puertas, a los dos lados; a veces, un
-##   salón del trono.
+##   salas de piedra en fila, unidas por puertas, a los dos lados, y abajo el
+##   salón del trono, al que se entra por una sala del costado.
 ## - "laberinto": el laberinto de antes (si la mazmorra no dice su estilo).
 ## Los planos están pensados para que limpiar una mazmorra pida caminar más o
 ## menos lo mismo que el laberinto de antes (así el estrés sigue igual).
@@ -24,7 +24,12 @@ extends RefCounted
 ##
 ## Además de las casillas, el plano trae su "aspecto": {casilla: qué es} para lo
 ## que el tablero dibuja distinto (una puerta, la alfombra, una choza, una viga).
-## Es solo para el dibujo y para elegir dónde van los cofres.
+## Sirve para el dibujo y para elegir dónde van los cofres y el jefe.
+##
+## Si la mazmorra tiene jefe ("jefe" en DatosAventura.MAZMORRAS), espera al
+## final, en su lugar (LUGAR_DEL_JEFE): la cámara más honda de la cueva, el
+## campamento más lejano de la mina, la choza más lejana del fuerte o el trono
+## del castillo. Cuenta como uno de los enemigos.
 
 enum Celda { MURO, SUELO }
 
@@ -33,6 +38,9 @@ const ALTO := 9
 const DIRECCIONES := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 ## Distancia mínima (en pasos) entre la entrada y un enemigo o cofre.
 const DISTANCIA_MINIMA := 3
+## Dónde espera el jefe en cada estilo: la casilla de ese aspecto más lejos de la
+## entrada (si no hay ninguna, el callejón más lejos).
+const LUGAR_DEL_JEFE := {"cueva": "camara", "mina": "campamento", "fuerte": "interior", "castillo": "trono"}
 ## Laberinto: paredes internas que se abren de más para que haya caminos alternativos.
 const PROPORCION_ATAJOS := 0.12
 ## Cueva: casillas de túnel que crecen, cuántas veces dobla un túnel en cada
@@ -53,8 +61,9 @@ const NICHOS_MINA := 8
 ## Fuerte: chozas que intenta levantar.
 const CHOZAS_FUERTE := 5
 ## Castillo: fila del pasillo principal (las salas quedan arriba y abajo),
-## probabilidad de que una fila de salas tenga una segunda puerta al pasillo y
-## de que su puerta esté en la sala de la punta (la más lejos de la entrada).
+## probabilidad de que una fila de salas de arriba tenga una segunda puerta al
+## pasillo y de que su puerta esté en la sala de la punta (la más lejos de la
+## entrada).
 const FILA_PASILLO := 4
 const SEGUNDA_PUERTA_CASTILLO := 0.3
 const PUERTA_EN_LA_PUNTA := 0.6
@@ -66,8 +75,9 @@ static func semilla(mazmorra_id: String, semana: int, semilla_partida := 0) -> i
 
 
 ## Devuelve {"celdas": Array de filas (Array de Celda), "entrada": Vector2i,
-## "enemigos": {Vector2i: enemigo_id}, "cofres": {Vector2i: true}, "estilo",
-## "aspecto": {Vector2i: String}}.
+## "enemigos": {Vector2i: enemigo_id} (el jefe también), "cofres": {Vector2i:
+## true}, "estilo", "aspecto": {Vector2i: String} y, si tiene, "jefe": la casilla
+## del jefe}.
 static func generar(mazmorra_id: String, semana: int, semilla_partida := 0) -> Dictionary:
 	var datos: Dictionary = DatosAventura.MAZMORRAS[mazmorra_id]
 	var rng := RandomNumberGenerator.new()
@@ -77,7 +87,7 @@ static func generar(mazmorra_id: String, semana: int, semilla_partida := 0) -> D
 	var celdas: Array
 	match estilo:
 		"cueva":
-			celdas = _cueva(rng)
+			celdas = _cueva(rng, aspecto)
 		"mina":
 			celdas = _mina(rng, aspecto)
 		"fuerte":
@@ -90,11 +100,14 @@ static func generar(mazmorra_id: String, semana: int, semilla_partida := 0) -> D
 	var entrada := Vector2i(ANCHO / 2, 0)
 	celdas[0][entrada.x] = Celda.SUELO
 	var distancias := distancias_desde(celdas, entrada)
+	var jefe := Vector2i(-1, -1)
+	if datos.has("jefe"):
+		jefe = _lugar_del_jefe(estilo, celdas, aspecto, distancias)
 	# Candidatas: suelo lejos de la entrada, en orden al azar (con la semilla,
 	# para que el plano de la semana sea siempre el mismo).
 	var candidatas: Array[Vector2i] = []
 	for celda in distancias:
-		if distancias[celda] >= DISTANCIA_MINIMA:
+		if distancias[celda] >= DISTANCIA_MINIMA and celda != jefe:
 			candidatas.append(celda)
 	for i in range(candidatas.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
@@ -117,6 +130,8 @@ static func generar(mazmorra_id: String, semana: int, semilla_partida := 0) -> D
 				break
 			cofres[celda] = true
 	var enemigos := {}
+	if datos.has("jefe"):
+		enemigos[jefe] = datos["jefe"]
 	var posibles: Array = datos["enemigos"]
 	for celda in candidatas:
 		if enemigos.size() >= int(datos["cantidad_enemigos"]):
@@ -129,8 +144,32 @@ static func generar(mazmorra_id: String, semana: int, semilla_partida := 0) -> D
 			break
 		if not enemigos.has(celda):
 			cofres[celda] = true
-	return {"celdas": celdas, "entrada": entrada, "enemigos": enemigos, "cofres": cofres, "estilo": estilo,
+	var plano := {"celdas": celdas, "entrada": entrada, "enemigos": enemigos, "cofres": cofres, "estilo": estilo,
 		"aspecto": aspecto}
+	if datos.has("jefe"):
+		plano["jefe"] = jefe
+	return plano
+
+
+## Casilla del jefe: la del aspecto de LUGAR_DEL_JEFE más lejos de la entrada;
+## si no hay ninguna, el callejón sin salida más lejos, y si tampoco, el suelo
+## más lejos (siempre a DISTANCIA_MINIMA o más).
+static func _lugar_del_jefe(estilo: String, celdas: Array, aspecto: Dictionary, distancias: Dictionary) -> Vector2i:
+	var que: String = LUGAR_DEL_JEFE.get(estilo, "")
+	var filtros: Array[Callable] = [
+		func(celda: Vector2i) -> bool: return que != "" and aspecto.get(celda, "") == que,
+		func(celda: Vector2i) -> bool: return _vecinos_de_suelo(celdas, celda) == 1,
+		func(_celda: Vector2i) -> bool: return true,
+	]
+	for filtro in filtros:
+		var mejor := Vector2i(-1, -1)
+		for celda in distancias:
+			if distancias[celda] >= DISTANCIA_MINIMA and filtro.call(celda) \
+					and (mejor.x < 0 or distancias[celda] > distancias[mejor]):
+				mejor = celda
+		if mejor.x >= 0:
+			return mejor
+	return Vector2i(-1, -1)
 
 
 static func _lugar_de_cofre(estilo: String, aspecto: Dictionary, celda: Vector2i) -> bool:
@@ -150,8 +189,9 @@ static func _lugar_de_cofre(estilo: String, aspecto: Dictionary, celda: Vector2i
 ## Cuevas naturales: los túneles crecen desde la entrada como raíces. Cada uno
 ## avanza doblando al azar y nunca toca a otro (no hay atajos, así que los
 ## caminos son largos y tienen callejones); de un túnel nacen otros. En la
-## punta de algunos se abre una cámara, y a los costados quedan recovecos.
-static func _cueva(rng: RandomNumberGenerator) -> Array:
+## punta de algunos se abre una cámara (aspecto "camara", para el jefe), y a
+## los costados quedan recovecos.
+static func _cueva(rng: RandomNumberGenerator, aspecto: Dictionary) -> Array:
 	var celdas := _lleno()
 	var inicio := Vector2i(ANCHO / 2, 1)
 	celdas[inicio.y][inicio.x] = Celda.SUELO
@@ -181,7 +221,7 @@ static func _cueva(rng: RandomNumberGenerator) -> Array:
 			if _sala_libre(celdas, camara, pos):
 				for y in range(camara.position.y, camara.end.y):
 					for x in range(camara.position.x, camara.end.x):
-						celdas[y][x] = Celda.SUELO
+						_cavar(celdas, aspecto, Vector2i(x, y), "camara")
 						tuneles.append(Vector2i(x, y))
 				camaras += 1
 	# Recovecos: una casilla de más al costado de un túnel, que no lleva a ningún
@@ -266,24 +306,29 @@ static func _mina(rng: RandomNumberGenerator, aspecto: Dictionary) -> Array:
 		var x: int = opciones[rng.randi() % opciones.size()]
 		for y in range(int(arriba[0]) + 1, int(abajo[0])):
 			_cavar(celdas, aspecto, Vector2i(x, y), "pozo")
-	# Campamentos: una sala de 2 o 3 de ancho y 2 de alto al final de una galería.
+	# Campamentos: al final de una galería, una sala de 2 o 3 de ancho y 2 de
+	# alto hecha con la punta de la galería y la fila de arriba o de abajo (que
+	# no toca ningún otro túnel).
 	var campamentos := 0
-	for _intento in 12:
+	for _intento in 30:
 		if campamentos >= 2:
 			break
 		var tramo: Array = tramos[rng.randi() % tramos.size()]
-		var hacia_la_izquierda := rng.randf() < 0.5
-		var punta := Vector2i(tramo[1] if hacia_la_izquierda else tramo[2], tramo[0])
 		var ancho := rng.randi_range(2, 3)
-		var x0: int = punta.x - ancho if hacia_la_izquierda else punta.x + 1
-		var y0: int = punta.y - 1 if rng.randf() < 0.5 else punta.y
-		var sala := Rect2i(x0, y0, ancho, 2)
-		if not _sala_libre(celdas, sala, punta):
+		var x0: int = tramo[1] if rng.randf() < 0.5 else tramo[2] - ancho + 1
+		var paso := -1 if rng.randf() < 0.5 else 1
+		var fila: int = tramo[0] + paso
+		var libre := true
+		for x in range(x0 - 1, x0 + ancho + 1):
+			for celda in [Vector2i(x, fila), Vector2i(x, fila + paso)]:
+				if es_suelo(celdas, celda) or (x >= x0 and x < x0 + ancho and celda.y == fila and not _dentro_interior(celda)):
+					libre = false
+		if not libre:
 			continue
-		for y in range(sala.position.y, sala.end.y):
-			for x in range(sala.position.x, sala.end.x):
-				_cavar(celdas, aspecto, Vector2i(x, y), "campamento")
-		aspecto[Vector2i(sala.position.x + rng.randi_range(0, ancho - 1), sala.position.y + rng.randi_range(0, 1))] = "fogata"
+		for x in range(x0, x0 + ancho):
+			_cavar(celdas, aspecto, Vector2i(x, fila), "campamento")
+			aspecto[Vector2i(x, tramo[0])] = "campamento"
+		aspecto[Vector2i(x0 + rng.randi_range(0, ancho - 1), fila)] = "fogata"
 		campamentos += 1
 	# Nichos: callejones de una o dos casillas arriba o abajo de una galería,
 	# sin tocar otro túnel.
@@ -509,22 +554,21 @@ static func _castillo(rng: RandomNumberGenerator, aspecto: Dictionary) -> Array:
 	_puerta_al_pasillo(celdas, aspecto, rng, _salas(celdas, aspecto, rng, 1, centro - 2, arriba), FILA_PASILLO - 1, desde, hasta)
 	_puerta_al_pasillo(celdas, aspecto, rng, _salas(celdas, aspecto, rng, centro + 2, ANCHO - 2, arriba), FILA_PASILLO - 1,
 		desde, hasta)
-	if rng.randf() < 0.5:
-		# Salón del trono: se entra desde el pasillo, frente a la entrada, y a sus
-		# lados hay salas que solo dan a él.
-		var salon := Rect2i(centro - 2, abajo, 5, 2)
-		for y in range(salon.position.y, salon.end.y):
-			for x in range(salon.position.x, salon.end.x):
-				_cavar(celdas, aspecto, Vector2i(x, y), "salon")
-		_cavar(celdas, aspecto, Vector2i(centro, FILA_PASILLO + 1), "puerta")
-		aspecto[Vector2i(centro, ALTO - 2)] = "trono"
-		_salas(celdas, aspecto, rng, 1, centro - 4, abajo)
-		_salas(celdas, aspecto, rng, centro + 4, ANCHO - 2, abajo)
-		_cavar(celdas, aspecto, Vector2i(centro - 3, rng.randi_range(abajo, abajo + 1)), "puerta")
-		_cavar(celdas, aspecto, Vector2i(centro + 3, rng.randi_range(abajo, abajo + 1)), "puerta")
-	else:
-		_puerta_al_pasillo(celdas, aspecto, rng, _salas(celdas, aspecto, rng, 1, ANCHO - 2, abajo), FILA_PASILLO + 1,
-			desde, hasta)
+	# Abajo en el medio, el salón del trono (donde espera el jefe), con una sala a
+	# cada lado. No da al pasillo: se entra por la sala de un costado, elegido al
+	# azar, y la del otro costado queda detrás del salón.
+	var salon := Rect2i(centro - 2, abajo, 5, 2)
+	for y in range(salon.position.y, salon.end.y):
+		for x in range(salon.position.x, salon.end.x):
+			_cavar(celdas, aspecto, Vector2i(x, y), "salon")
+	aspecto[Vector2i(centro, ALTO - 2)] = "trono"
+	var izquierda := _salas(celdas, aspecto, rng, 1, centro - 4, abajo)
+	var derecha := _salas(celdas, aspecto, rng, centro + 4, ANCHO - 2, abajo)
+	_cavar(celdas, aspecto, Vector2i(centro - 3, rng.randi_range(abajo, abajo + 1)), "puerta")
+	_cavar(celdas, aspecto, Vector2i(centro + 3, rng.randi_range(abajo, abajo + 1)), "puerta")
+	var antesala: Rect2i = izquierda[0] if rng.randf() < 0.5 else derecha[-1]
+	var columna := rng.randi_range(maxi(antesala.position.x, desde), mini(antesala.end.x - 1, hasta))
+	_cavar(celdas, aspecto, Vector2i(columna, FILA_PASILLO + 1), "puerta")
 	# Antorchas en los muros del pasillo y estandartes en el muro de arriba.
 	for x in range(desde, hasta + 1):
 		for y in [FILA_PASILLO - 1, FILA_PASILLO + 1]:

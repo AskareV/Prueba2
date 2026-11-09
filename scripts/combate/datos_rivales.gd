@@ -16,7 +16,10 @@ extends RefCounted
 ## - precision: precisión de su arma, si no usa la básica.
 ## - rapidez: velocidad en la barra de turnos (el rey empieza con 13). Los
 ##   rivales de la demo tienen la del rey, para que se alternen como antes.
-## - coraje: si la Presencia del rey lo supera por 3 o más, queda atemorizado.
+## - coraje: si la Presencia del rey lo supera por 3 o más, queda atemorizado
+##   (ver MotorCombate.darse_por_vencido).
+## - jefe: el jefe de una mazmorra (ver DatosAventura.MAZMORRAS): tiene mucho
+##   coraje y, aunque quede atemorizado, nunca huye ni se rinde.
 ## - empuje: probabilidad de empujar al rival con cada golpe (los brutos).
 ## - mana y hechizos: los que saben magia gastan maná con el bastón y lanzan esos
 ##   hechizos; pegan y curan según su bastón (ver Luchador.poder_magico).
@@ -199,6 +202,49 @@ static var ENEMIGOS := {
 			"panuelo": Color("#111111"), "ancho": 1.25, "alto": 1.03, "escala": 1.12,
 		},
 	},
+	# Jefes: uno al final de cada mazmorra (ver DatosAventura.MAZMORRAS).
+	"jefe_goblin": {
+		"nombre": "Jefe goblin", "articulo": "el", "vida": 60, "diestro": true, "arma": "espada",
+		"rapidez": 15, "coraje": 8, "personalidad": "astuto", "nivel": 1, "oro": [25, 40], "danio": [8, 11],
+		"precision": 0.85, "jefe": true,
+		"armadura": {"cabeza": [4, 0], "torso": [6, 2]}, "tipo_armadura": "cuero",
+		"aspecto": _GOBLIN.merged({"torso": Color("#4e342e"), "hombros": Color("#c9a227"),
+			"cinturon": Color("#b71c1c"), "ancho": 1.0, "alto": 0.92, "escala": 0.86}, true),
+	},
+	"capitan_bandido": {
+		"nombre": "Capitán bandido", "articulo": "el", "vida": 95, "diestro": true, "arma": "espada",
+		"rapidez": 13, "coraje": 11, "personalidad": "astuto", "nivel": 2, "oro": [45, 70], "danio": [12, 16],
+		"precision": 0.88, "jefe": true,
+		"armadura": {"cabeza": [5, 2], "torso": [11, 3]}, "tipo_armadura": "cuero",
+		"aspecto": {
+			"piel": Color("#d9a066"), "torso": Color("#7f1d1d"), "hombros": Color("#3e2723"),
+			"brazos": Color("#7f1d1d"), "antebrazos": Color("#d9a066"), "manos": Color("#3e2723"),
+			"muslos": Color("#3e2723"), "espinillas": Color("#212121"), "pies": Color("#1a1a1a"),
+			"cinturon": Color("#c9a227"), "accesorio": "capucha", "accesorio_color": Color("#2e2219"),
+			"panuelo": Color("#5d1010"), "capa": Color("#2e2219"), "ancho": 1.05, "alto": 1.0, "escala": 1.04,
+		},
+	},
+	"caudillo_orco": {
+		"nombre": "Caudillo orco", "articulo": "el", "vida": 135, "diestro": false, "arma": "maza",
+		"rapidez": 11, "coraje": 14, "personalidad": "bruto", "nivel": 3, "oro": [70, 100], "danio": [20, 24],
+		"empuje": 0.2, "jefe": true,
+		"armadura": {"cabeza": [14, 5], "torso": [20, 7], "brazos": [9, 3], "piernas": [9, 3]}, "tipo_armadura": "malla",
+		"aspecto": _ORCO.merged({"torso": Color("#4e342e"), "hombros": Color("#c9a227"), "accesorio": "casco",
+			"accesorio_color": Color("#c9a227"), "ancho": 1.35, "alto": 1.0, "escala": 1.12}, true),
+	},
+	"rey_negro": {
+		"nombre": "Rey negro", "articulo": "el", "vida": 145, "diestro": true, "arma": "espada",
+		"rapidez": 12, "coraje": 17, "personalidad": "preciso", "nivel": 4, "oro": [100, 150], "danio": [20, 24],
+		"precision": 0.9, "jefe": true,
+		"armadura": {"cabeza": [28, 11], "torso": [36, 13], "brazos": [20, 8], "piernas": [20, 8]}, "tipo_armadura": "placas",
+		"aspecto": {
+			"piel": Color("#d7ccc8"), "torso": Color("#1c1c22"), "hombros": Color("#37474f"),
+			"brazos": Color("#263238"), "antebrazos": Color("#1c1c22"), "manos": Color("#212121"),
+			"muslos": Color("#1c1c22"), "espinillas": Color("#37474f"), "pies": Color("#111111"),
+			"cinturon": Color("#b71c1c"), "accesorio": "corona", "pelo": Color("#212121"),
+			"capa": Color("#4a148c"), "ancho": 1.15, "alto": 1.0, "escala": 1.0,
+		},
+	},
 }
 
 const ASPECTO_REY := {
@@ -228,6 +274,7 @@ static func crear_rival(rival_id: String) -> Luchador:
 	luchador.personalidad = datos["personalidad"]
 	luchador.rapidez = float(datos.get("rapidez", luchador.rapidez))
 	luchador.coraje = float(datos.get("coraje", 0.0))
+	luchador.jefe = bool(datos.get("jefe", false))
 	luchador.empuje = float(datos.get("empuje", 0.0))
 	if datos.has("mana"):
 		luchador.usa_mana = true
